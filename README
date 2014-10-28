@@ -1,0 +1,3 @@
+This project implements basic to work with orthogonal polynomials.
+It does not work on its own, but rather needs to be included in
+other projects, which also include treelm.
