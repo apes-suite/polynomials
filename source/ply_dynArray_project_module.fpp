@@ -130,7 +130,7 @@ contains
     integer, intent(in)           :: basisType
     integer, intent(in)           :: maxPolyDegree
     integer, intent(in)           :: parent
-    !---------------------------------------------------------------------------------!  
+    !--------------------------------------------------------------------------!
     type(ply_prj_header_type) :: header
     type(ply_prj_init_type) :: proj_init
 
