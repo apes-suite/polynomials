@@ -6,6 +6,7 @@ module ply_l2p_header_module
   use env_module,         only: rk, labelLen
   use fftw_wrap,          only: fftw_available
   use aotus_module,       only: flu_State, aot_get_val
+  use aot_out_module,     only: aot_out_type, aot_out_val
 
   use tem_aux_module,     only: tem_abort
   use tem_logging_module, only: logUnit
@@ -62,6 +63,7 @@ module ply_l2p_header_module
   public :: assignment(=)
   public :: ply_l2p_header_type
   public :: ply_l2p_header_load,  ply_l2p_header_display
+  public :: ply_l2p_header_out
 
 
 contains
@@ -79,10 +81,10 @@ contains
     left%nodes_header = right%nodes_header
 
   end subroutine Copy_l2p_header
-  !*****************************************************************************!
+  !****************************************************************************!
 
 
-  !*****************************************************************************!
+  !****************************************************************************!
   !> Load settings to describe a projection method from a Lua table.
   subroutine ply_l2p_header_load(me, conf, thandle)
     !---------------------------------------------------------------------------!
@@ -119,10 +121,30 @@ contains
     end if
 
   end subroutine ply_l2p_header_load
-  !*****************************************************************************!
+  !****************************************************************************!
 
 
-  !*****************************************************************************!
+  !****************************************************************************!
+  !> Write L2P settings into a Lua table.
+  subroutine ply_l2p_header_out(me, conf)
+    !--------------------------------------------------------------------------!
+    type(ply_l2p_header_type), intent(in) :: me
+    type(aot_out_type)                    :: conf
+    !--------------------------------------------------------------------------!
+
+    call aot_out_val( put_conf = conf,     &
+       &              vname    = 'factor', &
+       &              val      = me%factor )
+
+    call aot_out_val( put_conf = conf,                         &
+       &              vname    = 'lobattoPoints',              &
+       &              val      = me%nodes_header%lobattoPoints )
+
+  end subroutine ply_l2p_header_out
+  !****************************************************************************!
+
+
+  !****************************************************************************!
   subroutine ply_l2p_header_display(me)
     !---------------------------------------------------------------------------!
     type(ply_l2p_header_type), intent(in) :: me

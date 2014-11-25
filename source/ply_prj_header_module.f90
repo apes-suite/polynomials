@@ -5,6 +5,7 @@ module ply_prj_header_module
 
   use aotus_module,       only: flu_State, aot_get_val
   use aot_table_module,   only: aot_table_open, aot_table_close
+  use aot_out_module,     only: aot_out_type, aot_out_val
 
   use tem_aux_module,     only: tem_abort
   use tem_tools_module,   only: upper_to_lower
@@ -12,13 +13,13 @@ module ply_prj_header_module
 
   use ply_nodes_header_module, only: ply_nodes_header_type
   use ply_fpt_header_module, only: ply_fpt_header_type, ply_fpt_header_load, &
-    &                              ply_fpt_header_display,     &
+    &                              ply_fpt_header_display, ply_fpt_header_out, &
     &                              assignment(=),              &
     &                              operator(==), operator(/=), &
     &                              operator(<), operator(<=),  &
     &                              operator(>),operator(>=)
   use ply_l2p_header_module, only: ply_l2p_header_type, ply_l2p_header_load, &
-    &                              ply_l2p_header_display,    &
+    &                              ply_l2p_header_display, ply_l2p_header_out, &
     &                              assignment(=),              &
     &                              operator(==), operator(/=), &
     &                              operator(<), operator(<=),  &
@@ -43,6 +44,7 @@ module ply_prj_header_module
 
   public :: ply_prj_header_type
   public :: ply_prj_header_load
+  public :: ply_prj_header_out
   public :: assignment(=)
 
   interface operator(==)
@@ -162,6 +164,37 @@ contains
 
   end subroutine ply_prj_header_load
   !****************************************************************************!
+
+
+  !***************************************************************************!
+  !> Load settings to describe a projection method from a Lua table.
+  subroutine ply_prj_header_out(me, conf)
+    !-------------------------------------------------------------------------!
+    type(ply_prj_header_type), intent(in) :: me
+    type(aot_out_type) :: conf
+    !-------------------------------------------------------------------------!
+    integer :: iError
+    !-------------------------------------------------------------------------!
+    
+    call aot_out_val( put_conf = conf,   &
+      &               vname    = 'kind', &
+      &               val      = me%kind )
+
+    select case(trim(me%kind))
+    case('l2p')
+      call ply_l2p_header_out( me   = me%l2p_header, & 
+        &                      conf = conf           )
+
+    case('fpt')
+      call ply_fpt_header_out( me   = me%fpt_header, & 
+         &                     conf = conf           )
+
+    end select
+
+
+  end subroutine ply_prj_header_out
+  !****************************************************************************!
+
 
   !****************************************************************************!
   !> This function provides the test for equality of the header for two projections.

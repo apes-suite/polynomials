@@ -6,6 +6,7 @@ module ply_fpt_header_module
 
   use env_module,              only: rk, labelLen
   use aotus_module,            only: flu_State, aot_get_val
+  use aot_out_module,          only: aot_out_type, aot_out_val
 
   use tem_aux_module,          only: tem_abort
   use tem_logging_module,      only: logUnit
@@ -108,6 +109,7 @@ module ply_fpt_header_module
 
   public :: ply_fpt_header_load, ply_fpt_header_display
   public :: ply_fpt_header_type
+  public :: ply_fpt_header_out
 
   public :: assignment(=)
   
@@ -233,6 +235,50 @@ module ply_fpt_header_module
    write(logUnit(1),*) ' * using fftMultithread =',fftMultiThread
 
   end subroutine ply_fpt_header_load
+  !****************************************************************************!
+
+
+  !****************************************************************************!
+  !> Write FPT settings into a Lua table.
+  subroutine ply_fpt_header_out(me, conf)
+    !--------------------------------------------------------------------------!
+    type(ply_fpt_header_type), intent(in) :: me
+    type(aot_out_type), intent(inout)     :: conf
+    !--------------------------------------------------------------------------!
+    logical :: fftMultiThread
+    !--------------------------------------------------------------------------!
+
+    ! fill up the fpt_header
+    call aot_out_val( put_conf = conf,        &
+       &              vname    = 'blocksize', &
+       &              val      = me%blocksize )
+
+    call aot_out_val( put_conf = conf,     &
+       &              vname    = 'factor', &
+       &              val      = me%factor )
+
+    call aot_out_val( put_conf = conf,           &
+       &              vname    = 'approx_terms', &
+       &              val      = me%approx_terms )
+
+    call aot_out_val( put_conf = conf,       &
+       &              vname    = 'striplen', &
+       &              val      = me%striplen )
+
+    call aot_out_val( put_conf = conf,               &
+       &              vname    = 'subblockingWidth', &
+       &              val      = me%subblockingWidth )
+
+    call aot_out_val( put_conf = conf,                &
+       &              vname    = 'adapt_factor_pow2', &
+       &              val      = me%adapt_factor_pow2 )
+
+    call aot_out_val( put_conf = conf,                         &
+       &              vname    = 'lobattoPoints',              &
+       &              val      = me%nodes_header%lobattoPoints )
+
+
+  end subroutine ply_fpt_header_out
   !****************************************************************************!
 
 
