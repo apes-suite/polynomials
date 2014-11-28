@@ -17,13 +17,6 @@ module ply_oversample_module
   public :: ply_convert2oversample
   public :: ply_convertFromOversample
 
-  public :: ply_convert2oversample_2d
-  public :: ply_convertFromOversample_2d
-
-  public :: ply_convert2oversample_1d
-  public :: ply_convertFromOversample_1d
-
-
 contains
 
 
@@ -34,7 +27,84 @@ contains
   !! nonlinear operations.
   !! Please note, that the oversampled representation is always a Q-Space
   !! polynomial.
-  subroutine ply_convert2oversample(state, poly_proj, modalCoeffs)
+  subroutine ply_convert2oversample(state, poly_proj, nDim, modalCoeffs, &
+    &                               nScalars                             )
+    !--------------------------------------------------------------------------
+    !> Description of the projection method.
+    type(ply_poly_project_type), intent(in) :: poly_proj
+
+    !> State in a single element, to be oversampled.
+    real(kind=rk), intent(in) :: state(:,:)
+
+    !> The number of dimensions to determine the correct oversampling routine.
+    integer, intent(in) :: nDim
+
+    !> Oversampled array for modal coefficients from state.
+    !!
+    !! These are always Q-Polynomial representations, as projections only work
+    !! with those.
+    real(kind=rk), intent(inout) :: modalCoeffs(:,:)
+
+    !> The number of scalar variables to convert. If nScalars is not passed
+    !! to this subroutine, all variables of argument state will be considered
+    !! by this routine.
+    integer, intent(in), optional :: nScalars
+    !--------------------------------------------------------------------------
+    select case(nDim)
+    case(1)
+      call ply_convert2oversample_1d(state, poly_proj, modalCoeffs, nScalars)
+    case(2)
+      call ply_convert2oversample_2d(state, poly_proj, modalCoeffs, nScalars)
+    case(3)
+      call ply_convert2oversample_3d(state, poly_proj, modalCoeffs)
+    end select
+  end subroutine ply_convert2oversample
+
+  !****************************************************************************!
+  !> Truncating an oversampled polynomial representation back to the original
+  !! representation.
+  !!
+  !! Note, that the oversampled array, which is given as an input here is
+  !! is always a Q-Polynomial representation, while the target truncated state
+  !! might also be a P-Polynomial.
+  subroutine ply_convertFromOversample(modalCoeffs, poly_proj, nDim, state, &
+      &                                nScalars                             )
+    !--------------------------------------------------------------------------
+    !> Data of the projection method
+    type(ply_poly_project_type), intent(in) :: poly_proj
+
+    !> Oversampled modal array for one element
+    real(kind=rk), intent(in) :: modalCoeffs(:,:)
+
+    !> The number of dimensions to determine the correct oversampling routine.
+    integer, intent(in) :: nDim
+
+    !> Truncated state for one element obtained from the modalCoeffs
+    real(kind=rk), intent(inout) :: state(:,:)
+
+    !> The number of scalar variables to convert. If nScalars is not passed
+    !! to this subroutine, all variables of argument state will be considered
+    !! by this routine.
+    integer, intent(in), optional :: nScalars
+    !--------------------------------------------------------------------------
+    select case(nDim)
+    case(1)
+      call ply_convertFromOversample_1d(modalCoeffs, poly_proj, state, nScalars)
+    case(2)
+      call ply_convertFromOversample_2d(modalCoeffs, poly_proj, state, nScalars)
+    case(3)
+      call ply_convertFromOversample_3d(modalCoeffs, poly_proj, state)
+    end select
+  end subroutine ply_convertFromOversample
+
+  !****************************************************************************!
+  !> Copy a single element state into a larger array and pad it with zeroes.
+  !!
+  !! The additional modes might be necessary for proper dealing with
+  !! nonlinear operations.
+  !! Please note, that the oversampled representation is always a Q-Space
+  !! polynomial.
+  subroutine ply_convert2oversample_3d(state, poly_proj, modalCoeffs)
     !--------------------------------------------------------------------------
     !> Description of the projection method.
     type(ply_poly_project_type), intent(in) :: poly_proj
@@ -93,7 +163,7 @@ contains
       !$OMP END SINGLE
     end if
 
-  end subroutine ply_convert2oversample
+  end subroutine ply_convert2oversample_3d
   !****************************************************************************!
 
 
@@ -104,7 +174,7 @@ contains
   !! Note, that the oversampled array, which is given as an input here is
   !! is always a Q-Polynomial representation, while the target truncated state
   !! might also be a P-Polynomial.
-  subroutine ply_convertFromOversample(modalCoeffs, poly_proj, state)
+  subroutine ply_convertFromOversample_3d(modalCoeffs, poly_proj, state)
     !--------------------------------------------------------------------------
     !> Data of the projection method
     type(ply_poly_project_type), intent(in) :: poly_proj
@@ -157,7 +227,7 @@ contains
       !$OMP END SINGLE
     end if
 
-  end subroutine ply_convertFromoversample
+  end subroutine ply_convertFromoversample_3d
   !****************************************************************************!
 
 
