@@ -74,23 +74,28 @@ def build(bld):
     ply_ppsources += bld.path.ant_glob('source/*.fpp')
     ply_sources += ply_ppsources
 
-    if bld.env.LIB_FFTW3:
-       if bld.env.LIB_FFTW3_OMP:
-          fftwdep = 'FFTW3_OMP FFTW3'
+    if bld.cmd != 'gendoxy':
+       if bld.env.LIB_FFTW3:
+          if bld.env.LIB_FFTW3_OMP:
+             fftwdep = 'FFTW3_OMP FFTW3'
+          else:
+             fftwdep = 'FFTW3'
+          bld( features = 'fc',
+               source = 'external/fftw/fftw_wrap.f90',
+               use = fftwdep,
+               target = 'fftw_mod_obj')
        else:
-          fftwdep = 'FFTW3'
-       bld( features = 'fc',
-            source = 'external/fftw/fftw_wrap.f90',
-            use = fftwdep,
-            target = 'fftw_mod_obj')
+          Logs.warn('Using the *dummy* FFTW here!')
+          bld( features = 'fc',
+               source = 'external/dummy/fftw_wrap.f90',
+               target = 'fftw_mod_obj')
+  
+       bld(
+           features = 'coco fc',
+           source = ply_sources,
+           use = ['FFTW3', 'NAG', 'tem_objs', 'fftw_mod_obj', 'aotus'],
+           target = 'ply_objs')
     else:
-       Logs.warn('Using the *dummy* FFTW here!')
-       bld( features = 'fc',
-            source = 'external/dummy/fftw_wrap.f90',
-            target = 'fftw_mod_obj')
-
-    bld(
-        features = 'coco fc',
-        source = ply_sources,
-        use = ['FFTW3', 'NAG', 'tem_objs', 'fftw_mod_obj', 'aotus'],
-        target = 'ply_objs')
+       bld(
+           features = 'coco',
+           source   = ply_ppsources)
