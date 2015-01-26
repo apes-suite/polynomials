@@ -242,32 +242,42 @@ contains
 
     nDofs = size(matrix,1)
 
-    !$OMP DO
-    do iStrip=0,nIndeps-1,vlen
+    if (nDofs > 1) then
 
-      ! Calculate the upper bound of the current strip
-      strip_ub = min(iStrip + vlen, nIndeps) - iStrip
+      !$OMP DO
+      do iStrip=0,nIndeps-1,vlen
 
-      ! Naive dense matrix vector multiply here.
-      ! Maybe use DGEMV from BLAS here instead (though not straight forward
-      ! with the memory layout used here).
-      do iDof=1,nDofs
-        do i=1,strip_ub
-          indep = iStrip + i
-          orig_off = nDofs*(indep-1)
-          res(i) = matrix(1,iDof) * original(orig_off+1)
-          do iOrig=2,nDofs-1
-            res(i) = res(i) &
-              &      + matrix(iOrig,iDof) * original(orig_off+iOrig)
+        ! Calculate the upper bound of the current strip
+        strip_ub = min(iStrip + vlen, nIndeps) - iStrip
+
+        ! Naive dense matrix vector multiply here.
+        ! Maybe use DGEMV from BLAS here instead (though not straight forward
+        ! with the memory layout used here).
+        do iDof=1,nDofs
+          do i=1,strip_ub
+            indep = iStrip + i
+            orig_off = nDofs*(indep-1)
+            res(i) = matrix(1,iDof) * original(orig_off+1)
+            do iOrig=2,nDofs-1
+              res(i) = res(i) &
+                &      + matrix(iOrig,iDof) * original(orig_off+iOrig)
+            end do
+            projected(indep + nIndeps*(iDof-1)) = res(i) &
+              &                                 + matrix(nDofs,iDof) &
+              &                                   * original(orig_Off+nDofs)
           end do
-          projected(indep + nIndeps*(iDof-1)) = res(i) &
-            &                                 + matrix(nDofs,iDof) &
-            &                                   * original(orig_Off+nDofs)
         end do
-      end do
 
-    end do
-    !$OMP END DO
+      end do
+      !$OMP END DO
+
+    else
+
+      !$OMP WORKSHARE
+      projected = matrix(nDofs,1) * original
+      !$OMP END WORKSHARE
+
+    end if
 
   end subroutine ply_l2_projection
   !****************************************************************************!
