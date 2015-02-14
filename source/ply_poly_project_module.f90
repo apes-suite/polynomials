@@ -148,6 +148,7 @@ module ply_poly_project_module
   public :: get_quadpoints_faces
   public :: get_quadpoints_faces_2d
   public :: get_quadpoints_faces_1d
+  public :: ply_prj_body_type
 
 contains
 
