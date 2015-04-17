@@ -1,0 +1,289 @@
+
+  FXTPACK: version 140715
+
+
+********** INTRODUCTION **********
+
+ FXTPACK is a set of routines for Fast Orthogonal Function Transforms.
+The current version provides transforms for Legendre Polynomials and
+Associated Legendre Functions.
+
+
+********** COMPILATION **********
+
+ The program is written in pedantic C Language, and should be compiled
+by any C compiler without difficulty.  In the makefile, there are
+several compilers and options the author used are written.
+
+ To check the compilation, run test_fxtpack without command line
+options.  It prints out several dozens of lines, and should end up
+with "- test done, no error nor warning found".
+
+
+********** PREPROCESSING **********
+
+ The fast transform algorithm requires preprocessing, which takes much
+more time than the transform.  Although it is possible to do
+preprocessing in application programs, we recommend to do
+preprocessing separately.  The preprocessed results are stored in a
+file, and application programs load it.
+
+ To make preprocessed file for Legendre Polynomial Transform upto
+degree 255 on 256 Gaussian points with precision of 1e-12, do
+
+	fxtpp_flptld 256 255 1e-12 L255.flpt
+
+The last argument specifies the name of the file.
+
+ To make preprocessed file for Associated Legendre function Transform
+of Triangular truncation of degree 170 (T170) on 256 Gaussian points
+with precision of 1e-12, do
+
+	fxtpp_faltld 256 170 1e-12 T170.falt
+
+ If you want to do preprocessing in your application, see
+fxtpp_flptld.c or fxtpp_faltld.c, or test_fxtpack.c.
+
+
+********** TRANSFORMS **********
+
+ It will be best to check sample_flptld.c for Legendre Polynomial
+Transform, and sample_faltld.c for Associated Legendre function
+Transform.  Those sample problems should be executed as 
+
+	sample_flptld L255.flpt
+
+	sample_faltld T170.falt
+
+where the arguments are the file names produced by the preprocessing.
+
+--- LINKING ---
+
+ Link the following files to your application program.
+
+ fxt_error.o fxt_file.o fxt_vecl.o fxt_vecld.o
+ fxt_sarld.o fxt_sarld_comp.o
+ fxt_faltld.o fxt_faltld_comp.o
+ fxt_flptld.o fxt_flptld_comp.o
+
+The first six files are necessary, and from the last four, you may
+discard the unnecessary pair.  (falt for Fast Associated Legendre
+Transform, and flpt for Fast Legendre Polynomial Transform)
+
+--- HEADER FILES ---
+
+ Include the following header files.
+
+#include "fxt_error.h"
+#include "fxt_faltld.h" and/or "fxt_flptld.h"
+
+--- DATA STRUCTURES ---
+
+ The data structure type for the Fast Associated Legendre function
+Transforms is "fxt_faltld", so declare
+
+  fxt_faltld *falt;
+
+Some useful fields of fxt_faltld are
+
+typedef struct {
+  long p;			/* number of points */
+  long n;			/* maximum degree */
+  double prec;			/* precision */
+
+  fxt_vecld *x;			/* Gaussian nodes */
+  fxt_vecld *w;			/* Gaussian weigths */
+
+  ...
+} fxt_faltld;
+
+where fxt_vecld represents an array of doubles:
+
+typedef struct {
+  long n;			/* length */
+  double *v;			/* vector */
+} fxt_vecld;
+
+The data structure for Fast Legendre Polynomial Transform is
+"fxt_flptld", which is very similar to "fxt_faltld".  So declare
+
+  fxt_flptld *flpt;
+
+--- LOADING PREPROCESSED DATA ---
+
+ In the program, first load the preprocessed data from a file as
+
+  falt = fxt_faltld_load("T170.falt");
+
+or
+
+  flpt = fxt_flptld_load("L255.flpt");
+
+--- ALLOCATING WORKING VECTOR ---
+
+ The fast transform algorithm requires working array.  The sizes of
+the working array can be checked as:
+
+  long wsize = fxt_faltld_wsizemax(falt);
+
+or
+
+  long wsize = fxt_flptld_wsize(flpt);
+
+Note that fxt_faltld_wsize(falt, m) requires second parameter, which
+specifies the order m.  The size given by fxt_faltld_wsizemax(falt) is
+just the maximum of the values of fxt_faltld_wsize.
+
+ The working array must be given in the data structure of fxt_vecld.
+If you newly allocate the working array, do
+
+  fxt_vecld *w = fxt_vecld_new(wsize);
+
+Otherwise you may construct fxt_vecld data structure by yourself.
+
+--- TRANSFORM ---
+
+ Both the Legendre Polynomials and the Associated Legendre functions
+are normalized so that the integration over [-1, 1] is ONE.
+
+ The Gaussian nodes are sorted upward, as falt->x or flpt->x shows.
+
+ To do the transform from the wave space to the physical space, do
+
+  fxt_faltld_evl(v, falt, m, u, w);
+
+and to do the transform from the physical space to the wave space, do
+
+  fxt_faltld_exp(u, falt, m, v, w);
+
+where the parameters are:
+
+  fxt_faltld *falt;	/* fast transform data structure */
+  long m;		/* the order parameter */
+  fxt_vecld *u;		/* vector of wave coefficients */
+  fxt_vecld *v;		/* vector of values on the Gaussian points */
+  fxt_vecld *w;		/* the working array */
+
+If you have several vectors to transform, it is recommended to
+transform all vectors for a value of m, and then to change m.
+
+ Transforms of Legendre Polynomials are, similarly,
+
+  fxt_flptld_evl(v, flpt, u, w);
+
+and
+
+  fxt_flptld_exp(u, flpt, v, w);
+
+ The length of u can be shorter than the expected value (zeros are
+filled for unspecified parts), but the length of v must match.
+
+--- ERRORS ---
+
+ The errors observed in the functions of FXTPACK are saved in an
+internal variable.  As is defined in fxt_util_error.h, there are five
+levels of errors:
+
+#define FXT_ERROR_CLEAR  0	/* no error, normal state */
+#define FXT_ERROR_WARN   1	/* warning */
+#define FXT_ERROR_USAGE  2	/* erroneous usage */
+#define FXT_ERROR_FXTBUG 3	/* bug of the fxtpack */
+#define FXT_ERROR_SYSTEM 4  	/* system error (malloc fail etc) */
+
+ The current error status can be checked by
+
+  err = fxt_error_level();
+
+You should think that if the error level is higher than
+FXT_ERROR_WARN, then the previously called functions terminate
+abnormally.
+
+--- DEALLOCATION ---
+
+ If you want to deallocate data structure, call
+
+  fxt_faltld_del(falt);
+  fxt_flptld_del(flpt);
+  fxt_vecld_del(w);
+
+Note that these routines assume that the data structures are allocated
+via fxt_faltld_load, fxt_flptld_load, or fxt_vecld_new.
+
+
+********** LIMITATIONS and BUGS **********
+
+ The following features will be provided in some future versions:
+
+(1) Transforms by polynomials/functions normalized to two.
+(2) Gaussian nodes sorted downward (from 1 to -1).
+(3) Transforms by differentiated functions.
+(4) FORTRAN routines.
+
+Yes, it is also very important to write a more friendly document for
+the library.  FXTPACK includes several useful routines, but they are
+not documented.
+
+ Sometimes the preprocessing program fails with the message "precision
+unattained".  I could not remove this error: FXTPACK evaluates errors
+in 2-norm, and uses the power method to evaluate 2-norms, but one
+cannot remove very small probability that the power method converges
+to another value than the largest eigenvalue.  Perhaps it will be
+resolved by setting another value for the seed of the random number
+generator (FXTPACK uses the standard random()).  However you can
+prohibit the preprocessing program from aborting by setting 0 to the
+macro DISALLOWHIGHERROR defined in fxt_config.h, and then the
+preprocessing program may generate results larger error than you have
+specified.
+
+ Anyway, the preprocessor generate results with larger error than the
+specified precision, if it seems to be unavoidable from the round-off
+errors.
+
+ Of course, there may remain bugs.
+
+
+********** REFERENCES **********
+
+ The first version of the fast transform algorithm was published in
+
+[1] R. Suda, M. Takami, "A Fast Spherical Harmonics Transform
+Algorithm", Math. Comp., 71-238, Apr. 2002, pp.703--715.
+
+This version of algorithm was implemented as FLTSS,
+and some results of FLTSS was published as
+
+[2] R. Suda, "Fast spherical harmonic transform routine FLTSS applied 
+to the shallow water test set", Mon. Wea. Rev. Vol. 133, No. 3,
+Mar. 2005, pp. 634--648.
+
+ The new algorithm implemented in FXTPACK is reported in
+
+[3] R. SUda, "Fast Spherical Harmonic Transform Algorithm based on 
+Generalized Fast Multiple Method", RIMS Kokyuroku vol 1606,
+pp. 18-29, Jun. 2008, RIMS, Kyoto University.
+
+********** CONDITIONS **********
+
+Anyone can use FXTPACK in any software, and anyone can modify the
+source files.
+
+When you publish your software that uses FXTPACK or its modification, 
+please mention that FXTPACK developed by Reiji Suda is used, in the 
+documentation.
+
+When you publish your paper of your research that uses FXTPACK, 
+please refer the paper [1] (and [3]).
+
+********** AUTHOR **********
+
+Reiji SUDA
+Department of Computer Science,
+Graduate School of Information Science and Technology,
+The University of Tokyo
+reiji@is.s.u-tokyo.ac.jp
+
+This work is supported by "An Evolutionary Approach to Construction 
+of a Software Development Environment for Massively-Parallel 
+Computing Systems", CREST, JST.
+
+Any comments are welcome.
