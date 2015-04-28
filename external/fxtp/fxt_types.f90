@@ -1,6 +1,6 @@
 module fxt_types
   use, intrinsic :: iso_c_binding
-	IMPLICIT NONE	
+  IMPLICIT NONE
   type, bind(c) :: fxt_vecld
     integer(c_long) :: n
     integer(c_long) :: v
