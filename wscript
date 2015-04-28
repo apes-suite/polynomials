@@ -63,6 +63,9 @@ def configure(conf):
        Logs.warn('You will not be able to use the FPT with the MODG scheme!')
        Logs.warn('')
 
+    # Check for m lib (necessary for FXTP):
+    conf.check_cc(lib='m', uselib_store='MATH')
+
 
 
 def build(bld):
@@ -73,6 +76,87 @@ def build(bld):
     ply_ppsources = bld.path.ant_glob('source/fpt/*.fpp')
     ply_ppsources += bld.path.ant_glob('source/*.fpp')
     ply_sources += ply_ppsources
+
+    #FXTP Sources
+    fxtp_wrap_sources = ['external/fxtp/fxt_faltld_binding.f90',
+                    'external/fxtp/fxt_flptld_binding.f90',
+		    'external/fxtp/fxt_types.f90']
+
+    fxtp_sources = ['fxt_faltld.c',
+		'fxt_faltld_comp.c',
+		'fxt_faltld_preproc.c',
+		'fxt_file.c',
+		'fxt_flptld_comp.c', 
+		'fxt_flptld_preproc.c',
+		'fxt_fmmld.c',
+		'fxt_fmmld_estimate.c',
+		'fxt_fmmld_evaluate.c',
+		'fxt_fmmld_evl.c',
+		'fxt_fmmld_exp.c',
+		'fxt_fmmld_lagld.c',
+		'fxt_fmmld_locexpmat.c',
+		'fxt_fmmld_matrix.c',
+		'fxt_fmmld_mulexpmat.c',
+		'fxt_fmmld_network.c',
+		'fxt_fmmld_preproc.c',
+		'fxt_fmmld_regions.c',
+		'fxt_fmmld_scalefmm.c',
+		'fxt_fmmld_scalevec.c',
+		'fxt_fxtld.c',
+		'fxt_fxtld_amat.c',
+		'fxt_fxtld_comp.c',
+		'fxt_fxtld_comp.c',
+		'fxt_fxtld_div.c',
+		'fxt_fxtld_fmm.c',
+		'fxt_fxtld_info.c',
+		'fxt_fxtld_lagld.c',
+		'fxt_fxtld_make.c',
+		'fxt_fxtld_scale.c',
+		'fxt_lagld.c',
+		'fxt_lagld_comp.c',
+		'fxt_lagld_drop.c',
+		'fxt_lagld_normal.c',
+		'fxt_lagld_oper.c',
+		'fxt_math_gaussll.c',
+		'fxt_math_legendrell.c',
+		'fxt_math_lsqrt.c',
+		'fxt_matld.c',
+		'fxt_matld_drop.c',
+		'fxt_matld_glq.c',
+		'fxt_matld_ipstab.c',
+		'fxt_matld_lagld.c',
+		'fxt_matld_lowrank.c',
+		'fxt_matld_vecld.c',
+		'fxt_matll.c',
+		'fxt_matll_drop.c',
+		'fxt_matll_ipstab.c',
+		'fxt_sarld.c',
+		'fxt_sarld_comp.c',
+		'fxt_sarld_error.c',
+		'fxt_sarld_lagld.c',
+		'fxt_sarld_scale.c',
+		'fxt_vecl.c',
+		'fxt_vecld.c',
+		'fxt_vecll.c',
+		'fxtpp_faltld.c',
+		'fxtpp_flptld.c',
+		'sample_faltld.c',
+		'sample_flptld.c']
+    
+    for i_source in range(0, len(fxtp_sources)):
+       fxtp_sources[i_source] = 'external/fxtp/fxtpack140715/' + fxtp_sources[i_source]
+
+    bld( features = 'c',
+         source = fxtp_sources, 
+         use = ['MATH'],       
+         includes = 'external/fxtp/fxtpack140715',
+         target = 'fxtp_obj')
+
+    bld( features = 'c',
+         source = fxtp_wrap_sources,
+         use = ['MATH'],
+         includes = 'external/fxtp/fxtpack140715',
+         target = 'fxtp_wrap_obj')
 
     if bld.cmd != 'gendoxy':
        if bld.env.LIB_FFTW3:
@@ -99,3 +183,5 @@ def build(bld):
        bld(
            features = 'coco',
            source   = ply_ppsources)
+
+
