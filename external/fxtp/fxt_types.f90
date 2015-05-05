@@ -24,7 +24,7 @@ module fxt_types
     real(c_double) :: prec
     type(fxt_vecld) :: x
     type(fxt_vecld) :: w
-    type(falt_alt) :: alt
+  !  type(_alt) :: alt  ?
   end type fxt_faltld
 
 end module fxt_types

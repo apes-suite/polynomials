@@ -80,7 +80,9 @@ def build(bld):
     #FXTP Sources
     fxtp_wrap_sources = ['external/fxtp/fxt_faltld_binding.f90',
                     'external/fxtp/fxt_flptld_binding.f90',
-		    'external/fxtp/fxt_types.f90']
+		    'external/fxtp/fxt_types.f90',
+                    'external/fxtp/fxt_vecl.f90',
+                    'external/fxtp/fxt_vecld.f90']
 
     fxtp_sources = ['fxt_faltld.c',
 		'fxt_faltld_comp.c',

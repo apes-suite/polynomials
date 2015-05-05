@@ -2,11 +2,7 @@ module fxt_flptld_binding
   use, intrinsic :: iso_c_binding
   IMPLICIT NONE 
 
-
-  
- 
- 
-  interface
+interface
     subroutine fxt_flptld_preproc(p, n, prec, fname) bind (c)
       use, intrinsic :: iso_c_binding
       use fxt_types
@@ -21,7 +17,7 @@ module fxt_flptld_binding
     subroutine fxt_flptld_del(flpt) bind (c)
       use, intrinsic :: iso_c_binding
       use fxt_types
-      type(fxt_flptld) :: flpt
+      type(c_ptr) :: flpt             !fxt_flptld
     end subroutine fxt_flptld_del
   
     ! size of working array
@@ -29,7 +25,7 @@ module fxt_flptld_binding
     integer(c_long) function fxt_flptld_wsize(flpt) bind (c)
       use, intrinsic :: iso_c_binding
       use fxt_types
-      type(fxt_flptld) :: flpt
+      type(c_ptr) :: flpt              !fxt_flptld
     end function fxt_flptld_wsize
    
     ! evaluate fast Legendre Polynomial transform 
@@ -38,8 +34,8 @@ module fxt_flptld_binding
     subroutine fxt_flptld_evl(v, flpt, u, w) bind (c)
       use, intrinsic :: iso_c_binding
       use fxt_types
-      type(fxt_vecld) :: v, u, w
-      type(fxt_flptld) :: flpt
+      type(c_ptr) :: v, u, w              ! fxt_vecld
+      type(c_ptr) :: flpt               ! fxt_flptld
     end subroutine fxt_flptld_evl
   
     ! expand fast Legendre Polynomial transform 
@@ -48,8 +44,8 @@ module fxt_flptld_binding
     subroutine fxt_flptld_exp(u, flpt, v, w) bind(c)
       use, intrinsic :: iso_c_binding
       use fxt_types
-      type(fxt_vecld) ::  u, v, w
-      type(fxt_flptld) :: flpt
+      type(c_ptr) ::  u, v, w        ! fxt_vecld
+      type(c_ptr) :: flpt            ! fxt_flptld
     end subroutine fxt_flptld_exp
   end interface
   

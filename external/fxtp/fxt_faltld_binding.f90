@@ -4,24 +4,20 @@ module fxt_faltld_binding
   IMPLICIT NONE 
 
 interface
-  subroutine fxt_faltld_preproc(p, n, mv, prec, fname) bind (c)
-    use, intrinsic :: iso_c_binding
-    use fxt_types
-    integer(c_long), value :: p
-    integer(c_long), value :: n
-    real(c_double), value :: prec
-    character(c_char) :: fname
-    type(fxt_vecl), value :: mv 
-  end subroutine fxt_faltld_preproc
-
-  ! fxt faltld*
+ 
+!  /*** load fast spherical harmonic transform ***/
+!  fxt_faltld* fxt_faltld_load(char *fname)
+   subroutine fxt_faltld_load(fname) bind (c)
+     use, intrinsic :: iso_c_binding
+     character(c_char) :: fname
+   end subroutine fxt_faltld_load
  
   ! deallocate fast spherical harmonic transform
   ! void fxt_faltld_del(fxt_faltld *falt);
   subroutine fxt_faltld_del(falt) bind (c)
     use, intrinsic :: iso_c_binding
     use fxt_types
-   type(fxt_faltld), value :: falt
+   type(c_ptr), value :: falt           !fxt_faltld
   end subroutine fxt_faltld_del
 
   ! size of working array
@@ -29,7 +25,7 @@ interface
   integer(c_long) function fxt_faltld_wsize(falt, m) bind (c)
     use, intrinsic :: iso_c_binding
     use fxt_types
-    type(fxt_faltld) :: falt
+    type(c_ptr) :: falt            !fxt_faltld
     integer(c_long), value :: m
   end function fxt_faltld_wsize
 
@@ -38,7 +34,7 @@ interface
   integer(c_long) function fxt_faltld_wsizemax(falt) bind (c)
      use, intrinsic :: iso_c_binding
      use fxt_types
-     type(fxt_faltld) :: falt
+     type(c_ptr) :: falt          !fxt_faltld
   end function fxt_faltld_wsizemax
 
   ! /*** evaluate fast spherical harmonic transform ***/
@@ -48,8 +44,8 @@ interface
      use, intrinsic :: iso_c_binding
      use fxt_types
      ! type(c_ptr), value :: v, falt, u, w
-     type(fxt_vecld) :: u, v, w
-     type(fxt_faltld) :: falt
+     type(c_ptr) :: u, v, w                 !fxt_vecld
+     type(c_ptr) :: falt                   !fxt_faltld 
      integer(c_long), value :: m
   end subroutine fxt_faltld_evl
 
@@ -59,11 +55,10 @@ interface
   subroutine fxt_faltld_exp(u, falt, m, v, w) bind(c)
      use, intrinsic :: iso_c_binding
      use fxt_types
-     type(fxt_vecld) :: u, v, w
-     type(fxt_faltld) :: falt
+     type(c_ptr) :: u, v, w            !fxt_vecld 
+     type(c_ptr) :: falt              !fxt_faltld
      integer(c_long), value :: m
   end subroutine fxt_faltld_exp
-
 
 end interface
 
