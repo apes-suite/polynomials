@@ -110,7 +110,6 @@ def build(bld):
 		'fxt_fxtld.c',
 		'fxt_fxtld_amat.c',
 		'fxt_fxtld_comp.c',
-		'fxt_fxtld_comp.c',
 		'fxt_fxtld_div.c',
 		'fxt_fxtld_fmm.c',
 		'fxt_fxtld_info.c',
