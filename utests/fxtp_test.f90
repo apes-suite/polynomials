@@ -1,11 +1,13 @@
 program test_fxtd
   use iso_c_binding
-  use fxt_flptld_binding
+  use fxt_vecld
   use fxt_faltld_binding
+
   implicit none
 
   character(c_char) :: fname
-  integer(c_long) :: m
+  integer(c_long) :: m, wsize
+  type(c_ptr) :: falt
   type(c_ptr) :: u, v, w
   
   ! load fast spherical harmonic transform

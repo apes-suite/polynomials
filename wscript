@@ -70,6 +70,7 @@ def configure(conf):
 
 def build(bld):
     from waflib import Logs
+    from waflib.extras.utest_results import utests
 
     ply_sources = bld.path.ant_glob('source/fpt/*.f90')
     ply_sources += bld.path.ant_glob('source/*.f90')
@@ -88,6 +89,8 @@ def build(bld):
 		'fxt_faltld_comp.c',
 		'fxt_faltld_preproc.c',
 		'fxt_file.c',
+		'fxt_error.c',
+                'fxt_flptld.c',
 		'fxt_flptld_comp.c', 
 		'fxt_flptld_preproc.c',
 		'fxt_fmmld.c',
@@ -139,26 +142,11 @@ def build(bld):
 		'fxt_sarld_scale.c',
 		'fxt_vecl.c',
 		'fxt_vecld.c',
-		'fxt_vecll.c',
-		'fxtpp_faltld.c',
-		'fxtpp_flptld.c',
-		'sample_faltld.c',
-		'sample_flptld.c']
+		'fxt_vecll.c']
     
     for i_source in range(0, len(fxtp_sources)):
        fxtp_sources[i_source] = 'external/fxtp/fxtpack140715/' + fxtp_sources[i_source]
 
-    bld( features = 'c',
-         source = fxtp_sources, 
-         use = ['MATH'],       
-         includes = 'external/fxtp/fxtpack140715',
-         target = 'fxtp_obj')
-
-    bld( features = 'c',
-         source = fxtp_wrap_sources,
-         use = ['MATH'],
-         includes = 'external/fxtp/fxtpack140715',
-         target = 'fxtp_wrap_obj')
 
     if bld.cmd != 'gendoxy':
        if bld.env.LIB_FFTW3:
@@ -176,14 +164,28 @@ def build(bld):
                source = 'external/dummy/fftw_wrap.f90',
                target = 'fftw_mod_obj')
   
+       bld( features = 'c',
+            source = fxtp_sources,
+            use = ['MATH'],
+            includes = 'external/fxtp/fxtpack140715',
+            target = 'fxtp_obj')
+
+       bld( features = 'c',
+            source = fxtp_wrap_sources,
+            use = ['MATH'],
+            includes = 'external/fxtp/fxtpack140715',
+            target = 'fxtp_wrap_obj')
+
        bld(
            features = 'coco fc',
            source = ply_sources,
            use = ['FFTW3', 'NAG', 'tem_objs', 'fftw_mod_obj', 'aotus'],
            target = 'ply_objs')
+
+       test_dep = ['tem_objs', 'ply_objs', 'fxtp_wrap_obj', 'fxtp_obj']
+       utests(bld = bld, use = test_dep)
+
     else:
        bld(
            features = 'coco',
            source   = ply_ppsources)
-
-

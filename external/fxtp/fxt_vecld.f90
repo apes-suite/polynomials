@@ -10,9 +10,8 @@ interface
     use, intrinsic :: iso_c_binding
     integer(c_long) :: size
   end function fxt_vecld_new
-
-
 end interface
+
 end module fxt_vecld
 
 ! interface

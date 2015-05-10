@@ -7,10 +7,11 @@ interface
  
 !  /*** load fast spherical harmonic transform ***/
 !  fxt_faltld* fxt_faltld_load(char *fname)
-   subroutine fxt_faltld_load(fname) bind (c)
+   function fxt_faltld_load(fname) result(falt) bind(c)
      use, intrinsic :: iso_c_binding
      character(c_char) :: fname
-   end subroutine fxt_faltld_load
+     type(c_ptr) :: falt
+   end function fxt_faltld_load
  
   ! deallocate fast spherical harmonic transform
   ! void fxt_faltld_del(fxt_faltld *falt);
