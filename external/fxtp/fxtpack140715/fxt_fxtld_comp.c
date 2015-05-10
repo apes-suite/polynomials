@@ -1,11 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <malloc.h>
+#include <stdlib.h>
 #include <math.h>
 
 #include "fxt_error.h"
-#include "fxt_fxtld.h"
 #include "fxt_fxtld_loc.h"
+#include "fxt_fxtld.h"
 
 /*********************************************************************
   FXTPACK
