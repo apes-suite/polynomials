@@ -5,23 +5,23 @@ program test_fxtd
   implicit none
 
   character(c_char) :: fname
-  integer(c_long) :: m, wsize
-  type(c_ptr) :: falt
+  integer(c_long) :: wsize
+  type(c_ptr) :: flpt
   type(c_ptr) :: u, v, w
   
   ! load fast spherical harmonic transform
-  falt = fxt_faltld_load(fname) 
+  flpt = fxt_flptld_init(10_c_long, 9_c_long, epsilon(1.0_c_double)) 
   
   ! size of working array
-  wsize = fxt_faltld_wsizemax(falt)
+  wsize = fxt_flptld_wsize(flpt)
 
   ! create a new vector (working vector)
   w = fxt_vecld_new(wsize)
    
   ! evaluate fast spherical harmonic transform
-  call fxt_faltld_evl(v, falt, m, u, w)  
+  call fxt_flptld_evl(v, flpt, u, w)  
 
   ! expand fast spherical harmonic transform
-  call fxt_faltld_exp(u, falt, m, v, w)
+  call fxt_flptld_exp(u, flpt, v, w)
 
 end program test_fxtd
