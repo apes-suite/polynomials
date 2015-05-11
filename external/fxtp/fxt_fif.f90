@@ -121,7 +121,7 @@ module fxt_fif
 
     type(c_ptr) function fxt_vecld_new(size) bind(c)
       use, intrinsic :: iso_c_binding
-      integer(c_long) :: size
+      integer(c_long), value :: size
     end function fxt_vecld_new
     ! ------------------------------------------------------------------------ !
 
