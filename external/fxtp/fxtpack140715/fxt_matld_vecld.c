@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdlib.h>
 
 #include "fxt_error.h"
 #include "fxt_matld.h"
