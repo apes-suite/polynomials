@@ -1,7 +1,6 @@
 program test_fxtd
   use iso_c_binding
-  use fxt_vecld
-  use fxt_faltld_binding
+  use fxt_fif
 
   implicit none
 
