@@ -30,6 +30,9 @@ typedef struct {
 /*** create fast Legendre polynomial transform preprocessed file ***/
 void fxt_flptld_preproc(long p, long n, double prec, char *fname);
 
+/*** create fast Legendre polynomial transform data structure ***/
+fxt_flptld* fxt_flptld_init(long p, long n, double prec);
+
 /*** load fast Legendre polynomial transform ***/
 fxt_flptld* fxt_flptld_load(char *fname);
 

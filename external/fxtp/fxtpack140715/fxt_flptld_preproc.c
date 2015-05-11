@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdlib.h>
 #include <string.h>
 
 #include "fxt_error.h"
@@ -31,8 +30,8 @@
 static double res_prec;
 static long res_mflop;
 
-static void create_legendre(int odd, fxt_vecll *x, fxt_vecll *w,
-			    long n, double prec, FILE *fout) {
+fxt_sarld* create_leg_half(int odd, fxt_vecll *x, fxt_vecll *w,
+			   long n, double prec) {
   fxt_matll *lg;		/* the Legendre matrix */
   fxt_vecll *xx, *ww;		/* halved vectors */
   fxt_matld *dlg;		/* double-valued matrix */
@@ -44,79 +43,79 @@ static void create_legendre(int odd, fxt_vecll *x, fxt_vecll *w,
 
   /* skip odd part for the 'last' order */
   if (odd && 0 == n)
-    return;
+    return NULL;
 
   /* get Legendre function matrix */
   lg = fxt_legendre_matll(x, 0, n, odd);
   if (fxt_error_raise() > FXT_ERROR_WARN)
-    return;
+    return NULL;
 
   /* get half of the Gaussian points */
   xx = fxt_vecll_clone(x, 0, lg->nrow - 1);
   if (fxt_error_raise() > FXT_ERROR_WARN)
-    return;
+    return NULL;
 
   /* functions are polynomials of x**2 */
   fxt_vecll_sq(xx);
   if (fxt_error_raise() > FXT_ERROR_WARN)
-    return;
+    return NULL;
 
   /* negate for upward sorting */
   fxt_vecll_neg(xx);
   if (fxt_error_raise() > FXT_ERROR_WARN)
-    return;
+    return NULL;
 
   /* get the halved Gaussian weight vector */
   ww = fxt_vecll_clone(w, 0, lg->nrow - 1);
   if (fxt_error_raise() > FXT_ERROR_WARN)
-    return;
+    return NULL;
 
   /* double the value of duplicated points */
   fxt_vecll_scale(ww, 0, w->n / 2 - 1, 2.0L);
   if (fxt_error_raise() > FXT_ERROR_WARN)
-    return;
+    return NULL;
 
   /* square-roots, being multiplied twice */
   fxt_vecll_sqrt(ww);
   if (fxt_error_raise() > FXT_ERROR_WARN)
-    return;
+    return NULL;
 
   /* scale the Legendre matrix */
   fxt_matll_scalerow(lg, ww);
   if (fxt_error_raise() > FXT_ERROR_WARN)
-    return;
+    return NULL;
 
   /* create fxt: the main part */
   fxt = fxtld_from_matll(lg, xx, prec);
   if (fxt_error_raise() > FXT_ERROR_WARN)
-    return;
+    return NULL;
 
   /* get the double-valued matrix */
   dlg = fxt_matll_to_matld(lg);
   if (fxt_error_raise() > FXT_ERROR_WARN)
-    return;
+    return NULL;
 
   /* convert to linear algorithm graph */
   lag = fxtld_get_lagld(fxt);
   if (fxt_error_raise() > FXT_ERROR_WARN)
-    return;
+    return NULL;
 
   /* optimize as for the precision */
   fxt_matld_lagld_opt(lag, dlg, prec);
   if (fxt_error_raise() > FXT_ERROR_WARN)
-    return;
+    return NULL;
 
   /* check error */
   err = fxt_matld_lagld_error(lag, dlg, POWERPREC, 0.0);
   if (fxt_error_raise() > FXT_ERROR_WARN)
-    return;
+    return NULL;
 
   if (err > prec) {
 #if DISALLOWHIGHERROR
     if (err > prec + 1e-16 * lg->nrow) {
       fxt_error_set(FXT_ERROR_FXTBUG,
 		    "fxt_flptld_preproc: precision unattained\n");
-      return;
+      return NULL;
     } else
 #endif
       fxt_error_set(FXT_ERROR_WARN,
@@ -129,36 +128,94 @@ static void create_legendre(int odd, fxt_vecll *x, fxt_vecll *w,
   /* convert to simple array representation */
   ar = fxt_sarld_from_lagld(lag);
   if (fxt_error_raise() > FXT_ERROR_WARN)
-    return;
+    return NULL;
 
   /* descale sarld */
   dw = fxt_vecll_to_vecld(ww);
   if (fxt_error_raise() > FXT_ERROR_WARN)
-    return;
+    return NULL;
 
   fxt_vecld_einv(dw);
   if (fxt_error_raise() > FXT_ERROR_WARN)
-    return;
+    return NULL;
 
   fxt_sarld_scalerow(ar, dw);
   if (fxt_error_raise() > FXT_ERROR_WARN)
-    return;
+    return NULL;
 
   fxt_vecld_del(dw);
 
-  /* save the results */
-  fxt_sarld_save(fout, ar);
-  if (fxt_error_raise() > FXT_ERROR_WARN)
-    return;
 
   /* deallocate everything */
-  fxt_sarld_del(ar);
   fxt_lagld_del(lag);
   fxt_matld_del(dlg);
   fxtld_del(fxt);
   fxt_vecll_del(ww);
   fxt_vecll_del(xx);
   fxt_matll_del(lg);
+
+  return ar;
+}
+
+static void create_legendre(int odd, fxt_vecll *x, fxt_vecll *w,
+			    long n, double prec, FILE *fout) {
+  fxt_sarld *ar;		/* simple array representation */
+  double err;
+
+
+  ar = create_leg_half(odd, x, w, n, prec);
+
+  /* save the results */
+  fxt_sarld_save(fout, ar);
+  if (fxt_error_raise() > FXT_ERROR_WARN)
+    return;
+}
+
+// Initialize a flptld data structure
+fxt_flptld* fxt_flptld_init(long p, long n, double prec) {
+  fxt_flptld *flpt;
+  fxt_vecll *x, *w;
+
+  /* check input */
+  if (p < n) {
+    fxt_error_set(FXT_ERROR_USAGE,
+		  "fxt_flptld_init: irregal degree n\n");
+    return;
+  }
+
+  /* allocate body */
+  flpt = (fxt_flptld*) malloc(sizeof(fxt_flptld));
+  if (flpt == NULL) {
+    fxt_error_set(FXT_ERROR_SYSTEM,
+		  "fxt_flptld_load: allocation failed\n");
+    return NULL;
+  }
+
+  flpt->p = p;
+  flpt->n = n;
+  flpt->prec = prec;
+
+  fxt_gauss_vecll(p, &x, &w);
+  if (fxt_error_raise() > FXT_ERROR_WARN)
+    return;
+
+  /* Gaussian points */
+  flpt->x = fxt_vecll_to_vecld(x);
+
+  /* Gaussian weights */
+  flpt->w = fxt_vecll_to_vecld(w);
+
+  /* create even half */
+  flpt->ear = create_leg_half(0, x, w, n, prec);
+
+  /* create odd half */
+  flpt->oar = create_leg_half(1, x, w, n, prec);
+
+  /* deallocate vectors */
+  fxt_vecll_del(w);
+  fxt_vecll_del(x);
+
+  return flpt;
 }
 
 void fxt_flptld_preproc(long p, long n, double prec, char *fname) {
