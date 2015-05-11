@@ -89,7 +89,7 @@ module fxt_fif
     ! long fxt_flptld_wsize(fxt_flptld *flpt);
     integer(c_long) function fxt_flptld_wsize(flpt) bind(c)
       use, intrinsic :: iso_c_binding
-      type(c_ptr) :: flpt              !fxt_flptld
+      type(c_ptr), value :: flpt              !fxt_flptld
     end function fxt_flptld_wsize
 
     ! evaluate fast Legendre Polynomial transform
@@ -97,8 +97,8 @@ module fxt_fif
     !                     fxt_vecld *u, fxt_vecld *w);
     subroutine fxt_flptld_evl(v, flpt, u, w) bind(c)
       use, intrinsic :: iso_c_binding
-      type(c_ptr) :: v, u, w              ! fxt_vecld
-      type(c_ptr) :: flpt               ! fxt_flptld
+      type(c_ptr), value :: v, u, w              ! fxt_vecld
+      type(c_ptr), value :: flpt               ! fxt_flptld
     end subroutine fxt_flptld_evl
 
     ! expand fast Legendre Polynomial transform
@@ -106,8 +106,8 @@ module fxt_fif
     !                     fxt_vecld *v, fxt_vecld *w);
     subroutine fxt_flptld_exp(u, flpt, v, w) bind(c)
       use, intrinsic :: iso_c_binding
-      type(c_ptr) ::  u, v, w        ! fxt_vecld
-      type(c_ptr) :: flpt            ! fxt_flptld
+      type(c_ptr), value ::  u, v, w        ! fxt_vecld
+      type(c_ptr), value :: flpt            ! fxt_flptld
     end subroutine fxt_flptld_exp
     ! ------------------------------------------------------------------------ !
 

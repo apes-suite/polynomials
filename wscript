@@ -79,7 +79,8 @@ def build(bld):
     ply_sources += ply_ppsources
 
     #FXTP Sources
-    fxtp_wrap_sources = ['external/fxtp/fxt_fif.f90']
+    fxtp_wrap_sources = ['external/fxtp/fxt_fif.f90',
+                         'external/fxtp/fxt_fwrap.f90']
 
     fxtp_sources = ['fxt_faltld.c',
 		'fxt_faltld_comp.c',
@@ -166,9 +167,14 @@ def build(bld):
             target = 'fxtp_obj')
 
        bld( features = 'c',
-            source = fxtp_wrap_sources,
+            source = ['external/fxtp/fxt_fwrapper.c'],
             use = ['MATH'],
             includes = 'external/fxtp/fxtpack140715',
+            target = 'fxtp_wrapper')
+
+       bld( features = 'fc',
+            source = fxtp_wrap_sources,
+            use = ['MATH'],
             target = 'fxtp_wrap_obj')
 
        bld(
@@ -177,7 +183,7 @@ def build(bld):
            use = ['FFTW3', 'NAG', 'tem_objs', 'fftw_mod_obj', 'aotus'],
            target = 'ply_objs')
 
-       test_dep = ['tem_objs', 'ply_objs', 'fxtp_wrap_obj', 'fxtp_obj']
+       test_dep = ['tem_objs', 'ply_objs', 'fxtp_wrap_obj', 'fxtp_obj', 'fxtp_wrapper']
        utests(bld = bld, use = test_dep)
 
     else:
