@@ -1,3 +1,6 @@
 This project implements basic to work with orthogonal polynomials.
 It does not work on its own, but rather needs to be included in
 other projects, which also include treelm.
+
+We are now including FXTPACK, and are working on integrating it to allow a
+fast polynomial transformation directly from Legendre modes to Legendre nodes.
