@@ -5,12 +5,13 @@ program test_fxtd
 
   implicit none
   integer, parameter :: rk = selected_real_kind(15)
-
+ 
   character(c_char) :: fname
   integer(c_long) :: wsize
-  type(c_ptr) :: flpt
-  type(c_ptr) :: w
-
+  ! type(c_ptr) :: flpt
+  ! type(c_ptr) :: w
+  type(fxtf_flptld) :: flpt
+ 
   real(kind=c_double) :: v_orig(10)
   real(kind=c_double), target :: u(10)
   real(kind=c_double), target :: v(10)
@@ -38,7 +39,7 @@ program test_fxtd
   n = 9
   prec = 1.0
 
-  call fxtf_flptld_init(p, n, prec, flpt, w)
+  call fxtf_flptld_init(p, n, prec, flpt)
   
   call random_number(v_orig)
   write(*,*) 'orig :', v_orig
@@ -46,11 +47,11 @@ program test_fxtd
 
   ! there ....
   ! transform from physical to wave space
-  call fxtf_flptld_exp(c_loc(u), 10_c_int, flpt, c_loc(v), 10_c_int, w)
+  call fxtf_flptld_exp(c_loc(u), 10_c_int, flpt%flpt, c_loc(v), 10_c_int, flpt%w)
 
   ! ...and back again
   ! transform from wave to physical space
-  call fxtf_flptld_evl(c_loc(v), 10_c_int, flpt, c_loc(u), 10_c_int, w)  
+  call fxtf_flptld_evl(c_loc(v), 10_c_int, flpt%flpt, c_loc(u), 10_c_int, flpt%w)  
   write(*,*) 'trafo:', v
   write(*,*) 'Should be the same as orig.'
 
