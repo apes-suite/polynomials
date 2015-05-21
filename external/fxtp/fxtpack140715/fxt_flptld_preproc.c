@@ -180,7 +180,7 @@ fxt_flptld* fxt_flptld_init(long p, long n, double prec) {
   if (p < n) {
     fxt_error_set(FXT_ERROR_USAGE,
 		  "fxt_flptld_init: irregal degree n\n");
-    return;
+    return NULL;
   }
 
   /* allocate body */
@@ -197,7 +197,7 @@ fxt_flptld* fxt_flptld_init(long p, long n, double prec) {
 
   fxt_gauss_vecll(p, &x, &w);
   if (fxt_error_raise() > FXT_ERROR_WARN)
-    return;
+    return NULL;
 
   /* Gaussian points */
   flpt->x = fxt_vecll_to_vecld(x);
