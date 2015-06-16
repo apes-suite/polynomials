@@ -48,46 +48,52 @@ contains
       &                        tree     = tree,           &
       &                        coloring = coloring        )
 
-    call tem_open_distconf( L        = conf,             &
-      &                     filename = trim(configfile), &
-      &                     proc     = proc              )
+    ! Only need to do anything, if there is actually a subresolution property.
+    ! Checking this via the association status of the property header.
+    if (associated(me%subres_prop%header)) then
 
-    call aot_get_val( L       = conf,          &
-      &               key     = 'polydegree',  &
-      &               val     = me%polydegree, &
-      &               ErrCode = iError         )
+      call tem_open_distconf( L        = conf,             &
+        &                     filename = trim(configfile), &
+        &                     proc     = proc              )
 
-    if (btest(iError, aoterr_Fatal)) then
-      write(logUnit(1),*) &
-        &  'FATAL Error occured, while retrieving subresolution polydegree'
-      call tem_abort()
+      call aot_get_val( L       = conf,          &
+        &               key     = 'polydegree',  &
+        &               val     = me%polydegree, &
+        &               ErrCode = iError         )
+
+      if (btest(iError, aoterr_Fatal)) then
+        write(logUnit(1),*) &
+          &  'FATAL Error occured, while retrieving subresolution polydegree'
+        call tem_abort()
+      end if
+
+      call aot_get_val( L       = conf,        &
+        &               key     = 'polyspace', &
+        &               val     = polyspace,   &
+        &               default = 'q',         &
+        &               ErrCode = iError       )
+
+      select case(upper_to_lower(trim(polyspace)))
+      case('q')
+        me%basisType = Q_space
+
+      case('p')
+        me%basisType = P_space
+
+      case default
+        write(logunit(1),*) 'ERROR in subresolution loading!'
+        write(logunit(1),*) 'Unknown polyspace ', trim(polyspace)
+        write(logUnit(1),*) 'Supported are:'
+        write(logUnit(1),*) '* Q (quadratic with i,j,k <= maxDegree)'
+        write(logUnit(1),*) '* P (with i+j+k <= maxDegree)'
+        write(logUnit(1),*) 'Stopping....'
+        call tem_abort()
+
+      end select
+
+      call close_config(conf)
+
     end if
-
-    call aot_get_val( L       = conf,        &
-      &               key     = 'polyspace', &
-      &               val     = polyspace,   &
-      &               default = 'q',         &
-      &               ErrCode = iError       )
-
-    select case(upper_to_lower(trim(polyspace)))
-    case('q')
-      me%basisType = Q_space
-
-    case('p')
-      me%basisType = P_space
-
-    case default
-      write(logunit(1),*) 'ERROR in subresolution loading!'
-      write(logunit(1),*) 'Unknown polyspace ', trim(polyspace)
-      write(logUnit(1),*) 'Supported are:'
-      write(logUnit(1),*) '* Q (quadratic with i,j,k <= maxDegree)'
-      write(logUnit(1),*) '* P (with i+j+k <= maxDegree)'
-      write(logUnit(1),*) 'Stopping....'
-      call tem_abort()
-
-    end select
-
-    call close_config(conf)
 
   end subroutine ply_subresolution_load
   !****************************************************************************!
