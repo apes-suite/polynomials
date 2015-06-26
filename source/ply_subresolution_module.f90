@@ -18,7 +18,7 @@ module ply_subresolution_module
   implicit none
 
   type ply_subresolution_type
-    integer :: polydegree
+    integer :: polydegree = 0
     integer :: basisType
     type(tem_subres_prop_type) :: subres_prop
   end type ply_subresolution_type
@@ -47,6 +47,10 @@ contains
     call tem_subres_prop_load( me       = me%subres_prop, &
       &                        tree     = tree,           &
       &                        coloring = coloring        )
+
+    ! Set the polydegree initially to 0 to ensure a proper setting even if
+    ! no subresolution property is present.
+    me%polydegree = 0
 
     ! Only need to do anything, if there is actually a subresolution property.
     ! Checking this via the association status of the property header.
