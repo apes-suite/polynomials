@@ -3,8 +3,8 @@
 !!
 !! Not to be confused with the oversample module!
 module ply_sampling_module
-  use aotus_module, only: flu_state, aot_table_open, aot_table_close, &
-    &                     aot_get_val, aoterr_Fatal
+  use aotus_module, only: flu_state, aot_get_val, aoterr_Fatal
+  use aot_table_module, only: aot_table_open, aot_table_close
 
   use tem_aux_module, only: tem_abort
   use tem_logging_module, only: logunit
