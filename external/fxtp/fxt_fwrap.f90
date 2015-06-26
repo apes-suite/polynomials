@@ -53,7 +53,35 @@ module fxt_fwrap
   end interface
  
   contains 
-  
+
+  subroutine fxt_flptld_m2n(v, flpt, u)
+    use, intrinsic :: iso_c_binding
+    integer, parameter :: rk = selected_real_kind(15)
+    type(fxtf_flptld) :: flpt
+    real(kind=rk), allocatable, target :: v(:)
+    real(kind=rk), dimension(:), target ::  u
+    integer(kind=c_int) :: vn
+    integer(kind=c_int) :: un
+
+    un = c_int(size(u))
+    allocate(v(size(u)))
+    call fxtf_flptld_evl(v, vn, flpt%flpt, u, un, flpt%w)
+  end subroutine fxtf_flptld_m2n
+
+  subroutine fxtf_flptld_n2m(u, flpt, v)
+    use, intrinsic :: iso_c_binding
+    integer, parameter :: rk = selected_real_kind(15)
+    type(fxtf_flptld) :: flpt
+    real(kind=rk), allocatable, target :: u(:)
+    real(kind=rk), dimension(:), target ::  v
+    integer(kind=c_int) :: un
+    integer(kind=c_int) :: vn
+
+    vn = c_int(size(v))
+    allocate(u(size(v)))
+    call fxtf_flptld_exp(c_loc(u), un, flpt%flpt, c_loc(v), vn, flpt%w)
+  end subroutine fxtf_flptld_n2m 
+
   subroutine fxtf_flptld_init(p, n, prec, flpt)
     ! Initialize a flptld data structure
     ! Create a new vector (working vector)
