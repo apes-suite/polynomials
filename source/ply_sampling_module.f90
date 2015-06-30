@@ -74,4 +74,25 @@ contains
   !----------------------------------------------------------------------------!
   !----------------------------------------------------------------------------!
 
+
+  !----------------------------------------------------------------------------!
+  !> Sampling polynomial data from a given array and mesh to a new mesh with
+  !! a new data array, where just a single degree of freedom per element is
+  !! used.
+  subroutine ply_sample_data()
+    ! A ply_sampling_type to describe the sampling method.
+    ! Required input: tree/subtree, to describe the original mesh.
+    !                 + tracking shape to restrict generated mesh to the tracked
+    !                   shape (-> Just use the tracking object?)
+    ! Arrays of data, and description of its layout FOR EACH VARIABLE:
+    !   Polynomial space and degree for each element
+    !   -> Define a datatype for this?
+    ! Output: New tree
+    !         Array of data (1 dof x elements in new mesh for each variable)
+    !         -> newelements x nVariables
+  end subroutine ply_sample_data
+  !----------------------------------------------------------------------------!
+  !----------------------------------------------------------------------------!
+
+
 end module ply_sampling_module
