@@ -1,71 +1,53 @@
-program test_fxtd
-  use iso_c_binding
-  use fxt_fif
-  use fxt_fwrap
+program test_fxtd_n2m2n
+  use env_module, only: rk
+  use fxt_fwrap, only: fxtf_flptld_type, fxtf_flptld_init, &
+    &                  fxtf_flptld_n2m, fxtf_flptld_m2n
 
   implicit none
-  integer, parameter :: rk = selected_real_kind(15)
- 
-  character(c_char) :: fname
-  integer(c_long) :: wsize
-  ! type(c_ptr) :: flpt
-  ! type(c_ptr) :: w
-  type(fxtf_flptld) :: flpt
- 
-  real(kind=c_double) :: v_orig(10)
-  real(kind=c_double), allocatable, target :: u(:)
-  real(kind=c_double), allocatable, target :: v(:)
 
-  integer(4) :: p           ! number of points
-  integer(4) :: n           ! maximum degree
-  real(kind=rk) :: prec
-  
-!  load fast spherical harmonic transform
-!  flpt = fxt_flptld_init(10_c_long, 9_c_long, epsilon(1.0_c_double)) 
-!  write(*,*) 'after flpt init'
-!  flush(6)
-! 
-!  ! size of working array
-!  wsize = fxt_flptld_wsize(flpt)
-!  write(*,*) 'wsize: ', wsize
-!  flush(6)
-!
-!  ! create a new vector (working vector)
-!  w = fxt_vecld_new(wsize)
-!  write(*,*) 'allocated working vector'
-!  flush(6)
+  type(fxtf_flptld_type) :: flpt
 
-  p = 10
-  n = 9
-  prec = 1.0
+  real(kind=rk) :: v_orig(10)
+  real(kind=rk), allocatable, target :: u(:)
+  real(kind=rk), allocatable, target :: v(:)
 
-! Test the subroutines m2n and n2m
-  
+  integer, parameter :: p = 10       ! number of points
+  integer, parameter :: n =  9       ! maximal polynomial degree
+  real(kind=rk), parameter :: prec = 8*epsilon(1.0_rk) ! Precision for the FMM
+
+
+  allocate(u(n+1))
+  allocate(v(p))
+
   call fxtf_flptld_init(flpt, p, n, prec)
-  
+
   call random_number(v_orig)
+
   write(*,*) 'orig :', v_orig
   v = v_orig
 
+  ! Test the subroutines m2n and n2m
+
   ! there ....
   ! transform from physical to wave space
-  call fxtf_flptld_n2m(u, flpt, v)
+  call fxtf_flptld_n2m( flpt       = flpt, &
+    &                   nodal_data = v,    &
+    &                   modal_data = u     )
 
   ! ...and back again
   ! transform from wave to physical space
-  deallocate(v)
-  call fxtf_flptld_m2n(v, flpt, u)  
+  call fxtf_flptld_m2n( flpt       = flpt, &
+    &                   modal_data = u,    &
+    &                   nodal_data = v     )
 
   write(*,*) 'trafo (after n2m and m2n):', v
   write(*,*) 'Should be the same as orig.'
 
-  if (all(v - v_orig < 2.*epsilon(1.0_c_double))) then
+  if (all(v - v_orig < 2.*epsilon(1.0_rk))) then
     write(*,*) 'PASSED'
   else
     write(*,*) 'Data does not match after conversion:'
     write(*,*) 'FAILED'
   end if
 
-  flush(6)
-
-end program test_fxtd
+end program test_fxtd_n2m2n

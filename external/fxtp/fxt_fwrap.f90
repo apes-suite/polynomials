@@ -1,18 +1,20 @@
 module fxt_fwrap
   use, intrinsic :: iso_c_binding
-  use :: fxt_fif
+  use env_module, only: rk
+
+  use fxt_fif
 
   implicit none
 
   !> This datatype provides a handle to the information that FXTPACK needs
   !! to have about the transformation.
-  type fxtf_flptld
+  type fxtf_flptld_type
     !> Handle for the fast Legendre polynomial transformation data in FXTPACK.
     type(c_ptr) :: handle
 
     !> Pointer to the working array, that is required by the transformations.
     type(c_ptr) :: work
-  end type fxtf_flptld  
+  end type fxtf_flptld_type
 
 
   interface
@@ -59,58 +61,70 @@ module fxt_fwrap
     end subroutine fxtf_faltld_exp
 
   end interface
- 
+
 
 contains
 
-  subroutine fxtf_flptld_m2n(v, flpt, u)
-    use, intrinsic :: iso_c_binding
-    use :: fxt_fif
-    integer, parameter :: rk = selected_real_kind(15)
-    type(fxtf_flptld) :: flpt
-    real(kind=rk), allocatable, target :: v(:)
-    real(kind=rk), dimension(:), target ::  u
+
+  !> Convert modal data to nodal data using flpt.
+  !!
+  !! This encapsualtes the pure C-Interface, with extraction of the array
+  !! sizes and dealing with the flpt data.
+  !!
+  !! Note: The modal and nodal data array sizes need to match the flpt
+  !! definitions, provided in the fxtf_flptld_init call.
+  subroutine fxtf_flptld_m2n(flpt, modal_data, nodal_data)
+    !> Description of the Fast Legendre Polynomial Transform
+    type(fxtf_flptld_type), intent(in) :: flpt
+    !> Modal data
+    real(kind=c_double), target :: modal_data(:)
+    !> Nodal data
+    real(kind=c_double), target :: nodal_data(:)
+
     integer(kind=c_int) :: vn
     integer(kind=c_int) :: un
 
-    ! allocatable variable u_local for c_loc
-    real(kind=rk), allocatable, target :: u_local(:)
+    un = size(modal_data)
+    vn = size(nodal_data)
 
-    allocate(u_local(size(u)))
-    u_local = u
+    call fxtf_flptld_evl( c_loc(nodal_data), vn, flpt%handle, &
+      &                   c_loc(modal_data), un, flpt%work    )
 
-    un = size(u)
-    allocate(v(size(u)))
-    call fxtf_flptld_evl(c_loc(v), vn, flpt%handle, c_loc(u_local), un, flpt%work)
   end subroutine fxtf_flptld_m2n
 
-  subroutine fxtf_flptld_n2m(u, flpt, v)
-    use, intrinsic :: iso_c_binding
-    use :: fxt_fif
-    integer, parameter :: rk = selected_real_kind(15)
-    type(fxtf_flptld) :: flpt
-    real(kind=rk), allocatable, target :: u(:)
-    real(kind=rk), dimension(:), target ::  v
+
+  !> Convert nodal data to modal data using flpt.
+  !!
+  !! This encapsualtes the pure C-Interface, with extraction of the array
+  !! sizes and dealing with the flpt data.
+  !!
+  !! Note: The modal and nodal data array sizes need to match the flpt
+  !! definitions, provided in the fxtf_flptld_init call.
+  subroutine fxtf_flptld_n2m(flpt, nodal_data, modal_data)
+    !> Description of the Fast Legendre Polynomial Transform
+    type(fxtf_flptld_type) :: flpt
+    !> Nodal data
+    real(kind=c_double), target :: nodal_data(:)
+    !> Modal data
+    real(kind=c_double), target :: modal_data(:)
+
     integer(kind=c_int) :: un
     integer(kind=c_int) :: vn
 
-    ! allocatable variable u_local for c_loc
-    real(kind=rk), allocatable, target :: v_local(:)
+    vn = size(nodal_data)
+    un = size(modal_data)
 
-    allocate(v_local(size(v)))
-    v_local = v
- 
-    vn = size(v)
-    allocate(u(size(v)))
-    call fxtf_flptld_exp(c_loc(u), un, flpt%handle, c_loc(v_local), vn, flpt%work)
-  end subroutine fxtf_flptld_n2m 
+    call fxtf_flptld_exp( c_loc(modal_data), un, flpt%handle, &
+      &                   c_loc(nodal_data), vn, flpt%work    )
+
+  end subroutine fxtf_flptld_n2m
 
 
   !> Initialize the flpt data structure for fast legendre polynomial
   !! transformation via the fxtpack.
   subroutine fxtf_flptld_init(flpt, degree, nPoints, prec)
     !> Handle to the resulting fast polynomial table.
-    type(fxtf_flptld), intent(out) :: flpt
+    type(fxtf_flptld_type), intent(out) :: flpt
 
     !> Polynomial degree.
     integer, intent(in) :: degree

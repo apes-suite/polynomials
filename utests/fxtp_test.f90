@@ -6,9 +6,7 @@ program fxtp_test
 
   implicit none
  
-  character(c_char) :: fname
-  integer(c_long) :: wsize
-  type(fxtf_flptld) :: flpt
+  type(fxtf_flptld_type) :: flpt
  
   real(kind=rk) :: v_orig(10)
   real(kind=rk), target :: u(10)
@@ -33,11 +31,13 @@ program fxtp_test
 
   ! there ....
   ! transform from physical to wave space
-  call fxtf_flptld_exp(c_loc(u), 10_c_int, flpt%handle, c_loc(v), 10_c_int, flpt%work)
+  call fxtf_flptld_exp( c_loc(u), 10_c_int, flpt%handle, &
+    &                   c_loc(v), 10_c_int, flpt%work    )
 
   ! ...and back again
   ! transform from wave to physical space
-  call fxtf_flptld_evl(c_loc(v), 10_c_int, flpt%handle, c_loc(u), 10_c_int, flpt%work)
+  call fxtf_flptld_evl( c_loc(v), 10_c_int, flpt%handle, &
+    &                   c_loc(u), 10_c_int, flpt%work    )
   write(*,*) 'trafo:', v
   write(*,*) 'Should be the same as orig.'
 
