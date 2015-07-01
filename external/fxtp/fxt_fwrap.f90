@@ -81,7 +81,7 @@ contains
 
     un = size(u)
     allocate(v(size(u)))
-    call fxtf_flptld_evl(c_loc(v), vn, flpt%flpt, c_loc(u_local), un, flpt%w)
+    call fxtf_flptld_evl(c_loc(v), vn, flpt%handle, c_loc(u_local), un, flpt%work)
   end subroutine fxtf_flptld_m2n
 
   subroutine fxtf_flptld_n2m(u, flpt, v)
@@ -102,7 +102,7 @@ contains
  
     vn = size(v)
     allocate(u(size(v)))
-    call fxtf_flptld_exp(c_loc(u), un, flpt%flpt, c_loc(v_local), vn, flpt%w)
+    call fxtf_flptld_exp(c_loc(u), un, flpt%handle, c_loc(v_local), vn, flpt%work)
   end subroutine fxtf_flptld_n2m 
 
 

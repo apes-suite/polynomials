@@ -16,8 +16,8 @@ program test_fxtd
   real(kind=c_double), allocatable, target :: u(:)
   real(kind=c_double), allocatable, target :: v(:)
 
-  integer(8) :: p           ! number of points
-  integer(8) :: n           ! maximum degree
+  integer(4) :: p           ! number of points
+  integer(4) :: n           ! maximum degree
   real(kind=rk) :: prec
   
 !  load fast spherical harmonic transform
@@ -41,7 +41,7 @@ program test_fxtd
 
 ! Test the subroutines m2n and n2m
   
-  call fxtf_flptld_init(p, n, prec, flpt)
+  call fxtf_flptld_init(flpt, p, n, prec)
   
   call random_number(v_orig)
   write(*,*) 'orig :', v_orig
