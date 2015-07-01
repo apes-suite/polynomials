@@ -62,7 +62,49 @@ module fxt_fwrap
  
 
 contains
-  
+
+  subroutine fxtf_flptld_m2n(v, flpt, u)
+    use, intrinsic :: iso_c_binding
+    use :: fxt_fif
+    integer, parameter :: rk = selected_real_kind(15)
+    type(fxtf_flptld) :: flpt
+    real(kind=rk), allocatable, target :: v(:)
+    real(kind=rk), dimension(:), target ::  u
+    integer(kind=c_int) :: vn
+    integer(kind=c_int) :: un
+
+    ! allocatable variable u_local for c_loc
+    real(kind=rk), allocatable, target :: u_local(:)
+
+    allocate(u_local(size(u)))
+    u_local = u
+
+    un = size(u)
+    allocate(v(size(u)))
+    call fxtf_flptld_evl(c_loc(v), vn, flpt%handle, c_loc(u_local), un, flpt%work)
+  end subroutine fxtf_flptld_m2n
+
+  subroutine fxtf_flptld_n2m(u, flpt, v)
+    use, intrinsic :: iso_c_binding
+    use :: fxt_fif
+    integer, parameter :: rk = selected_real_kind(15)
+    type(fxtf_flptld) :: flpt
+    real(kind=rk), allocatable, target :: u(:)
+    real(kind=rk), dimension(:), target ::  v
+    integer(kind=c_int) :: un
+    integer(kind=c_int) :: vn
+
+    ! allocatable variable u_local for c_loc
+    real(kind=rk), allocatable, target :: v_local(:)
+
+    allocate(v_local(size(v)))
+    v_local = v
+ 
+    vn = size(v)
+    allocate(u(size(v)))
+    call fxtf_flptld_exp(c_loc(u), un, flpt%handle, c_loc(v_local), vn, flpt%work)
+  end subroutine fxtf_flptld_n2m 
+
 
   !> Initialize the flpt data structure for fast legendre polynomial
   !! transformation via the fxtpack.
