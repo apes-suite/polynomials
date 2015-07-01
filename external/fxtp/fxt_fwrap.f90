@@ -1,11 +1,19 @@
 module fxt_fwrap
   use, intrinsic :: iso_c_binding
+  use :: fxt_fif
+
   implicit none
 
+  !> This datatype provides a handle to the information that FXTPACK needs
+  !! to have about the transformation.
   type fxtf_flptld
-    type(c_ptr) :: flpt
-    type(c_ptr) :: w
+    !> Handle for the fast Legendre polynomial transformation data in FXTPACK.
+    type(c_ptr) :: handle
+
+    !> Pointer to the working array, that is required by the transformations.
+    type(c_ptr) :: work
   end type fxtf_flptld  
+
 
   interface
     subroutine fxtf_flptld_evl(v, vn, fplt, u, un, w) bind(c)
@@ -52,7 +60,8 @@ module fxt_fwrap
 
   end interface
  
-  contains 
+
+contains
 
   subroutine fxtf_flptld_m2n(v, flpt, u)
     use, intrinsic :: iso_c_binding
@@ -96,26 +105,49 @@ module fxt_fwrap
     call fxtf_flptld_exp(c_loc(u), un, flpt%flpt, c_loc(v_local), vn, flpt%w)
   end subroutine fxtf_flptld_n2m 
 
-  subroutine fxtf_flptld_init(p, n, prec, flpt)
-    ! Initialize a flptld data structure
-    ! Create a new vector (working vector)
-       use, intrinsic :: iso_c_binding
-       use :: fxt_fif
-       integer, parameter :: rk = selected_real_kind(15)
-       integer(8) :: p
-       integer(8):: n
-       integer(8):: wsize
-       real(kind=rk) :: prec
-       ! real(kind=rk), dimension(:), allocatable :: w
-       ! type(c_ptr), value :: w
-       ! type(c_ptr), value :: flpt
-       type(fxtf_flptld) :: flpt
-       integer :: status
-       
-       flpt%flpt = fxt_flptld_init(p, n, prec)  
-       wsize = fxt_flptld_wsize(flpt%flpt)
-       ! allocate(w(0:wsize-1), stat=status)
-       flpt%w = fxt_vecld_new(wsize)
+
+  !> Initialize the flpt data structure for fast legendre polynomial
+  !! transformation via the fxtpack.
+  subroutine fxtf_flptld_init(flpt, degree, nPoints, prec)
+    !> Handle to the resulting fast polynomial table.
+    type(fxtf_flptld), intent(out) :: flpt
+
+    !> Polynomial degree.
+    integer, intent(in) :: degree
+
+    !> Number of points.
+    !!
+    !! Optional, defaults to degree+1.
+    integer, intent(in), optional :: nPoints
+
+    !> Required precision for the transformation.
+    !!
+    !! Optional, defaults to 8 times the precision of c_double.
+    real(kind=c_double), intent(in), optional :: prec
+
+    integer(c_long) :: wsize
+    integer(c_long) :: p
+    integer(c_long) :: n
+
+    real(kind=c_double) :: lprec
+
+    n = degree
+    if (present(nPoints)) then
+      p = nPoints
+    else
+      p = degree + 1
+    end if
+
+    if (present(prec)) then
+      lprec = prec
+    else
+      lprec = 8*epsilon(lprec)
+    end if
+
+    flpt%handle = fxt_flptld_init(p, n, lprec)
+    wsize = fxt_flptld_wsize(flpt%handle)
+    flpt%work = fxt_vecld_new(wsize)
+
   end subroutine fxtf_flptld_init
 
 end module fxt_fwrap
