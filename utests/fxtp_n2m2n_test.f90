@@ -10,6 +10,7 @@ program test_fxtd_n2m2n
   real(kind=rk) :: v_orig(10)
   real(kind=rk), allocatable, target :: u(:)
   real(kind=rk), allocatable, target :: v(:)
+  integer :: nNodes, nModes  
 
   integer, parameter :: p = 10       ! number of points
   integer, parameter :: n =  9       ! maximal polynomial degree
@@ -25,20 +26,26 @@ program test_fxtd_n2m2n
 
   write(*,*) 'orig :', v_orig
   v = v_orig
-
+  
   ! Test the subroutines m2n and n2m
+  nNodes = size(v)
+  nModes = size(u)
 
   ! there ....
   ! transform from physical to wave space
   call fxtf_flptld_n2m( flpt       = flpt, &
     &                   nodal_data = v,    &
-    &                   modal_data = u     )
+    &                   modal_data = u,    &
+    &                   nNodes = nNodes,   &
+    &                   nModes = nModes    )
 
   ! ...and back again
   ! transform from wave to physical space
   call fxtf_flptld_m2n( flpt       = flpt, &
     &                   modal_data = u,    &
-    &                   nodal_data = v     )
+    &                   nodal_data = v,    &
+    &                   nModes = nModes,   &
+    &                   nNodes = nNodes    )
 
   write(*,*) 'trafo (after n2m and m2n):', v
   write(*,*) 'Should be the same as orig.'
