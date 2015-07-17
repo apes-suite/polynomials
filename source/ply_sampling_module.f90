@@ -3,14 +3,30 @@
 !!
 !! Not to be confused with the oversample module!
 module ply_sampling_module
-  use env_module, only: labelLen
+  use iso_c_binding, only: c_f_pointer, c_loc
+  use env_module, only: labelLen, rk, long_k
 
   use aotus_module, only: flu_state, aot_get_val, aoterr_Fatal
   use aot_table_module, only: aot_table_open, aot_table_close
 
+  use treelmesh_module, only: treelmesh_type
   use tem_aux_module, only: tem_abort
+  use tem_bc_prop_module, only: tem_bc_prop_type
   use tem_logging_module, only: logunit
+  use tem_refining_module, only: tem_refine_global_subtree
+  use tem_subtree_module, only: tem_create_subtree_of, tem_create_tree_from_sub
+  use tem_subtree_type_module, only: tem_subtree_type, tem_destroy_subtree
+  use tem_time_module, only: tem_time_type
   use tem_tools_module, only: upper_to_lower
+  use tem_topology_module, only: tem_coordofid
+  use tem_tracking_module, only: tem_tracking_type
+  use tem_varSys_module, only: tem_varsys_type, tem_varSys_op_type, &
+    &                          tem_varSys_proc_point, tem_varSys_proc_element, &
+    &                          tem_varSys_init, tem_varSys_append_stateVar
+
+  use ply_dof_module, only: q_space, p_space, getDofsQtens, getDofsPtens, &
+    &                       nextModgCoeffQTens, nextModgCoeffPTens
+  use ply_modg_basis_module, only: legendre_1D
 
   implicit none
 
@@ -143,16 +159,73 @@ contains
   !> Sampling polynomial data from a given array and mesh to a new mesh with
   !! a new data array, where just a single degree of freedom per element is
   !! used.
-  subroutine ply_sample_data()
-    ! A ply_sampling_type to describe the sampling method.
-    ! Required input: tree/subtree, to describe the original mesh.
-    !                 + tracking shape to restrict generated mesh to the tracked
-    !                   shape (-> Just use the tracking object?)
-    ! Variable system + initial dofs and polyspace for each variable.
-    ! Output: New tree
-    !         Array of data (1 dof x elements in new mesh for each variable)
-    !         -> newelements x nVariables
-    ! Possibly new variable system to access the data in that array?
+  subroutine ply_sample_data( me, orig_mesh, orig_bcs, varsys, var_degree, &
+    &                         var_space, tracking, time, new_mesh, resvars )
+    !> A ply_sampling_type to describe the sampling method.
+    type(ply_sampling_type), intent(in) :: me
+
+    !> The original mesh to be refined.
+    type(treelmesh_type), intent(in) :: orig_mesh
+
+    !> Boundary conditions for the original mesh.
+    type(tem_BC_prop_type), intent(in) :: orig_bcs
+
+    type(tem_varsys_type), intent(in) :: varsys
+
+    !> Maximal polynomial degree for each variable.
+    !!
+    !! Needs to be matching the variable definition in the tracking object.
+    integer, intent(in) :: var_degree(:)
+
+    !> Polynomial space for each variable.
+    !!
+    !! Needs to be matching the variable definition in the tracking object.
+    integer, intent(in) :: var_space(:)
+
+    type(tem_tracking_type), intent(in) :: tracking
+
+    type(tem_time_type), intent(in) :: time
+
+    !> The new mesh with the refined elements.
+    type(treelmesh_type), intent(out) :: new_mesh
+
+    !> Resulting system of variables describing the data in the arrays of
+    !! subsampled elements.
+    type(tem_varsys_type), intent(out) :: resvars
+    !----------------------------------------------------------------------!
+    type(treelmesh_type) :: tmp_mesh(0:1)
+    type(tem_BC_prop_type) :: tmp_bcs(0:1)
+    type(tem_subtree_type) :: tmp_subtree
+    real(kind=rk), allocatable :: vardat(:)
+    real(kind=rk), allocatable :: points(:)
+    real(kind=rk), allocatable :: pointval(:,:)
+    real(kind=rk), pointer :: resdat(:)
+    integer, allocatable :: vardofs(:)
+    integer, allocatable :: elempos(:)
+    integer :: pointCoord(4)
+    integer :: nOrigElems
+    integer :: nVars
+    integer :: nComponents
+    integer :: nChilds
+    integer :: cur, prev
+    integer :: ansX, ansY, ansZ
+    integer :: i
+    integer :: iLevel
+    integer :: iChild
+    integer :: iComp
+    integer :: ivar
+    integer :: iDof
+    integer :: iElem
+    integer :: iProp
+    integer :: varpos
+    integer :: childpos, parentpos
+    integer :: maxdofs
+    integer :: n1D_childs
+    real(kind=rk) :: legval
+    real(kind=rk) :: point_spacing, point_start
+    procedure(tem_varSys_proc_element), pointer :: get_element => NULL()
+    procedure(tem_varSys_proc_point), pointer :: get_point => NULL()
+    !----------------------------------------------------------------------!
 
     ! Procedure to do...
     ! (Internally) create:
@@ -163,9 +236,256 @@ contains
     ! Refine the given mesh according to the configuration in the
     ! ply_sampling_type.
     ! And fill the final data array accordingly.
+
+    select case(trim(me%method))
+    case('fixed')
+      cur = 0
+      call tem_refine_global_subtree( orig_mesh, orig_bcs, tracking%subtree, &
+        &                             tmp_mesh(0), tmp_bcs(0),               &
+        &                             restrict_to_sub = .true.               )
+      call tem_create_subTree_of( inTree  = tmp_mesh(0),             &
+        &                         bc_prop = tmp_bcs(0),              &
+        &                         subtree = tmp_subtree,             &
+        &                         inShape = tracking%header%geometry )
+      do iLevel=2,me%max_nLevels
+        prev = mod(iLevel-2, 2)
+        cur = mod(iLevel-1, 2)
+        call tem_refine_global_subtree( tmp_mesh(prev), tmp_bcs(prev), &
+          &                             tmp_subtree,                   &
+          &                             tmp_mesh(cur), tmp_bcs(cur),   &
+          &                             restrict_to_sub = .true.       )
+        call tem_destroy_subtree(tmp_subtree)
+        nullify(tmp_bcs(prev)%property)
+        nullify(tmp_bcs(prev)%header)
+        do iProp=1,size(tmp_mesh(prev)%property)
+          deallocate(tmp_mesh(prev)%property(iProp)%ElemID)
+        end do
+        deallocate(tmp_mesh(prev)%property)
+        deallocate(tmp_mesh(prev)%global%property)
+        call tem_create_subTree_of( inTree  = tmp_mesh(cur),           &
+          &                         bc_prop = tmp_bcs(cur),            &
+          &                         subtree = tmp_subtree,             &
+          &                         inShape = tracking%header%geometry )
+      end do
+
+      call tem_create_tree_from_sub( intree  = tmp_mesh(cur), &
+        &                            subtree = tmp_subtree,   &
+        &                            newtree = new_mesh       )
+
+      maxdofs = 0
+      nVars = tracking%varmap%varPos%nVals
+      call tem_varSys_init( me         = resvars,       &
+        &                   systemName = 'sampledVars', &
+        &                   length     = nVars          )
+
+      allocate(vardofs(nVars))
+      do ivar=1,tracking%varmap%varPos%nVals
+        varpos = tracking%varmap%varPos%val(iVar)
+        select case(var_space(ivar))
+        case (q_space)
+          vardofs(iVar) = getDofsQTens(var_degree(iVar))
+          maxdofs = max( maxdofs, varsys%method%val(varpos)%nComponents &
+            &                     * vardofs(iVar)                       )
+        case (p_space)
+          vardofs(iVar) = getDofsPTens(var_degree(iVar))
+          maxdofs = max( maxdofs, varsys%method%val(varpos)%nComponents &
+            &                     * vardofs(iVar)                       )
+        end select
+      end do
+
+      if (tracking%subtree%useGlobalMesh) then
+        ! All elements are refined...
+        nOrigElems = orig_mesh%nElems
+        allocate( elempos(nOrigElems) )
+        elempos = [ (i, i=1,nOrigElems) ]
+
+      else
+        nOrigElems = tracking%subtree%nElems
+        allocate( elempos(nOrigElems) )
+        elempos = tracking%subtree%map2global
+
+      end if
+
+      n1D_childs = 2**me%max_nLevels
+      point_spacing = 2.0_rk / real(n1D_childs, kind=rk)
+      point_start = 0.5_rk * point_spacing - 1.0_rk
+
+      allocate(vardat(maxdofs*nOrigElems))
+      allocate(points(n1D_childs))
+
+      get_point   => Null()
+      get_element => get_sampled_element
+
+      do iChild=1,n1D_childs
+        points(iChild) = point_start + (iChild * point_spacing)
+      end do
+
+      allocate(pointval(var_degree(1)+1, n1D_childs))
+      pointval = legendre_1D(points = points, degree = var_degree(1))
+
+      do ivar=1,tracking%varmap%varPos%nVals
+        if (var_degree(max(iVar-1,1)) /= var_degree(iVar)) then
+          deallocate(pointval)
+          allocate(pointval(var_degree(iVar)+1, n1D_childs))
+          pointval = legendre_1D(points = points, degree = var_degree(iVar))
+        end if
+
+        varpos = tracking%varmap%varPos%val(iVar)
+        nComponents = varsys%method%val(varpos)%nComponents
+
+        call varSys%method%val(varpos)                    &
+          &        %get_element( varSys  = varSys,        &
+          &                      elempos = elempos,       &
+          &                      time    = time,          &
+          &                      tree    = orig_mesh,     &
+          &                      n       = nOrigElems,    &
+          &                      nDofs   = vardofs(iVar), &
+          &                      res     = vardat         )
+
+        if (tracking%subtree%useGlobalMesh) then
+
+          nChilds = 8**me%max_nLevels
+          allocate(resdat(nComponents*nChilds*nOrigElems))
+
+          do iChild=1,nChilds
+            pointCoord = tem_CoordofID( int(iChild, kind=long_k), &
+              &                         offset = 1_long_k       ) &
+              &        + 1
+
+            iDof = 1
+            ansX = 1
+            ansY = 1
+            ansZ = 1
+            legval = pointval(ansX, pointCoord(1)) &
+              &    * pointval(ansY, pointCoord(2)) &
+              &    * pointval(ansZ, pointCoord(3))
+
+            do iComp=1,nComponents
+              do iElem=1,nOrigElems
+                parentpos = (iElem-1)*vardofs(iVar)*nComponents
+                childpos = (iElem - 1)*nChilds*nComponents &
+                  &      + (iChild - 1)*nComponents
+                resdat(childpos+iComp) = resdat(childpos+iComp) &
+                  &                    + legval*vardat(parentpos+iComp)
+              end do
+            end do
+
+            do iDof=2,vardofs(iVar)
+              if (var_space(iVar) == q_space) then
+                call nextModgCoeffQTens( ansFuncX  = ansX,            &
+                  &                      ansFuncY  = ansY,            &
+                  &                      ansFuncZ  = ansZ,            &
+                  &                      maxdegree = var_degree(iVar) )
+              else
+                call nextModgCoeffPTens( ansFuncX  = ansX,            &
+                  &                      ansFuncY  = ansY,            &
+                  &                      ansFuncZ  = ansZ,            &
+                  &                      maxdegree = var_degree(iVar) )
+              end if
+              legval = pointval(ansX, pointCoord(1)) &
+                &    * pointval(ansY, pointCoord(2)) &
+                &    * pointval(ansZ, pointCoord(3))
+              do iComp=1,nComponents
+                do iElem=1,nOrigElems
+                  parentpos = (iElem-1)*vardofs(iVar)*nComponents &
+                    &       + (iDof-1)*nComponents
+                  childpos = (iElem - 1)*nChilds*nComponents &
+                    &      + (iChild - 1)*nComponents
+                  resdat(childpos+iComp) = resdat(childpos+iComp) &
+                    &                    + legval*vardat(parentpos+iComp)
+                end do
+              end do
+            end do
+
+          end do
+
+          ! assign resdat as method data to the variable in the resvars.
+          call tem_varSys_append_stateVar( me          = resvars,            &
+            &                              varname     = varsys%varname      &
+            &                                                  %val(varpos), &
+            &                              nComponents = nComponents,        &
+            &                              method_data = c_loc(resdat),      &
+            &                              get_point   = get_point,          &
+            &                              get_element = get_element         )
+
+          ! now nullify resdat again, to allow its usage for another allocation:
+          nullify(resdat)
+
+        else
+          write(logunit(1),*) 'Not yet supported non-global subtrees!'
+          write(logunit(1),*) 'Stopping...'
+          call tem_abort()
+        end if
+
+      end do
+
+      deallocate(pointval)
+
+    case default
+      write(logunit(1),*) 'Not implemented sampling method!'
+      write(logunit(1),*) 'Stopping...'
+      call tem_abort()
+
+    end select
+
   end subroutine ply_sample_data
   !----------------------------------------------------------------------------!
   !----------------------------------------------------------------------------!
 
+
+  !----------------------------------------------------------------------------!
+  !> Get sampled data.
+  !!
+  !! This routine provides the get_element function of the variable definition
+  !! to access the sampled data array obtained by ply_sample_data.
+  subroutine get_sampled_element( fun, varsys, elempos, time, tree, n, &
+    &                             nDofs, res                           )
+    !> Description of the method to obtain the variables, here some preset
+    !! values might be stored, like the space time function to use or the
+    !! required variables.
+    class(tem_varSys_op_type), intent(in) :: fun
+
+    !> The variable system to obtain the variable from.
+    type(tem_varSys_type), intent(in) :: varSys
+
+    !> TreeID of the element to get the variable for.
+    integer, intent(in) :: elempos(:)
+
+    !> Point in time at which to evaluate the variable.
+    type(tem_time_type), intent(in)  :: time
+
+    !> global treelm mesh info
+    type(treelmesh_type), intent(in) :: tree
+
+    !> Number of elements to obtain for this variable (vectorized access).
+    integer, intent(in) :: n
+
+    !> Number of degrees of freedom within an element.
+    integer, intent(in) :: nDofs
+
+    !> Resulting values for the requested variable.
+    !!
+    !! Linearized array dimension:
+    !! (nComponents of resulting variable) x (nDegrees of freedom) x (nElems)
+    !! Access: (iElem-1)*fun%nComponents*nDofs +
+    !!         (iDof-1)*fun%nComponents + iComp
+    real(kind=rk), intent(out) :: res(:)
+    !----------------------------------------------------------------------!
+    real(kind=rk), pointer :: p(:)
+    integer :: datlen(1)
+    integer :: iElem
+    integer :: nComps
+    !----------------------------------------------------------------------!
+
+    nComps = fun%nComponents
+    datlen = tree%nElems * nComps
+
+    call c_f_pointer(fun%method_data, p, shape=datlen)
+    do iElem=1,n
+      res((iElem-1)*nComps:iElem*nComps) &
+        &  = p((elempos(iElem)-1)*nComps:elempos(iElem)*nComps)
+    end do
+
+  end subroutine get_sampled_element
 
 end module ply_sampling_module
