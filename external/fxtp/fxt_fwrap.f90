@@ -73,22 +73,17 @@ contains
   !!
   !! Note: The modal and nodal data array sizes need to match the flpt
   !! definitions, provided in the fxtf_flptld_init call.
-  subroutine fxtf_flptld_m2n(flpt, modal_data, nodal_data)
+  subroutine fxtf_flptld_m2n(flpt, modal_data, nodal_data, nModes, nNodes)
     !> Description of the Fast Legendre Polynomial Transform
     type(fxtf_flptld_type), intent(in) :: flpt
+    integer, intent(in) :: nModes, nNodes
     !> Modal data
     real(kind=c_double), target :: modal_data(:)
     !> Nodal data
     real(kind=c_double), target :: nodal_data(:)
 
-    integer(kind=c_int) :: vn
-    integer(kind=c_int) :: un
-
-    un = size(modal_data)
-    vn = size(nodal_data)
-
-    call fxtf_flptld_evl( c_loc(nodal_data), vn, flpt%handle, &
-      &                   c_loc(modal_data), un, flpt%work    )
+    call fxtf_flptld_evl( c_loc(nodal_data), nNodes, flpt%handle, &
+      &                   c_loc(modal_data), nModes, flpt%work    )
 
   end subroutine fxtf_flptld_m2n
 
@@ -100,22 +95,17 @@ contains
   !!
   !! Note: The modal and nodal data array sizes need to match the flpt
   !! definitions, provided in the fxtf_flptld_init call.
-  subroutine fxtf_flptld_n2m(flpt, nodal_data, modal_data)
+  subroutine fxtf_flptld_n2m(flpt, nodal_data, modal_data, nNodes, nModes)
     !> Description of the Fast Legendre Polynomial Transform
     type(fxtf_flptld_type) :: flpt
+    integer, intent(in) :: nModes, nNodes
     !> Nodal data
-    real(kind=c_double), target :: nodal_data(:)
+    real(kind=c_double), target :: nodal_data(nNodes)
     !> Modal data
-    real(kind=c_double), target :: modal_data(:)
+    real(kind=c_double), target :: modal_data(nModes)
 
-    integer(kind=c_int) :: un
-    integer(kind=c_int) :: vn
-
-    vn = size(nodal_data)
-    un = size(modal_data)
-
-    call fxtf_flptld_exp( c_loc(modal_data), un, flpt%handle, &
-      &                   c_loc(nodal_data), vn, flpt%work    )
+    call fxtf_flptld_exp( c_loc(modal_data), nModes, flpt%handle, &
+      &                   c_loc(nodal_data), nNodes, flpt%work    )
 
   end subroutine fxtf_flptld_n2m
 

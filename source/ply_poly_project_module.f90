@@ -45,6 +45,8 @@ module ply_poly_project_module
                                    & init_gauss_nodes_2d, init_gauss_nodes_1d,&
                                    & ply_facenodes_type
 
+  use ply_fxt_module           
+
   implicit none
 
   private
@@ -55,6 +57,10 @@ module ply_poly_project_module
     !! of nonlinear equations. It is used if fpt is choses as projection
     !! method in the lua file
     type(ply_legFpt_type)  :: fpt
+    !> The Legendre Polynomial type for the Fast Orthogonal Function
+    !! Transform via fxtpack. It is used if 'fxt' is chosen as projection
+    !! method in the lua file
+    type(ply_fxt_type) :: fxt
     !> Projection method which cam be used for transfoamtion from modal to
     !! nodal space and vice versa. It is used if 'l2p' is chosen as projection
     !! method in the lua file
@@ -115,7 +121,7 @@ module ply_poly_project_module
     !> projection header consits of general information like which kind
     !! of projection is used
 !!    type(ply_prj_header_type) :: header
-
+    
     !> In the body datatype, there is for each dimension the main data
     !! for the projection method stored
     type(ply_prj_body_type)   :: body_1d
@@ -429,6 +435,25 @@ contains
         &               nodes  = me%body_1d%nodes,            &
         &               faces  = me%body_1d%faces             )
 
+    case ('fxt')
+      !> Fill the fxt Legendre Polynomial datatype
+      if (scheme_dim >= 3) then
+        call ply_fxt_init(flpt    = me%body_3d%fxt%flpt, &
+          &               degree  = me%maxPolyDegree,    &
+          &               nPoints = me%maxPolyDegree+1   )
+      end if
+
+      if (scheme_dim >= 2) then
+        call ply_fxt_init(flpt    = me%body_2d%fxt%flpt, &
+          &               degree  = me%MaxPolyDegree,    &
+          &               nPoints = me%maxPolyDegree+1   )
+      end if
+
+        call ply_fxt_init(flpt = me%body_1d%fxt%flpt,    &
+          &               degree  = me%maxPolyDegree,    &
+          &               nPoints = me%maxPolyDegree+1   )
+
+
     case default
       write(logUnit(1),*) 'ERROR in initializing projection:'
       write(logUnit(1),*) 'Unknown projection method <', &
@@ -455,6 +480,7 @@ contains
     !! more than one variable, the sum of all components has to be passed (e.g.
     !! 6 when there are two three-dimensional vectors).
     integer, intent(in) :: nVars
+    integer :: nNodes, nModes
     real(kind=rk), intent(inout) :: modal_data(:,:)
     real(kind=rk), intent(inout) :: nodal_data(:,:)
     !--------------------------------------------------------------------------!
@@ -511,6 +537,32 @@ contains
         end do
       end if
 
+    case ('fxt')
+      nNodes = size(nodal_data)
+      nModes = nNodes
+      if (dim .eq. 3) then
+        call ply_fxt_m2n( fxt = me%body_3d%fxt,           &
+          &               modal_data = modal_data,        &
+          &               nodal_data = nodal_data,        &         
+          &               nModes = nModes,                &
+          &               nNodes = nNodes                 )
+      end if
+
+      if (dim .eq. 2) then
+        call ply_fxt_m2n( fxt = me%body_2d%fxt,           &
+          &               modal_data = modal_data,        &
+          &               nodal_data = nodal_data,        &         
+          &               nModes = nModes,                &
+          &               nNodes = nNodes                 )
+      end if
+
+      if (dim .eq. 1) then
+        call ply_fxt_m2n( fxt = me%body_1d%fxt,           &
+          &               modal_data = modal_data,        & 
+          &               nodal_data = nodal_data,        &         
+          &               nModes = nModes,                &
+          &               nNodes = nNodes                 )
+      end if
     end select
 
   end subroutine ply_poly_project_m2n_multivar
@@ -526,6 +578,7 @@ contains
     type(ply_poly_project_type), intent(inout) :: me
     integer, intent(in) :: dim
     integer, intent(in) :: nVars
+    integer :: nNodes, nModes
     real(kind=rk), intent(inout) :: nodal_data(:,:)
     real(kind=rk), intent(inout) :: modal_data(:,:)
     !--------------------------------------------------------------------------!
@@ -576,6 +629,33 @@ contains
               &               legCoeffs = modal_data(:,iVar), &
               &               lobattoPoints = me%lobattoPoints)
          end do
+      end if
+
+    case ('fxt')
+      nNodes = size(nodal_data)
+      nModes = nNodes
+      if (dim .eq. 3) then
+        call ply_fxt_n2m( fxt = me%body_3d%fxt,           &
+          &               nodal_data = nodal_data,        &
+          &               modal_data = modal_data,        &
+          &               nNodes = nNodes,                &
+          &               nModes = nModes                 )
+      end if
+
+      if (dim .eq. 2) then
+        call ply_fxt_n2m( fxt = me%body_2d%fxt,           &
+          &               nodal_data = nodal_data,        &
+          &               modal_data = modal_data,        &
+          &               nNodes = nNodes,                &
+          &               nModes = nModes                 )
+      end if
+
+      if (dim .eq. 1) then
+        call ply_fxt_n2m( fxt = me%body_1d%fxt,           &
+          &               nodal_data = nodal_data,        &
+          &               modal_data = modal_data,        &
+          &               nNodes = nNodes,                &
+          &               nModes = nModes                 )
       end if
 
     case default
