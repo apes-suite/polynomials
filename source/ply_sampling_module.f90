@@ -174,12 +174,12 @@ contains
 
     !> Maximal polynomial degree for each variable.
     !!
-    !! Needs to be matching the variable definition in the tracking object.
+    !! Needs to be matching the variable definition in the variable system.
     integer, intent(in) :: var_degree(:)
 
     !> Polynomial space for each variable.
     !!
-    !! Needs to be matching the variable definition in the tracking object.
+    !! Needs to be matching the variable definition in the variable system.
     integer, intent(in) :: var_space(:)
 
     type(tem_tracking_type), intent(in) :: tracking
@@ -221,6 +221,7 @@ contains
     integer :: childpos, parentpos
     integer :: maxdofs
     integer :: n1D_childs
+    integer :: lastdegree
     real(kind=rk) :: legval
     real(kind=rk) :: point_spacing, point_start
     procedure(tem_varSys_proc_element), pointer :: get_element => NULL()
@@ -284,13 +285,13 @@ contains
       allocate(vardofs(nVars))
       do ivar=1,tracking%varmap%varPos%nVals
         varpos = tracking%varmap%varPos%val(iVar)
-        select case(var_space(ivar))
+        select case(var_space(varpos))
         case (q_space)
-          vardofs(iVar) = getDofsQTens(var_degree(iVar))
+          vardofs(iVar) = getDofsQTens(var_degree(varpos))
           maxdofs = max( maxdofs, varsys%method%val(varpos)%nComponents &
             &                     * vardofs(iVar)                       )
         case (p_space)
-          vardofs(iVar) = getDofsPTens(var_degree(iVar))
+          vardofs(iVar) = getDofsPTens(var_degree(varpos))
           maxdofs = max( maxdofs, varsys%method%val(varpos)%nComponents &
             &                     * vardofs(iVar)                       )
         end select
@@ -320,21 +321,25 @@ contains
       get_element => get_sampled_element
 
       do iChild=1,n1D_childs
-        points(iChild) = point_start + (iChild * point_spacing)
+        points(iChild) = point_start + ((iChild-1) * point_spacing)
       end do
 
-      allocate(pointval(var_degree(1)+1, n1D_childs))
+      varpos = tracking%varmap%varPos%val(1)
+      allocate(pointval(var_degree(varpos)+1, n1D_childs))
       pointval = legendre_1D(points = points, degree = var_degree(1))
+      lastdegree = var_degree(varpos)
 
       do ivar=1,tracking%varmap%varPos%nVals
-        if (var_degree(max(iVar-1,1)) /= var_degree(iVar)) then
-          deallocate(pointval)
-          allocate(pointval(var_degree(iVar)+1, n1D_childs))
-          pointval = legendre_1D(points = points, degree = var_degree(iVar))
-        end if
 
         varpos = tracking%varmap%varPos%val(iVar)
         nComponents = varsys%method%val(varpos)%nComponents
+
+        if (var_degree(varpos) /= lastdegree) then
+          deallocate(pointval)
+          allocate(pointval(var_degree(varpos)+1, n1D_childs))
+          pointval = legendre_1D(points = points, degree = var_degree(varpos))
+          lastdegree = var_degree(varpos)
+        end if
 
         call varSys%method%val(varpos)                    &
           &        %get_element( varSys  = varSys,        &
@@ -368,22 +373,21 @@ contains
                 parentpos = (iElem-1)*vardofs(iVar)*nComponents
                 childpos = (iElem - 1)*nChilds*nComponents &
                   &      + (iChild - 1)*nComponents
-                resdat(childpos+iComp) = resdat(childpos+iComp) &
-                  &                    + legval*vardat(parentpos+iComp)
+                resdat(childpos+iComp) = legval*vardat(parentpos+iComp)
               end do
             end do
 
             do iDof=2,vardofs(iVar)
               if (var_space(iVar) == q_space) then
-                call nextModgCoeffQTens( ansFuncX  = ansX,            &
-                  &                      ansFuncY  = ansY,            &
-                  &                      ansFuncZ  = ansZ,            &
-                  &                      maxdegree = var_degree(iVar) )
+                call nextModgCoeffQTens( ansFuncX  = ansX,              &
+                  &                      ansFuncY  = ansY,              &
+                  &                      ansFuncZ  = ansZ,              &
+                  &                      maxdegree = var_degree(varpos) )
               else
-                call nextModgCoeffPTens( ansFuncX  = ansX,            &
-                  &                      ansFuncY  = ansY,            &
-                  &                      ansFuncZ  = ansZ,            &
-                  &                      maxdegree = var_degree(iVar) )
+                call nextModgCoeffPTens( ansFuncX  = ansX,              &
+                  &                      ansFuncY  = ansY,              &
+                  &                      ansFuncZ  = ansZ,              &
+                  &                      maxdegree = var_degree(varpos) )
               end if
               legval = pointval(ansX, pointCoord(1)) &
                 &    * pointval(ansY, pointCoord(2)) &
