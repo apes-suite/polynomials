@@ -248,6 +248,7 @@ contains
         &                         subtree = tmp_subtree,             &
         &                         inShape = tracking%header%geometry )
       do iLevel=2,me%max_nLevels
+        write(logunit(6),*) 'sampling level ', iLevel
         prev = mod(iLevel-2, 2)
         cur = mod(iLevel-1, 2)
         call tem_refine_global_subtree( tmp_mesh(prev), tmp_bcs(prev), &
@@ -257,11 +258,13 @@ contains
         call tem_destroy_subtree(tmp_subtree)
         nullify(tmp_bcs(prev)%property)
         nullify(tmp_bcs(prev)%header)
-        do iProp=1,size(tmp_mesh(prev)%property)
-          deallocate(tmp_mesh(prev)%property(iProp)%ElemID)
-        end do
-        deallocate(tmp_mesh(prev)%property)
-        deallocate(tmp_mesh(prev)%global%property)
+        if (associated(tmp_mesh(prev)%property)) then
+          do iProp=1,size(tmp_mesh(prev)%property)
+            deallocate(tmp_mesh(prev)%property(iProp)%ElemID)
+          end do
+          deallocate(tmp_mesh(prev)%property)
+          deallocate(tmp_mesh(prev)%global%property)
+        end if
         call tem_create_subTree_of( inTree  = tmp_mesh(cur),           &
           &                         bc_prop = tmp_bcs(cur),            &
           &                         subtree = tmp_subtree,             &
@@ -481,9 +484,10 @@ contains
     datlen = tree%nElems * nComps
 
     call c_f_pointer(fun%method_data, p, shape=datlen)
+
     do iElem=1,n
-      res((iElem-1)*nComps:iElem*nComps) &
-        &  = p((elempos(iElem)-1)*nComps:elempos(iElem)*nComps)
+      res(1+(iElem-1)*nComps:iElem*nComps) &
+        &  = p(1+(elempos(iElem)-1)*nComps:elempos(iElem)*nComps)
     end do
 
   end subroutine get_sampled_element
