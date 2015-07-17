@@ -151,11 +151,11 @@ contains
     !! Gaussian weights
     real(kind=rk), allocatable  :: w(:)
     !! legendre polynomila values left on [-1;0]
-    real(kind=rk) :: legendre_left(1:max(2, nFunc), nPoints)
-    real(kind=rk) :: legendre_left_shifted(1:max(2, nFunc), nPoints)
+    real(kind=rk) :: legendre_left(nFunc, nPoints)
+    real(kind=rk) :: legendre_left_shifted(nFunc, nPoints)
     !! legendre polynomila values right on [0;+1]
-    real(kind=rk) :: legendre_right(1:max(2, nFunc), nPoints)
-    real(kind=rk) :: legendre_right_shifted(1:max(2, nFunc), nPoints)
+    real(kind=rk) :: legendre_right(nFunc, nPoints)
+    real(kind=rk) :: legendre_right_shifted(nFunc, nPoints)
     integer :: iFunc, jFunc
     !---------------------------------------------------------------------------
 
@@ -238,11 +238,11 @@ contains
     !! Gaussian weights
     real(kind=rk), allocatable  :: w(:)
     !! legendre polynomial values [-1,1]
-    real(kind=rk) :: legendre_standard(1:max(2, nFunc), nPoints)
+    real(kind=rk) :: legendre_standard(nFunc, nPoints)
     !! legendre polynomila values left shift
-    real(kind=rk) :: legendre_left(1:max(2, nFunc), nPoints)
+    real(kind=rk) :: legendre_left(nFunc, nPoints)
     !! legendre polynomila values right shift
-    real(kind=rk) :: legendre_right(1:max(2, nFunc), nPoints)
+    real(kind=rk) :: legendre_right(nFunc, nPoints)
     integer :: iFunc, jFunc
     !---------------------------------------------------------------------------
 
@@ -295,7 +295,7 @@ contains
     !> Degree up to which to evaluate the polynomials
     integer,intent(in) ::degree
     !> Resulting vector of all mode values at all points
-    real(kind=rk) :: one_dim_eval(1:max(2,degree+1), size(points))
+    real(kind=rk) :: one_dim_eval(degree+1, size(points))
 
     integer :: iDegree
     real(kind=rk) :: n_q
@@ -303,18 +303,21 @@ contains
     !> init the first two Legendre polynomials.
     !! ... the first Legendre polynomial is 1
     one_dim_eval(1, :) = 1
-    !! ... the second Legendre polynomial is x
-    one_dim_eval(2, :) = points(:)
 
-    do iDegree = 2, degree
-      n_q = 1.0_rk / real(iDegree , kind=rk)
-      !> Recursive polynomial evaluation:
-      !! \f$ n L_{n}(x)= (2n - 1) x L_{n-1}(x) - (n-1)L_{n-2}(x) \f$
-      one_dim_eval(iDegree + 1,:) &
-        &  = n_q * ( (2*iDegree-1) * points(:)*one_dim_eval(iDegree,:) &
-        &           -(iDegree-1) * one_dim_eval(iDegree-1,:) &
-        &          )
-    end do
+    if (degree > 0) then
+      !! ... the second Legendre polynomial is x
+      one_dim_eval(2, :) = points(:)
+
+      do iDegree = 2, degree
+        n_q = 1.0_rk / real(iDegree , kind=rk)
+        !> Recursive polynomial evaluation:
+        !! \f$ n L_{n}(x)= (2n - 1) x L_{n-1}(x) - (n-1)L_{n-2}(x) \f$
+        one_dim_eval(iDegree + 1,:) &
+          &  = n_q * ( (2*iDegree-1) * points(:)*one_dim_eval(iDegree,:) &
+          &           -(iDegree-1) * one_dim_eval(iDegree-1,:) &
+          &          )
+      end do
+    end if
   end function legendre_1D
 
 
