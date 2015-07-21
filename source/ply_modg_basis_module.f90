@@ -75,7 +75,7 @@ module ply_modg_basis_module
   !!   |                      |  \     /                         \n
   !!   |                      |   -----                          \n
   !!   |----------|-->        |-----------|-->                   \n
-  !!  -1             x         +1             x                  \n
+  !!  -1          0  x        0           +1  x                  \n
   !! \n
   !! This datatype stores all the coefficients to calculate the necessary
   !! L2 projections to transfer polynomial functions between coarser and
@@ -126,7 +126,7 @@ module ply_modg_basis_module
     &       faceValLeftBndTestGrad, faceValRightBndTestGrad,               & 
     &       faceValLeftBndgradTest, faceValRightBndgradTest,               &
     &       faceValLeftBndDiffAns, faceValRightBndDiffAns,                 &
-    &       init_modg_covolumeCoeffs
+    &       init_modg_covolumeCoeffs, integrateLeg
 
 contains
 
@@ -286,6 +286,57 @@ contains
     end do
 
   end subroutine init_modg_multilevelCoeffs
+
+
+  !> Integrate the integrand function in Legendre basis, and represent the
+  !! integral again in the Legendre basis up to the maximal degree.
+  !!
+  !! The maximal degree needs to be one higher than the maximal degree of the
+  !! integrand in order to fully represent the integral, otherwise the result
+  !! is truncated and only an approximation up to maxdegree is obtained.
+  !!
+  !! The integral needs to have a length of maxdegree+1.
+  !! maxdegree needs to be non-negative. Thus, integral needs to be an array
+  !! with a length of at least 1!
+  !!
+  !! Implemented property of Legendre Polynomials:
+  !! L_i(x) = 1/(2*i + 1) * d/dx [ L_{i+1}(x) - L_{i-1}(x) ]
+  pure function integrateLeg(integrand, maxdegree) result(integral)
+    !> Coefficients of the function to integrate in Legendre basis.
+    real(kind=rk), intent(in) :: integrand(:)
+
+    !> Maximal polynomial degree for the integral, should be larger than the
+    !! degree of the integrand
+    integer, intent(in) :: maxdegree
+
+    !> Legendre coefficients of the resulting integral.
+    real(kind=rk) :: integral(maxdegree+1)
+
+    integer :: nOrigModes
+    integer :: commonModes
+    integer :: iMode
+
+    nOrigModes = size(integrand)
+    commonModes = min(nOrigModes-1, maxdegree+1)
+
+    if (nOrigModes >= 2) then
+      integral(1) = -1.0_rk/3.0_rk * integrand(2)
+    else
+      integral(1) = 0.0_rk
+    end if
+    do iMode=2,commonModes
+      integral(iMode) = integrand(iMode-1)/real(2*iMode-1, kind=rk) &
+        &             - integrand(iMode+1)/real(2*iMode+3, kind=rk)
+    end do
+    do iMode=nOrigModes,min(maxDegree+1,nOrigModes+1)
+      integral(iMode) = integrand(iMode-1)/real(2*iMode-1, kind=rk)
+    end do
+    do iMode=nOrigModes+2,maxDegree+1
+      integral(iMode) = 0.0_rk
+    end do
+
+  end function integrateLeg
+
 
   !> Evaluate all 1D Legendre polynomials at a given set
   !! of points up to the given degree.
