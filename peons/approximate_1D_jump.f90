@@ -49,6 +49,7 @@ program approximate_1D_jump
   integer :: ipoint
   integer :: imode
   integer :: iCoarse, iFine
+  integer :: intmode
   integer :: bis_lb
   integer :: current, last
   integer :: lastside
@@ -64,6 +65,8 @@ program approximate_1D_jump
   real(kind=rk), allocatable :: bisect(:)
   real(kind=rk), allocatable :: nodal_data(:,:)
   real(kind=rk), allocatable :: modal_data(:,:)
+  real(kind=rk), allocatable :: legmodes(:)
+  real(kind=rk), allocatable :: exact(:)
   real(kind=rk), allocatable :: const1_left(:)
   real(kind=rk), allocatable :: const1_right(:)
   real(kind=rk), allocatable :: integral(:)
@@ -198,7 +201,7 @@ program approximate_1D_jump
     ! (Precomputation)
     allocate(const1_left(polydegree+1))
     allocate(const1_right(polydegree+1))
-    do iCoarse=1,polydegree+1
+    do iCoarse=1,min(polydegree+1,2)
       !! sqnorm = 2.0_rk / (2.0_rk*iCoarse - 1.0_rk)
       !! jacobidetfinetocoarse = 0.5
       !! const = anz_anzShift * jacobidetfinetocoarse / sqnorm
@@ -245,11 +248,11 @@ program approximate_1D_jump
           modal_data(:,current) = 0.0_rk
         end if
       end if
-      do iCoarse=1,polydegree+1
+      do iCoarse=1,min(polydegree+1,2**(ibis-1))
         !! sqnorm = 2.0_rk / (2.0_rk*iCoarse - 1.0_rk)
         !! jacobidetfinetocoarse = 0.5
         !! const = anz_anzShift * jacobidetfinetocoarse / sqnorm
-        do iFine=1,polydegree+1
+        do iFine=1,min(polydegree+1,2**(ibis-2))
           modal_data(iCoarse,current) = modal_data(iCoarse,current)      &
             &                  + 0.25_rk * (2.0_rk*iCoarse-1)            &
             &                            * refine%anz_anzShift(iFine,    &
@@ -289,11 +292,31 @@ program approximate_1D_jump
 
   end if
 
-  l2err = 1.0_rk - jota
+  allocate(legmodes(polydegree+1))
+  allocate(exact(polydegree+1))
+  allocate(integral(polydegree+2))
+  allocate(intatjota(polydegree+2,1))
+
+  do iMode=1,polydegree+1
+    legmodes = 0.0_rk
+    legmodes(iMode) = 1.0_rk
+    integral(:iMode+1) = integrateleg( integrand = legmodes(:iMode), &
+      &                                maxdegree = iMode             )
+    intatjota = legendre_1D( points = [jota], degree = polydegree+1 )
+    exact(iMode) = 0.0_rk
+    do intmode=1,iMode+1
+      exact(iMode) = exact(iMode) &
+        &          + integral(intmode)*(1.0_rk - intatjota(intmode,1))
+    end do
+    exact(iMode) = exact(iMode) / scalprodleg(iMode)
+  end do
+
+  l2err = 0.0
   write(*,*) 'Legendre Modes:'
   do iMode=1,polydegree+1
-    write(*,*) modal_data(iMode,current)
-    l2err = l2err - scalprodleg(iMode) * modal_data(iMode,current)**2
+    write(*,*) modal_data(iMode,current), exact(iMode)
+    l2err = l2err + scalprodleg(iMode)*(modal_data(iMode,current) &
+      &                                 - exact(iMode))**2
   end do
   write(*,*) '-----------------'
 

@@ -325,11 +325,11 @@ contains
       integral(1) = 0.0_rk
     end if
     do iMode=2,commonModes
-      integral(iMode) = integrand(iMode-1)/real(2*iMode-1, kind=rk) &
-        &             - integrand(iMode+1)/real(2*iMode+3, kind=rk)
+      integral(iMode) = integrand(iMode-1)/real(2*iMode-3, kind=rk) &
+        &             - integrand(iMode+1)/real(2*iMode+1, kind=rk)
     end do
-    do iMode=nOrigModes,min(maxDegree+1,nOrigModes+1)
-      integral(iMode) = integrand(iMode-1)/real(2*iMode-1, kind=rk)
+    do iMode=max(nOrigModes,2),min(maxDegree+1,nOrigModes+1)
+      integral(iMode) = integrand(iMode-1)/real(2*iMode-3, kind=rk)
     end do
     do iMode=nOrigModes+2,maxDegree+1
       integral(iMode) = 0.0_rk
