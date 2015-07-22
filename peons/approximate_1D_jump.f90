@@ -61,6 +61,7 @@ program approximate_1D_jump
   real(kind=rk) :: cur_lb
   real(kind=rk) :: ivldistance
   real(kind=rk) :: l2err
+  real(kind=rk) :: optierr
   real(kind=rk) :: voldiff
   real(kind=rk), allocatable :: bisect(:)
   real(kind=rk), allocatable :: nodal_data(:,:)
@@ -248,11 +249,11 @@ program approximate_1D_jump
           modal_data(:,current) = 0.0_rk
         end if
       end if
-      do iCoarse=1,min(polydegree+1,2**(ibis-1))
+      do iCoarse=1,polydegree+1
         !! sqnorm = 2.0_rk / (2.0_rk*iCoarse - 1.0_rk)
         !! jacobidetfinetocoarse = 0.5
         !! const = anz_anzShift * jacobidetfinetocoarse / sqnorm
-        do iFine=1,min(polydegree+1,2**(ibis-2))
+        do iFine=1,polydegree+1
           modal_data(iCoarse,current) = modal_data(iCoarse,current)      &
             &                  + 0.25_rk * (2.0_rk*iCoarse-1)            &
             &                            * refine%anz_anzShift(iFine,    &
@@ -311,10 +312,12 @@ program approximate_1D_jump
     exact(iMode) = exact(iMode) / scalprodleg(iMode)
   end do
 
-  l2err = 0.0
+  l2err = 0.0_rk
+  optierr = 0.0_rk
   write(*,*) 'Legendre Modes:'
   do iMode=1,polydegree+1
     write(*,*) modal_data(iMode,current), exact(iMode)
+    optierr = optierr + exact(iMode)**2 * scalprodleg(iMode)
     l2err = l2err + scalprodleg(iMode)*(modal_data(iMode,current) &
       &                                 - exact(iMode))**2
   end do
@@ -323,7 +326,8 @@ program approximate_1D_jump
   voldiff = abs(2*modal_data(1,current) - (1.0_rk-jota))
 
   write(*,*) 'N=', 2**level
-  write(*,*) 'L2 Error : ', sqrt(l2err)
+  write(*,*) 'L2 Error numeric vs optimal: ', sqrt(l2err)
+  write(*,*) 'Projection Error:', sqrt(1-jota - optierr)
   write(*,*) 'Vol Error: ', voldiff
 
 
