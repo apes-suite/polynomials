@@ -3,7 +3,6 @@
 !!
 !! This module contains the subroutine for differentiation of the legendre
 !! Polynomials in 1D, 2D and 3D.
-!! \author Nikhil Anand
 
 
 module ply_leg_diff_module

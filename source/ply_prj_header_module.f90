@@ -24,6 +24,12 @@ module ply_prj_header_module
     &                              operator(==), operator(/=), &
     &                              operator(<), operator(<=),  &
     &                              operator(>),operator(>=)
+  use ply_fxt_header_module, only: ply_fxt_header_type, ply_fxt_header_load, &
+    &                              ply_fxt_header_display, ply_fxt_header_out, &
+    &                              assignment(=),              &
+    &                              operator(==), operator(/=), &
+    &                              operator(<), operator(<=),  &
+    &                              operator(>),operator(>=)
   implicit none
 
   private
@@ -36,6 +42,7 @@ module ply_prj_header_module
     character(len=labelLen) :: kind
     type(ply_fpt_header_type)    :: fpt_header
     type(ply_l2p_header_type) :: l2p_header
+    type(ply_fxt_header_type) :: fxt_header
   end type ply_prj_header_type
 
   interface assignment(=)
@@ -88,6 +95,7 @@ contains
     left%kind = right%kind
     left%fpt_header = right%fpt_header
     left%l2p_header = right%l2p_header
+    left%fxt_header = right%fxt_header
   end subroutine copy_poly_proj_header
   !***************************************************************************!
 
@@ -120,6 +128,12 @@ contains
            &                      conf    = conf ,         &
            &                      thandle = parent         )
         call ply_l2p_header_display(me = me%l2p_header)
+
+      case('fxt')
+        call ply_fxt_header_load( me      = me%fxt_header, & 
+           &                      conf    = conf ,         &
+           &                      thandle = parent         )
+        call ply_fxt_header_display(me = me%fxt_header     )
 
       case('fpt')
         if (fftw_available) then
@@ -189,6 +203,11 @@ contains
       call ply_fpt_header_out( me   = me%fpt_header, & 
          &                     conf = conf           )
 
+    case('fxt')
+      call ply_fxt_header_out( me   = me%fxt_header, & 
+        &                      conf = conf           )
+
+
     end select
 
 
@@ -218,6 +237,9 @@ contains
       case ('l2p')
          equality = ( left%kind == right%kind ) &
            &  .and. ( left%l2p_header == right%l2p_header ) 
+      case ('fxt')
+         equality = ( left%kind == right%kind ) &
+           &  .and. ( left%fxt_header == right%fxt_header ) 
     end select
 
   end function isEqual
@@ -247,6 +269,8 @@ contains
           unequality =  (left%fpt_header /= right%fpt_header ) 
         case ('l2p')
           unequality = ( left%l2p_header /= right%l2p_header)
+        case ('fxt')
+          unequality = ( left%fxt_header /= right%fxt_header)
       end select
     end if
   end function isUnequal
@@ -277,7 +301,9 @@ contains
           case ('fpt')
             small = (left%fpt_header < right%fpt_header) 
           case ('l2p')
-            small =  (left%fpt_header < right%fpt_header) 
+            small =  (left%l2p_header < right%l2p_header) 
+          case ('fxt')
+            small =  (left%fxt_header < right%fxt_header) 
         end select
       end if
     end if
@@ -310,7 +336,9 @@ contains
           case ('fpt')
             small = (left%fpt_header <= right%fpt_header) 
           case ('l2p')
-            small =  (left%fpt_header <= right%fpt_header) 
+            small =  (left%l2p_header <= right%l2p_header) 
+          case ('fxt')
+            small =  (left%fxt_header <= right%fxt_header) 
         end select
       end if
     end if
@@ -343,7 +371,9 @@ contains
           case ('fpt')
             great = (left%fpt_header > right%fpt_header) 
           case ('l2p')
-            great =  (left%fpt_header > right%fpt_header) 
+            great =  (left%l2p_header > right%l2p_header) 
+          case ('fxt')
+            great =  (left%fxt_header > right%fxt_header) 
         end select
       end if
     end if
@@ -376,7 +406,9 @@ contains
           case ('fpt')
             great = (left%fpt_header >= right%fpt_header) 
           case ('l2p')
-            great =  (left%fpt_header >= right%fpt_header) 
+            great =  (left%l2p_header >= right%l2p_header) 
+          case ('fxt')
+            great =  (left%fxt_header >= right%fxt_header) 
         end select
       end if
     end if
