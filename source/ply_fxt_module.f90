@@ -1,6 +1,6 @@
 module ply_fxt_module
   use env_module,                only: rk
-  use fxt_fif
+  !use fxt_fif
   use fxt_fwrap
 
   implicit none

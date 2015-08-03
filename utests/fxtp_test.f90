@@ -3,6 +3,7 @@ program fxtp_test
   use env_module, only: rk
   use fxt_fif
   use fxt_fwrap
+  use ply_fxt_module, only:  ply_init_fxt
 
   implicit none
  
@@ -20,7 +21,7 @@ program fxtp_test
   maxDegree = 9
   prec = 8*epsilon(prec)
 
-  call fxtf_flptld_init(flpt    = flpt,      &
+  call ply_init_fxt(    flpt    = flpt,      &
     &                   degree  = maxDegree, &
     &                   nPoints = nPoints,   &
     &                   prec    = prec       )
