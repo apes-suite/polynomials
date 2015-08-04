@@ -36,17 +36,13 @@ program test_fxtd_n2m2n
   ! transform from physical to wave space
   call ply_fxt_n2m_1D(     fxt        = fxt,      &
     &                      nodal_data = v,        &
-    &                      modal_data = u,        &
-    &                      nNodes     = nNodes,   &
-    &                      nModes     = nModes    )
+    &                      modal_data = u         )
 
   ! ...and back again
   ! transform from wave to physical space
   call ply_fxt_m2n_1D(     fxt        = fxt,      &
     &                      modal_data = u,        &
-    &                      nodal_data = v,        &
-    &                      nModes     = nModes,   &
-    &                      nNodes     = nNodes    )
+    &                      nodal_data = v         )
 
   write(*,*) 'trafo (after n2m and m2n):', v
   write(*,*) 'Should be the same as orig.'

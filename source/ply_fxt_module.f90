@@ -1,6 +1,5 @@
 module ply_fxt_module
   use env_module,                only: rk
-  !use fxt_fif
   use fxt_fwrap
 
   implicit none
@@ -84,16 +83,21 @@ contains
    !!
    !! Note: The modal and nodal data array sizes need to match the flpt
    !! definitions, provided in the fxtf_flptld_init call.
-   subroutine ply_fxt_m2n_1D(fxt, modal_data, nodal_data, nModes, nNodes)
+   subroutine ply_fxt_m2n_1D(fxt, modal_data, nodal_data)
     !--------------------------------------------------------------------------!
      !> Description of the Fast Legendre Polynomial Transform
      type(ply_fxt_type) :: fxt
-     integer(kind=c_int), intent(in) :: nModes, nNodes
      !> Nodal data
      real(kind=c_double), target :: nodal_data(:,:)
      !> Modal data
      real(kind=c_double), target :: modal_data(:,:)
     !--------------------------------------------------------------------------!
+     integer(kind=c_int) :: nModes
+     integer(kind=c_int) :: nNodes
+    !--------------------------------------------------------------------------!
+
+     nModes = size(modal_data,1)
+     nNodes = size(nodal_data,1)
 
      call fxtf_flptld_evl( c_loc(nodal_data), nNodes, fxt%flpt%handle, &
        &                   c_loc(modal_data), nModes, fxt%flpt%work    )
@@ -102,16 +106,21 @@ contains
 
   !****************************************************************************!
 
-   subroutine ply_fxt_m2n_2D(fxt, modal_data, nodal_data, nModes, nNodes)
+   subroutine ply_fxt_m2n_2D(fxt, modal_data, nodal_data)
     !--------------------------------------------------------------------------!
      !> Description of the Fast Legendre Polynomial Transform
      type(ply_fxt_type) :: fxt
-     integer(kind=c_int), intent(in) :: nModes, nNodes
      !> Nodal data
      real(kind=c_double), target :: nodal_data(:,:)
      !> Modal data
      real(kind=c_double), target :: modal_data(:,:)
     !--------------------------------------------------------------------------!
+     integer(kind=c_int) :: nModes
+     integer(kind=c_int) :: nNodes
+    !--------------------------------------------------------------------------!
+
+     nModes = size(modal_data,1)
+     nNodes = size(nodal_data,1)
 
     ! Transformation in X direction
      call fxtf_flptld_evl( c_loc(nodal_data), nNodes, fxt%flpt%handle, &
@@ -130,24 +139,29 @@ contains
 
    end subroutine ply_fxt_m2n_2D
   !****************************************************************************!
-   subroutine ply_fxt_m2n_3D(fxt, modal_data, nodal_data, nModes, nNodes)
+   subroutine ply_fxt_m2n_3D(fxt, modal_data, nodal_data)
     !--------------------------------------------------------------------------!
      !> Description of the Fast Legendre Polynomial Transform
      type(ply_fxt_type) :: fxt
-     integer(kind=c_int), intent(in) :: nModes, nNodes
      !> Nodal data
      real(kind=c_double), target :: nodal_data(:,:)
      !> Modal data
      real(kind=c_double), target :: modal_data(:,:)
     !--------------------------------------------------------------------------!
+     integer(kind=c_int) :: nModes
+     integer(kind=c_int) :: nNodes
+    !--------------------------------------------------------------------------!
+
+     nModes = size(modal_data,1)
+     nNodes = size(nodal_data,1)
 
     ! Transformation in X direction
      call fxtf_flptld_evl( c_loc(nodal_data), nNodes, fxt%flpt%handle, &
        &                   c_loc(modal_data), nModes, fxt%flpt%work    )
 
     ! Transformation in Y direction
-     call fxtf_flptld_evl( c_loc(modal_data), nNodes, fxt%flpt%handle, &
-       &                   c_loc(nodal_data), nModes, fxt%flpt%work    )
+     call fxtf_flptld_evl( c_loc(modal_data), nModes, fxt%flpt%handle, &
+       &                   c_loc(nodal_data), nNodes, fxt%flpt%work    )
 
     ! Transformation in Z direction
      call fxtf_flptld_evl( c_loc(nodal_data), nNodes, fxt%flpt%handle, &
@@ -164,51 +178,51 @@ contains
    !!
    !! Note: The modal and nodal data array sizes need to match the flpt
    !! definitions, provided in the fxtf_flptld_init call.
-   subroutine ply_fxt_n2m_1D(fxt, nodal_data, modal_data, nNodes, nModes)
+   subroutine ply_fxt_n2m_1D(fxt, nodal_data, modal_data)
     !--------------------------------------------------------------------------!
      !> Description of the Fast Legendre Polynomial Transform
      type(ply_fxt_type) :: fxt
-     integer(kind=c_int), intent(in) :: nModes, nNodes
      !> Nodal data
      real(kind=c_double), target :: nodal_data(:,:)
      !> Modal data
      real(kind=c_double), target :: modal_data(:,:)
+    !--------------------------------------------------------------------------!
+     integer(kind=c_int) :: nModes
+     integer(kind=c_int) :: nNodes
+    !--------------------------------------------------------------------------!
 
-     integer(kind=c_int) :: un
-     integer(kind=c_int) :: vn
+     nModes = size(modal_data,1)
+     nNodes = size(nodal_data,1)
 
-     vn = size(nodal_data)
-     un = size(modal_data)
-
-     call fxtf_flptld_exp( c_loc(modal_data), un, fxt%flpt%handle, &
-       &                   c_loc(nodal_data), vn, fxt%flpt%work    )
+     call fxtf_flptld_exp( c_loc(modal_data), nModes, fxt%flpt%handle, &
+       &                   c_loc(nodal_data), nNodes, fxt%flpt%work    )
 
    end subroutine ply_fxt_n2m_1D 
   !****************************************************************************!
 
-   subroutine ply_fxt_n2m_2D(fxt, nodal_data, modal_data, nNodes, nModes)
+   subroutine ply_fxt_n2m_2D(fxt, nodal_data, modal_data)
     !--------------------------------------------------------------------------!
      !> Description of the Fast Legendre Polynomial Transform
      type(ply_fxt_type) :: fxt
-     integer(kind=c_int), intent(in) :: nModes, nNodes
      !> Nodal data
      real(kind=c_double), target :: nodal_data(:,:)
      !> Modal data
      real(kind=c_double), target :: modal_data(:,:)
+    !--------------------------------------------------------------------------!
+     integer(kind=c_int) :: nModes
+     integer(kind=c_int) :: nNodes
+    !--------------------------------------------------------------------------!
 
-     integer(kind=c_int) :: un
-     integer(kind=c_int) :: vn
-
-     vn = size(nodal_data)
-     un = size(modal_data)
+     nModes = size(modal_data,1)
+     nNodes = size(nodal_data,1)
 
     ! Transformation in X direction
-     call fxtf_flptld_exp( c_loc(modal_data), un, fxt%flpt%handle, &
-       &                   c_loc(nodal_data), vn, fxt%flpt%work    )
+     call fxtf_flptld_exp( c_loc(modal_data), nModes, fxt%flpt%handle, &
+       &                   c_loc(nodal_data), nNodes, fxt%flpt%work    )
 
     ! Transformation in Y direction
-     call fxtf_flptld_exp( c_loc(nodal_data), un, fxt%flpt%handle, &
-       &                   c_loc(modal_data), vn, fxt%flpt%work    )
+     call fxtf_flptld_exp( c_loc(nodal_data), nNodes, fxt%flpt%handle, &
+       &                   c_loc(modal_data), nModes, fxt%flpt%work    )
 
     ! As we reuse the modal_data in Y-direction to store the nodal
     ! values, thus we need to copy those back into the nodal array.
@@ -221,33 +235,33 @@ contains
   !****************************************************************************!
 
 
-   subroutine ply_fxt_n2m_3D(fxt, nodal_data, modal_data, nNodes, nModes)
+   subroutine ply_fxt_n2m_3D(fxt, nodal_data, modal_data)
     !--------------------------------------------------------------------------!
      !> Description of the Fast Legendre Polynomial Transform
      type(ply_fxt_type) :: fxt
-     integer(kind=c_int), intent(in) :: nModes, nNodes
      !> Nodal data
      real(kind=c_double), target :: nodal_data(:,:)
      !> Modal data
      real(kind=c_double), target :: modal_data(:,:)
+    !--------------------------------------------------------------------------!
+     integer(kind=c_int) :: nModes
+     integer(kind=c_int) :: nNodes
+    !--------------------------------------------------------------------------!
 
-     integer(kind=c_int) :: un
-     integer(kind=c_int) :: vn
-
-     vn = size(nodal_data)
-     un = size(modal_data)
+     nModes = size(modal_data,1)
+     nNodes = size(nodal_data,1)
 
      ! Transformation in X direction
-     call fxtf_flptld_exp( c_loc(modal_data), un, fxt%flpt%handle, &
-       &                   c_loc(nodal_data), vn, fxt%flpt%work    )
+     call fxtf_flptld_exp( c_loc(modal_data), nModes, fxt%flpt%handle, &
+       &                   c_loc(nodal_data), nNodes, fxt%flpt%work    )
 
      ! Transformation in Y direction
-     call fxtf_flptld_exp( c_loc(nodal_data), vn, fxt%flpt%handle, &
-       &                   c_loc(modal_data), un, fxt%flpt%work    )
+     call fxtf_flptld_exp( c_loc(nodal_data), nNodes, fxt%flpt%handle, &
+       &                   c_loc(modal_data), nModes, fxt%flpt%work    )
 
      ! Transformation in Z direction
-     call fxtf_flptld_exp( c_loc(modal_data), un, fxt%flpt%handle, &
-       &                   c_loc(nodal_data), vn, fxt%flpt%work    )
+     call fxtf_flptld_exp( c_loc(modal_data), nModes, fxt%flpt%handle, &
+       &                   c_loc(nodal_data), nNodes, fxt%flpt%work    )
 
 
 

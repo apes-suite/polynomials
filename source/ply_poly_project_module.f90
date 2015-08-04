@@ -487,7 +487,6 @@ contains
     !! more than one variable, the sum of all components has to be passed (e.g.
     !! 6 when there are two three-dimensional vectors).
     integer, intent(in) :: nVars
-    integer :: nNodes, nModes
     real(kind=rk), intent(inout) :: modal_data(:,:)
     real(kind=rk), intent(inout) :: nodal_data(:,:)
     !--------------------------------------------------------------------------!
@@ -545,30 +544,22 @@ contains
       end if
 
     case ('fxt')
-      nNodes = size(nodal_data)
-      nModes = nNodes
       if (dim .eq. 3) then
         call ply_fxt_m2n_3D( fxt        = me%body_3d%fxt,    &
           &                  modal_data = modal_data,        &
-          &                  nodal_data = nodal_data,        &         
-          &                  nModes     = nModes,            &
-          &                  nNodes     = nNodes             )
+          &                  nodal_data = nodal_data         )      
       end if
 
       if (dim .eq. 2) then
         call ply_fxt_m2n_2D( fxt        = me%body_2d%fxt,    &
           &                  modal_data = modal_data,        &
-          &                  nodal_data = nodal_data,        &         
-          &                  nModes     = nModes,            &
-          &                  nNodes     = nNodes             )
+          &                  nodal_data = nodal_data         )    
       end if
 
       if (dim .eq. 1) then
         call ply_fxt_m2n_1D( fxt        = me%body_1d%fxt,    &
           &                  modal_data = modal_data,        & 
-          &                  nodal_data = nodal_data,        &         
-          &                  nModes     = nModes,            &
-          &                  nNodes     = nNodes             )
+          &                  nodal_data = nodal_data         )    
       end if
     end select
 
@@ -585,7 +576,6 @@ contains
     type(ply_poly_project_type), intent(inout) :: me
     integer, intent(in) :: dim
     integer, intent(in) :: nVars
-    integer :: nNodes, nModes
     real(kind=rk), intent(inout) :: nodal_data(:,:)
     real(kind=rk), intent(inout) :: modal_data(:,:)
     !--------------------------------------------------------------------------!
@@ -639,30 +629,22 @@ contains
       end if
 
     case ('fxt')
-      nNodes = size(nodal_data)
-      nModes = nNodes
       if (dim .eq. 3) then
         call ply_fxt_n2m_3D( fxt        = me%body_3d%fxt,    &
           &                  nodal_data = nodal_data,        &
-          &                  modal_data = modal_data,        &
-          &                  nNodes     = nNodes,            &
-          &                  nModes     = nModes             )
+          &                  modal_data = modal_data         )
       end if
 
       if (dim .eq. 2) then
         call ply_fxt_n2m_2D( fxt        = me%body_2d%fxt,    &
           &                  nodal_data = nodal_data,        &
-          &                  modal_data = modal_data,        &
-          &                  nNodes     = nNodes,            &
-          &                  nModes     = nModes             )
+          &                  modal_data = modal_data         )
       end if
 
       if (dim .eq. 1) then
         call ply_fxt_n2m_1D( fxt        = me%body_1d%fxt,    &
           &                  nodal_data = nodal_data,        &
-          &                  modal_data = modal_data,        &
-          &                  nNodes     = nNodes,            &
-          &                  nModes     = nModes             )
+          &                  modal_data = modal_data         )
       end if
 
     case default
