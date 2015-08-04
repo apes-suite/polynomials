@@ -47,7 +47,7 @@ implicit none
   call ply_init_fxt(fxt%flpt, p, n, prec)
 
   call random_number(v_orig)
-
+  
   write(*,*) 'orig :', v_orig
   v(:,1) = v_orig
   
@@ -86,11 +86,26 @@ implicit none
   end if
 
 
+  write(*,*) 'trafo (after n2m and m2n):', v
+  write(*,*) 'Should be the same as orig.',2.*epsilon(1.0_rk)
 
-  !Check the 2D fxt projection!
-  ! check l2p Q-Space
+  !if (all(v(:,1) - v_orig(:) < 2.*epsilon(1.0_rk))) then
+  if (all(abs(v(:,1) - v_orig(:)) < 1e-8)) then
 !NA!  do power = 1,7
 !NA!    write(logUnit(10),*) '---------------------------   CHECKING CHEB->LEG L2P Q-SPACE TRAFO FOR ', 2**power
+!NA!    call check_fxt_2d(power, newRes)
+!NA!    if (newRes.gt.res) then
+!NA!      res = newRes
+!NA!    end if
+!NA!    write(logUnit(10),*) '--------------------------- DONE'
+!NA!  end do
+!NA!
+!NA!  !>\todo If everything worked fine, write PASSED on the very last line of output, to
+!NA!  !!      indicate a successful run of the unit test:
+!NA!  if(res.lt.1e-08) then
+!NA!    write(logUnit(1),*) 'PASSED'
+!NA!  end if 
+!NA!  call fin_env()
 !NA!    call check_fxt_2d(power, newRes)
 !NA!    if (newRes.gt.res) then
 !NA!      res = newRes
@@ -151,6 +166,8 @@ contains
        ref_modes(i)=1.0/real(i, kind=rk)
     end do
     
+    write(*,*) "ref_modes = "
+    write(*,*) ref_modes 
     modal_data(:,:) = 0.0_rk 
     oversamp_modal(:,:) = 0.0_rk 
     ! oversampling of modes 
@@ -162,6 +179,8 @@ contains
       end do
     end do                  
 
+    write(*,*) "modes in overSampled space = "
+    write(*,*) oversamp_modal
  
     ! transform from wave to physical space
     call ply_poly_project_m2n(me = me ,                &
@@ -170,6 +189,8 @@ contains
       &                       nodal_data=nodal_data,   &
       &                       modal_data=oversamp_modal)
   
+    write(*,*) "After conversion to nodal_data = "
+    write(*,*) nodal_data
 
     
     oversamp_modal(:,:) = 0.0_rk
@@ -181,6 +202,8 @@ contains
       &                       nVars = 1,                &
       &                       nodal_data=nodal_data,    &
       &                       modal_data= oversamp_modal)
+    write(*,*) "After converting it back to oversampled space = "
+    write(*,*) oversamp_modal 
 
     do iDegX = 1, maxdegree+1
       do iDegY = 1, maxdegree+1
@@ -190,9 +213,13 @@ contains
       end do
     end do                  
 
+    write(*,*) "final_modal data = "
+    write(*,*) modal_data
  
     res= maxval( abs(ref_modes-modal_data(:,1)) ) 
 
+    write(*,*) 'power=', power
+    write(*,*) 'res=', res
   end subroutine  check_fxt_2d
 
 end program test_fxtd_n2m2n
