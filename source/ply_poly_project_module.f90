@@ -491,6 +491,7 @@ contains
     real(kind=rk), intent(inout) :: nodal_data(:,:)
     !--------------------------------------------------------------------------!
     integer :: iVar
+    integer :: nNodes, nModes
     !--------------------------------------------------------------------------!
 
     select case(trim(me%kind))
@@ -545,21 +546,42 @@ contains
 
     case ('fxt')
       if (dim .eq. 3) then
-        call ply_fxt_m2n_3D( fxt        = me%body_3d%fxt,    &
-          &                  modal_data = modal_data,        &
-          &                  nodal_data = nodal_data         )      
+        do iVar = 1,nVars
+          nNodes = size(nodal_data,1)
+          nModes = nNodes
+          call ply_fxt_m2n_3D( fxt = me%body_3d%fxt,             &
+            &               modal_data = modal_data(:,iVar),     &
+            &               nodal_data = nodal_data(:,iVar),     &
+            &               nModes = nModes,                     &
+            &               nNodes = nNodes,                     &
+            &              oversamp_degree = me%oversamp_degree  )
+        end do
       end if
 
       if (dim .eq. 2) then
-        call ply_fxt_m2n_2D( fxt        = me%body_2d%fxt,    &
-          &                  modal_data = modal_data,        &
-          &                  nodal_data = nodal_data         )    
+        do iVar = 1,nVars
+          nNodes = size(nodal_data,1)
+          nModes = nNodes
+          call ply_fxt_m2n_2D( fxt = me%body_2d%fxt,             &
+            &               modal_data = modal_data(:,iVar),     &
+            &               nodal_data = nodal_data(:,iVar),     &
+            &               nModes = nModes,                     &
+            &               nNodes = nNodes,                     &
+            &              oversamp_degree = me%oversamp_degree  )
+        end do
       end if
 
       if (dim .eq. 1) then
-        call ply_fxt_m2n_1D( fxt        = me%body_1d%fxt,    &
-          &                  modal_data = modal_data,        & 
-          &                  nodal_data = nodal_data         )    
+        do iVar = 1,nVars
+          nNodes = size(nodal_data(:,iVar))
+          nModes = nNodes
+          call ply_fxt_m2n_1D( fxt = me%body_1d%fxt,             &
+            &               modal_data = modal_data(:,iVar),     &
+            &               nodal_data = nodal_data(:,iVar),     &
+            &               nModes = nModes,                     &
+            &               nNodes = nNodes,                     &
+            &              oversamp_degree = me%oversamp_degree  )
+        end do
       end if
     end select
 
@@ -580,6 +602,7 @@ contains
     real(kind=rk), intent(inout) :: modal_data(:,:)
     !--------------------------------------------------------------------------!
     integer :: iVar
+    integer :: nNodes, nModes
     !--------------------------------------------------------------------------!
 
     select case(trim(me%kind))
@@ -630,21 +653,39 @@ contains
 
     case ('fxt')
       if (dim .eq. 3) then
-        call ply_fxt_n2m_3D( fxt        = me%body_3d%fxt,    &
-          &                  nodal_data = nodal_data,        &
-          &                  modal_data = modal_data         )
+        do iVar = 1, nVars 
+          nNodes = size(nodal_data,1)
+          nModes = nNodes
+          call ply_fxt_n2m_3D( fxt = me%body_3d%fxt,         &
+            &               nodal_data = nodal_data(:,iVar), &
+            &               modal_data = modal_data(:,iVar), &
+            &               nNodes = nNodes,                 &
+            &               nModes = nModes                  )
+        end do
       end if
 
       if (dim .eq. 2) then
-        call ply_fxt_n2m_2D( fxt        = me%body_2d%fxt,    &
-          &                  nodal_data = nodal_data,        &
-          &                  modal_data = modal_data         )
+        do iVar = 1, nVars 
+          nNodes = size(nodal_data,1)
+          nModes = nNodes
+          call ply_fxt_n2m_2D( fxt = me%body_2d%fxt,         &
+            &               nodal_data = nodal_data(:,iVar), &
+            &               modal_data = modal_data(:,iVar), &
+            &               nNodes = nNodes,                 &
+            &               nModes = nModes                  )
+        end do
       end if
 
       if (dim .eq. 1) then
-        call ply_fxt_n2m_1D( fxt        = me%body_1d%fxt,    &
-          &                  nodal_data = nodal_data,        &
-          &                  modal_data = modal_data         )
+        do iVar = 1, nVars 
+          nNodes = size(nodal_data,1)
+          nModes = nNodes
+          call ply_fxt_n2m_1D( fxt = me%body_1d%fxt,         &
+            &               nodal_data = nodal_data(:,iVar), &
+            &               modal_data = modal_data(:,iVar), &
+            &               nNodes = nNodes,                 &
+            &               nModes = nModes                  )
+        end do
       end if
 
     case default

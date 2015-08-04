@@ -40,62 +40,70 @@ implicit none
     &            version  = 'utest',            &
     &            general  = params%general      )
   res = 0.0_rk
- !> NA: Commenting it out for the moment
- !NA! allocate(u(n+1,1))
- !NA! allocate(v(p,1))
 
- !NA! call ply_init_fxt(fxt%flpt, p, n, prec)
+  allocate(u(n+1,1))
+  allocate(v(p,1))
 
- !NA! call random_number(v_orig)
+  call ply_init_fxt(fxt%flpt, p, n, prec)
 
- !NA! write(*,*) 'orig :', v_orig
- !NA! v(:,1) = v_orig
- !NA! 
- !NA! ! Test the subroutines m2n and n2m
- !NA! nNodes = size(v)
- !NA! nModes = size(u)
+  call random_number(v_orig)
 
- !NA! ! there ....
- !NA! ! transform from physical to wave space
- !NA! call ply_fxt_n2m_1D(     fxt        = fxt,      &
- !NA!   &                      nodal_data = v,        &
- !NA!   &                      modal_data = u         )
+  write(*,*) 'orig :', v_orig
+  v(:,1) = v_orig
+  
+  ! Test the subroutines m2n and n2m
+  nNodes = size(v)
+  nModes = size(u)
 
- !NA! ! ...and back again
- !NA! ! transform from wave to physical space
- !NA! call ply_fxt_m2n_1D(     fxt        = fxt,      &
- !NA!   &                      modal_data = u,        &
- !NA!   &                      nodal_data = v         )
+  ! there ....
+  ! transform from physical to wave space
+  call ply_fxt_n2m_1D(     fxt        = fxt,      &
+    &                      nodal_data = v,        &
+    &                      modal_data = u,        &
+    &                      nNodes     = nNodes,   &
+    &                      nModes     = nModes    )
 
- !NA! write(*,*) 'trafo (after n2m and m2n):', v
- !NA! write(*,*) 'Should be the same as orig.'
+  write(*,*) "modal values = "
+  write(*,*) u 
 
- !NA! if (all(v(:,1) - v_orig < 2.*epsilon(1.0_rk))) then
- !NA!   write(*,*) 'PASSED'
- !NA! else
- !NA!   write(*,*) 'Data does not match after conversion:'
- !NA!   write(*,*) 'FAILED'
- !NA! end if
+  ! ...and back again
+  ! transform from wave to physical space
+  call ply_fxt_m2n_1D(     fxt        = fxt,      &
+    &                      modal_data = u,        &
+    &                      nodal_data = v,        &
+    &                      nNodes     = nNodes,   &
+    &                      nModes     = nModes,   &
+    &                 oversamp_degree = nModes    )
+
+  write(*,*) 'trafo (after n2m and m2n):', v
+  write(*,*) 'Should be the same as orig.'
+
+  if (all(v(:,1) - v_orig < 2.*epsilon(1.0_rk))) then
+    write(*,*) 'PASSED'
+  else
+    write(*,*) 'Data does not match after conversion:'
+    write(*,*) 'FAILED'
+  end if
 
 
 
   !Check the 2D fxt projection!
   ! check l2p Q-Space
-  do power = 1,7
-    write(logUnit(10),*) '---------------------------   CHECKING CHEB->LEG L2P Q-SPACE TRAFO FOR ', 2**power
-    call check_fxt_2d(power, newRes)
-    if (newRes.gt.res) then
-      res = newRes
-    end if
-    write(logUnit(10),*) '--------------------------- DONE'
-  end do
-
-  !>\todo If everything worked fine, write PASSED on the very last line of output, to
-  !!      indicate a successful run of the unit test:
-  if(res.lt.1e-08) then
-    write(logUnit(1),*) 'PASSED'
-  end if 
-  call fin_env()
+!NA!  do power = 1,7
+!NA!    write(logUnit(10),*) '---------------------------   CHECKING CHEB->LEG L2P Q-SPACE TRAFO FOR ', 2**power
+!NA!    call check_fxt_2d(power, newRes)
+!NA!    if (newRes.gt.res) then
+!NA!      res = newRes
+!NA!    end if
+!NA!    write(logUnit(10),*) '--------------------------- DONE'
+!NA!  end do
+!NA!
+!NA!  !>\todo If everything worked fine, write PASSED on the very last line of output, to
+!NA!  !!      indicate a successful run of the unit test:
+!NA!  if(res.lt.1e-08) then
+!NA!    write(logUnit(1),*) 'PASSED'
+!NA!  end if 
+!NA!  call fin_env()
 
 contains
 
