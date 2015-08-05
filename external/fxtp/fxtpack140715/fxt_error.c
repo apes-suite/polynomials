@@ -44,6 +44,9 @@ char* fxt_error_message(void) {
   return error_message;
 }
 
+void fxt_error_print(void) {
+  printf("%s", fxt_error_message());
+}
 
 /*** set error level and message: %d, %f, %e, %s available ***/
 void fxt_error_set(int level, char *fmt, ...) {

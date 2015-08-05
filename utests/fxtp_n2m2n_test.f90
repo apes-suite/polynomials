@@ -63,6 +63,7 @@ implicit none
     &                      nNodes     = nNodes,   &
     &                      nModes     = nModes    )
 
+  v = 0.0
   write(*,*) "modal values = "
   write(*,*) u 
 
@@ -78,23 +79,13 @@ implicit none
   write(*,*) 'trafo (after n2m and m2n):', v
   write(*,*) 'Should be the same as orig.'
 
-  if (all(v(:,1) - v_orig < 2.*epsilon(1.0_rk))) then
+  if (all(abs(v(:,1) - v_orig) < 2.*epsilon(1.0_rk))) then
     write(*,*) 'PASSED'
   else
     write(*,*) 'Data does not match after conversion:'
     write(*,*) 'FAILED'
   end if
 
-
-  write(*,*) 'trafo (after n2m and m2n):', v
-  write(*,*) 'Should be the same as orig.',2.*epsilon(1.0_rk)
-
-  if (all(v(:,1) - v_orig < 2.*epsilon(1.0_rk))) then
-    write(*,*) 'PASSED'
-  else
-    write(*,*) 'Data does not match after conversion:'
-    write(*,*) 'FAILED'
-  end if
 
 !NA!  do power = 1,7
 !NA!    write(logUnit(10),*) '---------------------------   CHECKING CHEB->LEG L2P Q-SPACE TRAFO FOR ', 2**power

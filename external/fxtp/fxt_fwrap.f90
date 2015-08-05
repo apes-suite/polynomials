@@ -17,24 +17,24 @@ module fxt_fwrap
 
 
   interface
-    subroutine fxtf_flptld_evl(v, vn, fplt, u, un, w) bind(c)
+    subroutine fxtf_flptld_evl(v, vn, flpt, u, un, w) bind(c)
       use, intrinsic :: iso_c_binding
-      type(c_ptr), value :: v
-      integer(kind=c_int) :: vn
-      type(c_ptr), value :: fplt
-      type(c_ptr), value :: u
-      integer(kind=c_int) :: un
+      real(c_double), dimension(*) :: v
+      integer(c_int), value :: vn
+      type(c_ptr), value :: flpt
+      real(c_double), dimension(*) :: u
+      integer(c_int), value :: un
       type(c_ptr), value :: w
     end subroutine fxtf_flptld_evl
 
-    subroutine fxtf_flptld_exp(u, un, fplt, v, vn, w) bind(c)
+    subroutine fxtf_flptld_exp(u, un, flpt, v, vn, w) bind(c)
       use, intrinsic :: iso_c_binding
-      type(c_ptr), value :: u
-      integer(kind=c_int) :: un
-      type(c_ptr), value :: fplt
-      type(c_ptr), value :: v
-      integer(kind=c_int) :: vn
-      type(c_ptr), value :: w
+      real(c_double), dimension(*)  ::  u
+      integer(c_int), value  :: un
+      type(c_ptr), value  :: flpt
+      real(c_double), dimension(*)  :: v
+      integer(c_int), value :: vn
+      type(c_ptr), value  :: w
     end subroutine fxtf_flptld_exp
 
     subroutine fxtf_faltld_evl(v, vn, falt, m, u, un, w) bind(c)
@@ -59,6 +59,10 @@ module fxt_fwrap
       type(c_ptr), value :: w
     end subroutine fxtf_faltld_exp
 
+    subroutine fxt_error_print() bind(c)
+
+    end subroutine fxt_error_print
+
   end interface
 
 
@@ -81,8 +85,8 @@ contains
     !> Nodal data
     real(kind=c_double), target :: nodal_data(nNodes)
 
-    call fxtf_flptld_evl( c_loc(nodal_data), nNodes, flpt%handle, &
-      &                   c_loc(modal_data), nModes, flpt%work    )
+!    call fxtf_flptld_evl( c_loc(nodal_data), nNodes, flpt%handle, &
+!      &                   c_loc(modal_data), nModes, flpt%work    )
 
   end subroutine fxtf_flptld_m2n
 
@@ -103,8 +107,8 @@ contains
     !> Modal data
     real(kind=c_double), target :: modal_data(nModes)
 
-    call fxtf_flptld_exp( c_loc(modal_data), nModes, flpt%handle, &
-      &                   c_loc(nodal_data), nNodes, flpt%work    )
+    !call fxtf_flptld_exp( c_loc(modal_data), nModes, flpt%handle, &
+    !  &                   c_loc(nodal_data), nNodes, flpt%work    )
 
   end subroutine fxtf_flptld_n2m
 

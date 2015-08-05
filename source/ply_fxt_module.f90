@@ -55,6 +55,7 @@ contains
 
      real(kind=c_double) :: lprec
 
+     
      n = degree
      if (present(nPoints)) then
        p = nPoints
@@ -67,6 +68,7 @@ contains
      else
        lprec = 8*epsilon(lprec)
      end if
+
 
      flpt%handle = fxt_flptld_init(p, n, lprec)
      wsize = fxt_flptld_wsize(flpt%handle)
@@ -172,8 +174,8 @@ contains
      !-----------------------------------------------------------!
      integer :: ub, lb, iLine
 
-     call fxtf_flptld_evl( c_loc(nodal_data), nNodes, fxt%flpt%handle, &
-       &                   c_loc(modal_data), nModes, fxt%flpt%work    )
+!     call fxtf_flptld_evl( c_loc(nodal_data), nNodes, fxt%flpt%handle, &
+!       &                   c_loc(modal_data), nModes, fxt%flpt%work    )
 
      do iLine = 1, oversamp_degree+1
        lb = (iLine-1)*(oversamp_degree+1)+1
@@ -206,8 +208,8 @@ contains
      !> Modal data
      real(kind=c_double), target :: modal_data(nModes)
 
-     call fxtf_flptld_exp( c_loc(modal_data), nModes, fxt%flpt%handle, &
-       &                   c_loc(nodal_data), nNodes, fxt%flpt%work    )
+    ! call fxtf_flptld_exp( c_loc(modal_data), nModes, fxt%flpt%handle, &
+    !   &                   c_loc(nodal_data), nNodes, fxt%flpt%work    )
 
    end subroutine ply_fxt_n2m_1D 
   !****************************************************************************!
@@ -223,8 +225,8 @@ contains
      !> Modal data
      real(kind=c_double), target :: modal_data(nModes)
 
-     call fxtf_flptld_exp( c_loc(modal_data), nModes, fxt%flpt%handle, &
-       &                   c_loc(nodal_data), nNodes, fxt%flpt%work    )
+    ! call fxtf_flptld_exp( c_loc(modal_data), nModes, fxt%flpt%handle, &
+    !   &                   c_loc(nodal_data), nNodes, fxt%flpt%work    )
    end subroutine ply_fxt_n2m_2D 
   !****************************************************************************!
 
@@ -240,8 +242,8 @@ contains
      !> Modal data
      real(kind=c_double), target :: modal_data(nModes)
 
-     call fxtf_flptld_exp( c_loc(modal_data), nModes, fxt%flpt%handle, &
-       &                   c_loc(nodal_data), nNodes, fxt%flpt%work    )
+    ! call fxtf_flptld_exp( c_loc(modal_data), nModes, fxt%flpt%handle, &
+    !   &                   c_loc(nodal_data), nNodes, fxt%flpt%work    )
 
    end subroutine ply_fxt_n2m_3D 
   !****************************************************************************!

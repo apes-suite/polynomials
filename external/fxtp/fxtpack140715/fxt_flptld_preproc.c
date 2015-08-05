@@ -171,7 +171,7 @@ static void create_legendre(int odd, fxt_vecll *x, fxt_vecll *w,
     return;
 }
 
-// Initialize a flptld data structure
+/* Initialize a flptld data structure */
 fxt_flptld* fxt_flptld_init(long p, long n, double prec) {
   fxt_flptld *flpt;
   fxt_vecll *x, *w;
