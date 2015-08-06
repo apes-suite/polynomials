@@ -36,7 +36,7 @@ contains
    subroutine ply_init_fxt(flpt, degree, nPoints, prec)
     !--------------------------------------------------------------------------!
      !> Handle to the resulting fast polynomial table.
-     type(fxtf_flptld_type), intent(out) :: flpt
+     type(fxtf_flptld_type), intent(inout) :: flpt
 
      !> Polynomial degree.
      integer, intent(in) :: degree
@@ -69,10 +69,10 @@ contains
        lprec = 8*epsilon(lprec)
      end if
 
-
      flpt%handle = fxt_flptld_init(p, n, lprec)
      wsize = fxt_flptld_wsize(flpt%handle)
      flpt%work = fxt_vecld_new(wsize)
+
 
    end subroutine ply_init_fxt
   !****************************************************************************!
@@ -92,25 +92,28 @@ contains
     !--------------------------------------------------------------------------!
      !> Description of the Fast Legendre Polynomial Transform
      type(ply_fxt_type) :: fxt
-     integer(kind=c_int), intent(in) :: nModes, nNodes
+     integer(c_int), intent(in) :: nModes, nNodes
      !> Nodal data
-     real(kind=c_double), target :: nodal_data(nNodes)
+     real(c_double), intent(inout) :: nodal_data(nNodes)
      !> Modal data
-     real(kind=c_double), target :: modal_data(nModes)
+     real(c_double), intent(inout) :: modal_data(nModes)
      integer, intent(in) :: oversamp_degree 
      !-----------------------------------------------------------!
      integer :: ub, lb, iLine
 
  
-     do iLine = 1, oversamp_degree+1
-       lb = (iLine-1)*(oversamp_degree+1)+1
-       ub = ub + oversamp_degree
-       call fxtf_flptld_n2m( flpt        = fxt%flpt,         & 
-         &                   nodal_data = nodal_data(lb:ub), &
-         &                   modal_data = modal_data(lb:ub), &
-         &                   nModes     = nModes,            &
-         &                   nNodes     = nNodes             )
-     end do
+     !do iLine = 1, oversamp_degree+1
+     !  lb = (iLine-1)*(oversamp_degree+1)+1
+     !  ub = ub + oversamp_degree
+     call fxtf_flptld_evl( nodal_data, nNodes,fxt%flpt%handle, &
+       &                   modal_data, nModes,fxt%flpt%work    )
+
+      ! call fxtf_flptld_n2m( flpt        = fxt%flpt,         & 
+      !   &                   nodal_data = nodal_data(lb:ub), &
+      !   &                   modal_data = modal_data(lb:ub), &
+      !   &                   nModes     = nModes,            &
+      !   &                   nNodes     = nNodes             )
+     !end do
 
    end subroutine ply_fxt_m2n_1D
   !****************************************************************************!
@@ -202,14 +205,16 @@ contains
     !--------------------------------------------------------------------------!
      !> Description of the Fast Legendre Polynomial Transform
      type(ply_fxt_type) :: fxt
-     integer(kind=c_int), intent(in) :: nModes, nNodes
+     integer(c_int), intent(in) :: nModes, nNodes
      !> Nodal data
-     real(kind=c_double), target :: nodal_data(nNodes)
+     real(c_double), intent(inout) :: nodal_data(nNodes)
      !> Modal data
-     real(kind=c_double), target :: modal_data(nModes)
+     real(c_double), intent(inout) :: modal_data(nModes)
 
-    ! call fxtf_flptld_exp( c_loc(modal_data), nModes, fxt%flpt%handle, &
-    !   &                   c_loc(nodal_data), nNodes, fxt%flpt%work    )
+     call fxtf_flptld_exp( modal_data, nModes, fxt%flpt%handle, &
+       &                   nodal_data, nNodes, fxt%flpt%work    )
+
+     call fxt_error_print()
 
    end subroutine ply_fxt_n2m_1D 
   !****************************************************************************!

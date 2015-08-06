@@ -19,16 +19,15 @@ program test_fxtd_n2m2n
 implicit none
 
 
-  type(ply_fxt_type) :: fxt
-  !type(fxtf_flptld_type) :: flpt
+  type(ply_fxt_type), target :: fxt
 
   real(kind=rk) :: v_orig(10)
-  real(kind=rk), allocatable, target :: u(:,:)
-  real(kind=rk), allocatable, target :: v(:,:)
+  real(kind=rk), allocatable :: u(:,:)
+  real(kind=rk), allocatable :: v(:,:)
   integer :: nNodes, nModes  
 
-  integer, parameter :: p = 10       ! number of points
-  integer, parameter :: n =  9       ! maximal polynomial degree
+  integer, parameter :: nPoints = 10       ! number of points
+  integer, parameter :: maxDegree =  9       ! maximal polynomial degree
   real(kind=rk), parameter :: prec = 8*epsilon(1.0_rk) ! Precision for the FMM
 
   real(kind=rk) :: res, newRes
@@ -41,10 +40,14 @@ implicit none
     &            general  = params%general      )
   res = 0.0_rk
 
-  allocate(u(n+1,1))
-  allocate(v(p,1))
+  allocate(u(maxDegree + 1,1))
+  allocate(v(nPoints,1))
 
-  call ply_init_fxt(fxt%flpt, p, n, prec)
+  call ply_init_fxt(    flpt    = fxt%flpt,  &
+    &                   degree  = maxDegree, &
+    &                   nPoints = nPoints,   &
+    &                   prec    = prec       )
+
 
   call random_number(v_orig)
   
@@ -52,14 +55,14 @@ implicit none
   v(:,1) = v_orig
   
   ! Test the subroutines m2n and n2m
-  nNodes = size(v)
-  nModes = size(u)
+  nNodes = size(v,1)
+  nModes = size(u,1)
 
   ! there ....
   ! transform from physical to wave space
   call ply_fxt_n2m_1D(     fxt        = fxt,      &
-    &                      nodal_data = v,        &
-    &                      modal_data = u,        &
+    &                      nodal_data = v(:,1),        &
+    &                      modal_data = u(:,1),        &
     &                      nNodes     = nNodes,   &
     &                      nModes     = nModes    )
 
@@ -70,8 +73,8 @@ implicit none
   ! ...and back again
   ! transform from wave to physical space
   call ply_fxt_m2n_1D(     fxt        = fxt,      &
-    &                      modal_data = u,        &
-    &                      nodal_data = v,        &
+    &                      modal_data = u(:,1),        &
+    &                      nodal_data = v(:,1),        &
     &                      nNodes     = nNodes,   &
     &                      nModes     = nModes,   &
     &                 oversamp_degree = nModes    )
