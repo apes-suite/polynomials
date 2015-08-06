@@ -446,19 +446,19 @@ contains
       !> Fill the fxt Legendre Polynomial datatype
       if (scheme_dim >= 3) then
         call ply_init_fxt(flpt    = me%body_3d%fxt%flpt, &
-          &               degree  = me%maxPolyDegree,    &
-          &               nPoints = me%maxPolyDegree+1   )
+          &               degree  = me%oversamp_degree,  &
+          &               nPoints = me%oversamp_degree+1 )
       end if
 
       if (scheme_dim >= 2) then
-        call ply_init_fxt(flpt    = me%body_2d%fxt%flpt, &
-          &               degree  = me%MaxPolyDegree,    &
-          &               nPoints = me%maxPolyDegree+1   )
+        call ply_init_fxt(flpt    = me%body_2d%fxt%flpt,   &
+          &               degree  = me%oversamp_degree,    &
+          &               nPoints = me%oversamp_degree+1   )
       end if
 
-        call ply_init_fxt(flpt = me%body_1d%fxt%flpt,    &
-          &               degree  = me%maxPolyDegree,    &
-          &               nPoints = me%maxPolyDegree+1   )
+        call ply_init_fxt(flpt = me%body_1d%fxt%flpt,      &
+          &               degree  = me%oversamp_degree,    &
+          &               nPoints = me%oversamp_degree+1   )
 
 
     case default
@@ -656,11 +656,11 @@ contains
         do iVar = 1, nVars 
           nNodes = size(nodal_data,1)
           nModes = nNodes
-          call ply_fxt_n2m_3D( fxt = me%body_3d%fxt,         &
-            &               nodal_data = nodal_data(:,iVar), &
-            &               modal_data = modal_data(:,iVar), &
-            &               nNodes = nNodes,                 &
-            &               nModes = nModes                  )
+          call ply_fxt_n2m_3D( fxt        = me%body_3d%fxt,     &
+            &                  nodal_data = nodal_data(:,iVar), &
+            &                  modal_data = modal_data(:,iVar), &
+            &                  nNodes     = nNodes,             &
+            &                  nModes     = nModes              )
         end do
       end if
 
@@ -668,11 +668,13 @@ contains
         do iVar = 1, nVars 
           nNodes = size(nodal_data,1)
           nModes = nNodes
-          call ply_fxt_n2m_2D( fxt = me%body_2d%fxt,         &
-            &               nodal_data = nodal_data(:,iVar), &
-            &               modal_data = modal_data(:,iVar), &
-            &               nNodes = nNodes,                 &
-            &               nModes = nModes                  )
+          call ply_fxt_n2m_2D(                                  &
+            &         fxt              = me%body_2d%fxt,        &
+            &         nodal_data       = nodal_data(:,iVar),    &
+            &         modal_data       = modal_data(:,iVar),    &
+            &         nNodes           = nNodes,                &
+            &         nModes           = nModes,                &
+            &         oversamp_degree  = me%oversamp_degree     )
         end do
       end if
 
@@ -680,11 +682,13 @@ contains
         do iVar = 1, nVars 
           nNodes = size(nodal_data,1)
           nModes = nNodes
-          call ply_fxt_n2m_1D( fxt = me%body_1d%fxt,         &
-            &               nodal_data = nodal_data(:,iVar), &
-            &               modal_data = modal_data(:,iVar), &
-            &               nNodes = nNodes,                 &
-            &               nModes = nModes                  )
+          call ply_fxt_n2m_1D(                                  &
+            &         fxt              = me%body_1d%fxt,        &
+            &         nodal_data       = nodal_data(:,iVar),    &
+            &         modal_data       = modal_data(:,iVar),    &
+            &         nNodes           = nNodes,                &
+            &         nModes           = nModes,                &
+            &         oversamp_degree  = me%oversamp_degree     )
         end do
       end if
 

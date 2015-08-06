@@ -40,185 +40,225 @@ implicit none
     &            general  = params%general      )
   res = 0.0_rk
 
-  allocate(u(maxDegree + 1,1))
-  allocate(v(nPoints,1))
-
-  call ply_init_fxt(    flpt    = fxt%flpt,  &
-    &                   degree  = maxDegree, &
-    &                   nPoints = nPoints,   &
-    &                   prec    = prec       )
-
-
-  call random_number(v_orig)
-  
-  write(*,*) 'orig :', v_orig
-  v(:,1) = v_orig
-  
-  ! Test the subroutines m2n and n2m
-  nNodes = size(v,1)
-  nModes = size(u,1)
-
-  ! there ....
-  ! transform from physical to wave space
-  call ply_fxt_n2m_1D(     fxt        = fxt,      &
-    &                      nodal_data = v(:,1),        &
-    &                      modal_data = u(:,1),        &
-    &                      nNodes     = nNodes,   &
-    &                      nModes     = nModes    )
-
-  v = 0.0
-  write(*,*) "modal values = "
-  write(*,*) u 
-
-  ! ...and back again
-  ! transform from wave to physical space
-  call ply_fxt_m2n_1D(     fxt        = fxt,      &
-    &                      modal_data = u(:,1),        &
-    &                      nodal_data = v(:,1),        &
-    &                      nNodes     = nNodes,   &
-    &                      nModes     = nModes,   &
-    &                 oversamp_degree = nModes    )
-
-  write(*,*) 'trafo (after n2m and m2n):', v
-  write(*,*) 'Should be the same as orig.'
-
-  if (all(abs(v(:,1) - v_orig) < 2.*epsilon(1.0_rk))) then
-    write(*,*) 'PASSED'
-  else
-    write(*,*) 'Data does not match after conversion:'
-    write(*,*) 'FAILED'
-  end if
-
-
-!NA!  do power = 1,7
-!NA!    write(logUnit(10),*) '---------------------------   CHECKING CHEB->LEG L2P Q-SPACE TRAFO FOR ', 2**power
-!NA!    call check_fxt_2d(power, newRes)
-!NA!    if (newRes.gt.res) then
-!NA!      res = newRes
-!NA!    end if
-!NA!    write(logUnit(10),*) '--------------------------- DONE'
-!NA!  end do
+!NA!  allocate(u(maxDegree + 1,1))
+!NA!  allocate(v(nPoints,1))
 !NA!
-!NA!  !>\todo If everything worked fine, write PASSED on the very last line of output, to
-!NA!  !!      indicate a successful run of the unit test:
-!NA!  if(res.lt.1e-08) then
-!NA!    write(logUnit(1),*) 'PASSED'
-!NA!  end if 
-!NA!  call fin_env()
-!NA!    call check_fxt_2d(power, newRes)
-!NA!    if (newRes.gt.res) then
-!NA!      res = newRes
-!NA!    end if
-!NA!    write(logUnit(10),*) '--------------------------- DONE'
-!NA!  end do
+!NA!  call ply_init_fxt(    flpt    = fxt%flpt,  &
+!NA!    &                   degree  = maxDegree, &
+!NA!    &                   nPoints = nPoints,   &
+!NA!    &                   prec    = prec       )
 !NA!
-!NA!  !>\todo If everything worked fine, write PASSED on the very last line of output, to
-!NA!  !!      indicate a successful run of the unit test:
-!NA!  if(res.lt.1e-08) then
-!NA!    write(logUnit(1),*) 'PASSED'
-!NA!  end if 
-!NA!  call fin_env()
+!NA!
+!NA!  call random_number(v_orig)
+!NA!  
+!NA!  write(*,*) 'orig :', v_orig
+!NA!  v(:,1) = v_orig
+!NA!  
+!NA!  ! Test the subroutines m2n and n2m
+!NA!  nNodes = size(v,1)
+!NA!  nModes = size(u,1)
+!NA!
+!NA!  ! there ....
+!NA!  ! transform from physical to wave space
+!NA!  call ply_fxt_n2m_1D(     fxt        = fxt,      &
+!NA!    &                      nodal_data = v(:,1),        &
+!NA!    &                      modal_data = u(:,1),        &
+!NA!    &                      nNodes     = nNodes,   &
+!NA!    &                      nModes     = nModes    )
+!NA!
+!NA!  v = 0.0
+!NA!  write(*,*) "modal values = "
+!NA!  write(*,*) u 
+!NA!
+!NA!  ! ...and back again
+!NA!  ! transform from wave to physical space
+!NA!  call ply_fxt_m2n_1D(     fxt        = fxt,      &
+!NA!    &                      modal_data = u(:,1),        &
+!NA!    &                      nodal_data = v(:,1),        &
+!NA!    &                      nNodes     = nNodes,   &
+!NA!    &                      nModes     = nModes,   &
+!NA!    &                 oversamp_degree = nModes    )
+!NA!
+!NA!  write(*,*) 'trafo (after n2m and m2n):', v
+!NA!  write(*,*) 'Should be the same as orig.'
+!NA!
+!NA!  if (all(abs(v(:,1) - v_orig) < 2.*epsilon(1.0_rk))) then
+!NA!    write(*,*) 'PASSED'
+!NA!  else
+!NA!    write(*,*) 'Data does not match after conversion:'
+!NA!    write(*,*) 'FAILED'
+!NA!  end if
 
-!contains
+  !--------- CHECK FXT 1D -----------------------------------!
+  call check_fxt_1d(res)
 
 
-!  subroutine check_fxt_2d(power, res)
-!    integer, intent(in) :: power
-!    real(kind=rk), intent(out) :: res
-!    !---------------------------------------------
-!    type(ply_prj_header_type) :: header
-!    type(ply_poly_project_type)   :: me
-!    type(ply_prj_init_type)   :: prj_init
-!    real(kind=rk),allocatable     :: nodal_data(:,:)
-!    real(kind=rk), allocatable    :: modal_data(:,:)
-!    real(kind=rk), allocatable    :: oversamp_modal(:,:)
-!    real(kind=rk), allocatable    :: ref_modes(:)
-!    type(ply_fxt_type) :: fxt
-!    !-----------for init
-!    integer ::basisType, maxdegree, i
-!    !-----------for oversamp
-!    integer :: iDegX, iDegY, dof, dofOverSamp
-!
-!    basisType = Q_space
-!    maxdegree = power
-!    header%kind = 'fxt'
-!    !> todo NA: Check if nodes kind and factor are correctly used for 
-!    !           fxt here or they should be different
-!    header%fxt_header%nodes_header%nodes_kind = 'gauss-legendre'
-!    header%fxt_header%factor = 2.0_rk
-!
-!    ! define my poly projection type
-!    call ply_prj_init_define(me= prj_init,             &
-!      &                          header = header ,         &
-!      &                          maxPolyDegree= maxdegree, &
-!      &                          basisType = basistype )
-! 
-!    ! fill the projection body according to the header
-!    call ply_poly_project_fillbody(me, proj_init=prj_init,scheme_dim=2)
-!  
-!    allocate(ref_modes(1:me%body_2d%ndofs) ) 
-!    allocate(modal_data(1:me%body_2d%ndofs,1) ) 
-!    allocate(oversamp_modal(1:me%body_2d%oversamp_dofs,1) ) 
-!    allocate(nodal_data(1:me%body_2d%nQuadPoints,1) ) 
-!
-!    do i=1, me%body_2d%ndofs 
-!       ref_modes(i)=1.0/real(i, kind=rk)
-!    end do
-!    
-!    write(*,*) "ref_modes = "
-!    write(*,*) ref_modes 
-!    modal_data(:,:) = 0.0_rk 
-!    oversamp_modal(:,:) = 0.0_rk 
-!    ! oversampling of modes 
-!    do iDegX = 1, maxdegree+1
-!      do iDegY = 1, maxdegree+1
-!        dof = 1 + (iDegX-1) + (iDegY-1)*(maxdegree+1)
-!        dofOverSamp = 1 + (iDegX-1) + (iDegY-1)*(me%oversamp_degree+1)
-!        oversamp_modal(dofOverSamp,1) = ref_modes(dof)
-!      end do
-!    end do                  
-!
-!    write(*,*) "modes in overSampled space = "
-!    write(*,*) oversamp_modal
-! 
-!    ! transform from wave to physical space
-!    call ply_poly_project_m2n(me = me ,                &
-!      &                       dim = 2 ,                &
-!      &                       nVars = 1,               &
-!      &                       nodal_data=nodal_data,   &
-!      &                       modal_data=oversamp_modal)
-!  
-!    write(*,*) "After conversion to nodal_data = "
-!    write(*,*) nodal_data
-!
-!    
-!    oversamp_modal(:,:) = 0.0_rk
-! 
-!    ! ...and back again
-!    ! transform from physical to wave space
-!    call ply_poly_project_n2m(me = me,                  & 
-!      &                       dim = 2 ,                 &
-!      &                       nVars = 1,                &
-!      &                       nodal_data=nodal_data,    &
-!      &                       modal_data= oversamp_modal)
-!    write(*,*) "After converting it back to oversampled space = "
-!    write(*,*) oversamp_modal 
-!
-!    do iDegX = 1, maxdegree+1
-!      do iDegY = 1, maxdegree+1
-!        dof = 1 + (iDegX-1) + (iDegY-1)*(maxdegree+1)
-!        dofOverSamp = 1 + (iDegX-1) + (iDegY-1)*(me%oversamp_degree+1)
-!        modal_data(dof,:) = oversamp_modal(dofOverSamp,:)
-!      end do
-!    end do                  
-!
-!    write(*,*) "final_modal data = "
-!    write(*,*) modal_data
-! 
-!    res= maxval( abs(ref_modes-modal_data(:,1)) ) 
-!
-!    write(*,*) 'power=', power
-!    write(*,*) 'res=', res
-!  end subroutine  check_fxt_2d
+
+  !--------- CHECK FXT 2D -----------------------------------!
+  do power = 1,7
+    write(logUnit(10),*) '--------------------------- &
+    &              CHECKING CHEB->LEG L2P Q-SPACE TRAFO FOR ', 2**power
+    call check_fxt_2d(power, newRes)
+    if (newRes.gt.res) then
+      res = newRes
+    end if
+    write(logUnit(10),*) '--------------------------- DONE'
+  end do
+
+  !>\todo If everything worked fine, write PASSED on the very last line of output, to
+  !!      indicate a successful run of the unit test:
+  if(res.lt.1e-08) then
+    write(logUnit(1),*) 'PASSED'
+  end if 
+  call fin_env()
+
+contains
+
+  subroutine check_fxt_1d(res)
+    real(kind=rk), intent(out) :: res
+    !---------------------------------------------
+
+    type(ply_fxt_type), target :: fxt
+    real(kind=rk) :: v_orig(10)
+    real(kind=rk), allocatable :: u(:,:)
+    real(kind=rk), allocatable :: v(:,:)
+    integer :: nNodes, nModes  
+    integer, parameter :: nPoints = 10       ! number of points
+    integer, parameter :: maxDegree =  9       ! maximal polynomial degree
+    real(kind=rk), parameter :: prec = 8*epsilon(1.0_rk) ! Precision for the FMM
+
+    allocate(u(maxDegree + 1,1))
+    allocate(v(nPoints,1))
+
+    call ply_init_fxt(    flpt    = fxt%flpt,  &
+      &                   degree  = maxDegree, &
+      &                   nPoints = nPoints,   &
+      &                   prec    = prec       )
+
+
+    call random_number(v_orig)
+    
+    write(logunit(10),*) 'orig :', v_orig
+    v(:,1) = v_orig
+    
+    ! Test the subroutines m2n and n2m
+    nNodes = size(v,1)
+    nModes = size(u,1)
+
+    ! there ....
+    ! transform from physical to wave space
+    call ply_fxt_n2m_1D(  fxt              = fxt,      &
+      &                   nodal_data       = v(:,1),   &
+      &                   modal_data       = u(:,1),   &
+      &                   nNodes           = nNodes,   &
+      &                   nModes           = nModes,   &
+      &                   oversamp_degree  = maxDegree )
+
+    v = 0.0
+    write(logunit(10),*) "modal values = "
+    write(logunit(10),*) u 
+
+    ! ...and back again
+    ! transform from wave to physical space
+    call ply_fxt_m2n_1D(     fxt        = fxt,      &
+      &                      modal_data = u(:,1),   &
+      &                      nodal_data = v(:,1),   &
+      &                      nNodes     = nNodes,   &
+      &                      nModes     = nModes,   &
+      &                 oversamp_degree = nModes    )
+
+    write(logunit(10),*) 'trafo (after n2m and m2n):', v
+    write(logunit(10),*) 'Should be the same as orig.'
+
+    res = maxval(abs(v(:,1) - v_orig) ) 
+
+  end subroutine check_fxt_1d
+
+
+  subroutine check_fxt_2d(power, res)
+    integer, intent(in) :: power
+    real(kind=rk), intent(out) :: res
+    !---------------------------------------------
+    type(ply_prj_header_type) :: header
+    type(ply_poly_project_type)   :: me
+    type(ply_prj_init_type)   :: prj_init
+    real(kind=rk),allocatable     :: nodal_data(:,:)
+    real(kind=rk), allocatable    :: modal_data(:,:)
+    real(kind=rk), allocatable    :: oversamp_modal(:,:)
+    real(kind=rk), allocatable    :: ref_modes(:)
+    type(ply_fxt_type) :: fxt
+    !-----------for init
+    integer ::basisType, maxdegree, i
+    !-----------for oversamp
+    integer :: iDegX, iDegY, dof, dofOverSamp
+
+    basisType = Q_space
+    maxdegree = power
+    header%kind = 'fxt'
+    !> todo NA: Check if nodes kind and factor are correctly used for 
+    !           fxt here or they should be different
+    header%fxt_header%nodes_header%nodes_kind = 'gauss-legendre'
+    header%fxt_header%factor = 2.0_rk
+
+    ! define my poly projection type
+    call ply_prj_init_define(me= prj_init,             &
+      &                          header = header ,         &
+      &                          maxPolyDegree= maxdegree, &
+      &                          basisType = basistype )
+ 
+    ! fill the projection body according to the header
+    call ply_poly_project_fillbody(me, proj_init=prj_init,scheme_dim=2)
+  
+    allocate(ref_modes(1:me%body_2d%ndofs) ) 
+    allocate(modal_data(1:me%body_2d%ndofs,1) ) 
+    allocate(oversamp_modal(1:me%body_2d%oversamp_dofs,1) ) 
+    allocate(nodal_data(1:me%body_2d%nQuadPoints,1) ) 
+
+    do i=1, me%body_2d%ndofs 
+       ref_modes(i)=1.0/real(i, kind=rk)
+    end do
+    
+    modal_data(:,:) = 0.0_rk 
+    oversamp_modal(:,:) = 0.0_rk 
+    ! oversampling of modes 
+    do iDegX = 1, maxdegree+1
+      do iDegY = 1, maxdegree+1
+        dof = 1 + (iDegX-1) + (iDegY-1)*(maxdegree+1)
+        dofOverSamp = 1 + (iDegX-1) + (iDegY-1)*(me%oversamp_degree+1)
+        oversamp_modal(dofOverSamp,1) = ref_modes(dof)
+      end do
+    end do                  
+
+ 
+    ! transform from wave to physical space
+    call ply_poly_project_m2n(me = me ,                &
+      &                       dim = 2 ,                &
+      &                       nVars = 1,               &
+      &                       nodal_data=nodal_data,   &
+      &                       modal_data=oversamp_modal)
+  
+    
+    oversamp_modal(:,:) = 0.0_rk
+ 
+    ! ...and back again
+    ! transform from physical to wave space
+    call ply_poly_project_n2m(me = me,                  & 
+      &                       dim = 2 ,                 &
+      &                       nVars = 1,                &
+      &                       nodal_data=nodal_data,    &
+      &                       modal_data= oversamp_modal)
+
+    do iDegX = 1, maxdegree+1
+      do iDegY = 1, maxdegree+1
+        dof = 1 + (iDegX-1) + (iDegY-1)*(maxdegree+1)
+        dofOverSamp = 1 + (iDegX-1) + (iDegY-1)*(me%oversamp_degree+1)
+        modal_data(dof,:) = oversamp_modal(dofOverSamp,:)
+      end do
+    end do                  
+
+ 
+    res= maxval( abs(ref_modes-modal_data(:,1)) ) 
+
+  end subroutine  check_fxt_2d
 
 end program test_fxtd_n2m2n

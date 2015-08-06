@@ -92,28 +92,20 @@ contains
     !--------------------------------------------------------------------------!
      !> Description of the Fast Legendre Polynomial Transform
      type(ply_fxt_type) :: fxt
-     integer(c_int), intent(in) :: nModes, nNodes
      !> Nodal data
      real(c_double), intent(inout) :: nodal_data(nNodes)
      !> Modal data
      real(c_double), intent(inout) :: modal_data(nModes)
+     integer(c_int), intent(in) :: nModes, nNodes
      integer, intent(in) :: oversamp_degree 
      !-----------------------------------------------------------!
      integer :: ub, lb, iLine
+     !-----------------------------------------------------------!
 
  
-     !do iLine = 1, oversamp_degree+1
-     !  lb = (iLine-1)*(oversamp_degree+1)+1
-     !  ub = ub + oversamp_degree
      call fxtf_flptld_evl( nodal_data, nNodes,fxt%flpt%handle, &
        &                   modal_data, nModes,fxt%flpt%work    )
 
-      ! call fxtf_flptld_n2m( flpt        = fxt%flpt,         & 
-      !   &                   nodal_data = nodal_data(lb:ub), &
-      !   &                   modal_data = modal_data(lb:ub), &
-      !   &                   nModes     = nModes,            &
-      !   &                   nNodes     = nNodes             )
-     !end do
 
    end subroutine ply_fxt_m2n_1D
   !****************************************************************************!
@@ -125,39 +117,35 @@ contains
     !--------------------------------------------------------------------------!
      !> Description of the Fast Legendre Polynomial Transform
      type(ply_fxt_type) :: fxt
-     integer(kind=c_int), intent(in) :: nModes, nNodes
      !> Nodal data
-     real(kind=c_double), target :: nodal_data(nNodes)
+     real(c_double), intent(inout) :: nodal_data(nNodes)
      !> Modal data
-     real(kind=c_double), target :: modal_data(nModes)
+     real(c_double), intent(inout) :: modal_data(nModes)
+     integer(c_int), intent(in) :: nModes, nNodes
      integer, intent(in) :: oversamp_degree 
      !-----------------------------------------------------------!
-     integer :: ub, lb, iLine, iColumn, nModesPerDim 
+     integer :: ub, lb, iLine, iColumn, nModesPerDim, msq 
+     !-----------------------------------------------------------!
 
-     nModesPerDim = (oversamp_degree+1)**2
+     nModesPerDim = (oversamp_degree+1)
+     msq = nModesPerDim*nModesPerDim
 
      do iLine = 1, oversamp_degree+1
        lb = (iLine-1)*(oversamp_degree+1)+1
-       ub = ub + oversamp_degree
-       call fxtf_flptld_n2m( flpt        = fxt%flpt,         & 
-         &                   nodal_data = nodal_data(lb:ub), &
-         &                   modal_data = modal_data(lb:ub), &
-         &                   nModes     = nModes,            &
-         &                   nNodes     = nNodes             )
+       ub = lb + oversamp_degree
+       call fxtf_flptld_evl( nodal_data(lb:ub), nModesPerDim,   &
+         &                   fxt%flpt%handle,modal_data(lb:ub), &
+         &                   nModesPerDim,fxt%flpt%work         )
      end do
 
      do iColumn = 1, oversamp_degree+1
        lb = iColumn
-       ub = (oversamp_degree*oversamp_degree-1) + iColumn
-       call fxtf_flptld_n2m( flpt       = fxt%flpt,                    & 
-         &                   nodal_data =                              &
-         &                    nodal_data(lb:ub:oversamp_degree+1), &
-         &            modal_data = modal_data(nModesPerDim+lb          &
-         &                                   :nModesPerDim+ub          &
-         &                                   :oversamp_degree+1),  &
-         &                   nModes     = nModes,                      &
-         &                   nNodes     = nNodes                       )
+       ub = oversamp_degree +1
+       call fxtf_flptld_evl( nodal_data(lb:msq:ub), nModesPerDim ,        &
+         &                   fxt%flpt%handle, modal_data(lb : msq : ub),  &
+         &                   nModesPerDim,fxt%flpt%work                   )
      end do
+
    end subroutine ply_fxt_m2n_2D
   !****************************************************************************!
 
@@ -191,7 +179,6 @@ contains
      end do
    end subroutine ply_fxt_m2n_3D
   !****************************************************************************!
-  !****************************************************************************!
 
   !****************************************************************************!
    !> Convert nodal data to modal data using flpt.
@@ -201,37 +188,59 @@ contains
    !!
    !! Note: The modal and nodal data array sizes need to match the flpt
    !! definitions, provided in the fxtf_flptld_init call.
-   subroutine ply_fxt_n2m_1D(fxt, nodal_data, modal_data, nNodes, nModes)
+   subroutine ply_fxt_n2m_1D(fxt, nodal_data, modal_data, nNodes, nModes, &
+    &                        oversamp_degree                              )
     !--------------------------------------------------------------------------!
      !> Description of the Fast Legendre Polynomial Transform
      type(ply_fxt_type) :: fxt
-     integer(c_int), intent(in) :: nModes, nNodes
      !> Nodal data
      real(c_double), intent(inout) :: nodal_data(nNodes)
      !> Modal data
      real(c_double), intent(inout) :: modal_data(nModes)
+     integer(c_int), intent(in) :: nModes, nNodes
+     integer, intent(in) :: oversamp_degree 
+    !--------------------------------------------------------------------------!
 
-     call fxtf_flptld_exp( modal_data, nModes, fxt%flpt%handle, &
-       &                   nodal_data, nNodes, fxt%flpt%work    )
+     call fxtf_flptld_exp( modal_data, nModes, fxt%flpt%handle,   &
+       &                   nodal_data, nNodes, fxt%flpt%work      )
 
-     call fxt_error_print()
 
    end subroutine ply_fxt_n2m_1D 
   !****************************************************************************!
 
-   !> todo :NA: This routine needs to be adapted to work with the specified dimension
-   subroutine ply_fxt_n2m_2D(fxt, nodal_data, modal_data, nNodes, nModes)
+   subroutine ply_fxt_n2m_2D(fxt, nodal_data, modal_data, nNodes, nModes,    &
+    &                                                         oversamp_degree)
     !--------------------------------------------------------------------------!
      !> Description of the Fast Legendre Polynomial Transform
      type(ply_fxt_type) :: fxt
-     integer(kind=c_int), intent(in) :: nModes, nNodes
      !> Nodal data
-     real(kind=c_double), target :: nodal_data(nNodes)
+     real(c_double), target :: nodal_data(nNodes)
      !> Modal data
-     real(kind=c_double), target :: modal_data(nModes)
+     real(c_double), target :: modal_data(nModes)
+     integer(c_int), intent(in) :: nModes, nNodes
+     integer, intent(in) :: oversamp_degree 
+     !-----------------------------------------------------------!
+     integer :: ub, lb, iLine, iColumn, nModesPerDim, msq 
+     !-----------------------------------------------------------!
 
-    ! call fxtf_flptld_exp( c_loc(modal_data), nModes, fxt%flpt%handle, &
-    !   &                   c_loc(nodal_data), nNodes, fxt%flpt%work    )
+     nModesPerDim = (oversamp_degree+1)
+     msq = nModesPerDim*nModesPerDim
+
+     do iLine = 1, oversamp_degree+1
+       lb = (iLine-1)*(oversamp_degree+1)+1
+       ub = lb + oversamp_degree
+       call fxtf_flptld_exp( modal_data(lb:ub), nModesPerDim ,          &
+         &                   fxt%flpt%handle, nodal_data(lb:ub),        &
+         &                   nModesPerDim ,fxt%flpt%work                )
+     end do
+
+     do iColumn = 1, oversamp_degree+1
+       lb = iColumn
+       ub = oversamp_degree + 1
+       call fxtf_flptld_exp( modal_data(lb:msq:ub), nModesPerDim ,      &
+         &                   fxt%flpt%handle, nodal_data(lb : msq :ub), &
+         &                   nModesPerDim ,fxt%flpt%work                )
+     end do
    end subroutine ply_fxt_n2m_2D 
   !****************************************************************************!
 
