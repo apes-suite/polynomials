@@ -656,11 +656,13 @@ contains
         do iVar = 1, nVars 
           nNodes = size(nodal_data,1)
           nModes = nNodes
-          call ply_fxt_n2m_3D( fxt        = me%body_3d%fxt,     &
-            &                  nodal_data = nodal_data(:,iVar), &
-            &                  modal_data = modal_data(:,iVar), &
-            &                  nNodes     = nNodes,             &
-            &                  nModes     = nModes              )
+          call ply_fxt_n2m_3D(                                  &
+            &         fxt              = me%body_3d%fxt,        &
+            &         nodal_data       = nodal_data(:,iVar),    &
+            &         modal_data       = modal_data(:,iVar),    &
+            &         nNodes           = nNodes,                &
+            &         nModes           = nModes,                &
+            &         oversamp_degree  = me%oversamp_degree     )
         end do
       end if
 
