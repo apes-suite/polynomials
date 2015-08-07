@@ -16,6 +16,14 @@ module fxt_fwrap
   end type fxtf_flptld_type
 
 
+  !HK: This is totally unnecessary!
+  !HK: The declaration of the interfaces to the C-Routines is in fxt_fif,
+  !HK: which is used above!
+  !HK:
+  !HK: It is absolutely confusing to have two contradicting interface
+  !HK: declarations in the same code!
+  !HK: Also, I am not sure why the declarations in fxt_fif should be
+  !HK: problematic!
   interface
     subroutine fxtf_flptld_evl(v, vn, flpt, u, un, w) bind(c)
       use, intrinsic :: iso_c_binding
@@ -59,9 +67,12 @@ module fxt_fwrap
       type(c_ptr), value :: w
     end subroutine fxtf_faltld_exp
 
-    subroutine fxt_error_print() bind(c)
-
-    end subroutine fxt_error_print
+!HK: Not used anywhere...
+!HK: I would like to keep the modifications to the upstream code
+!HK: to a minimum. So, it would be nice, if we could avoid using it.
+!HK!    subroutine fxt_error_print() bind(c)
+!HK!
+!HK!    end subroutine fxt_error_print
 
   end interface
 
