@@ -43,8 +43,7 @@ implicit none
 
 
   !--------- CHECK FXT 2D -----------------------------------!
-  write(*,*) "2D"
-  do power = 3,3
+  do power = 1,7
     write(logUnit(10),*) '--------------------------- &
     &              CHECKING FXT TRANSFORMATION FOR ', 2**power
     call check_fxt_2d(power, newRes2)
@@ -57,9 +56,7 @@ implicit none
 
 
   !--------- CHECK FXT 3D -----------------------------------!
-  write(*,*) "3D"
-  !do power = 1,7
-  do power = 3,3
+  do power = 1,7
     write(logUnit(10),*) '---------------------------   CHECKING  &
     &                     FXT TRANSFORMATION  FOR ', 2**power
     call check_fxt_3d (power, newRes3)
