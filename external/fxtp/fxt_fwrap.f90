@@ -5,6 +5,7 @@ module fxt_fwrap
 
   implicit none
 
+  private
 
   !> This datatype provides a handle to the information that FXTPACK needs
   !! to have about the transformation.
@@ -15,10 +16,6 @@ module fxt_fwrap
     !> Pointer to the working array, that is required by the transformations.
     type(c_ptr) :: work
   end type fxtf_flptld_type
-
-!  public :: fxtf_flptld_type
-!  public :: fxtf_flptld_evl 
-!  public :: fxtf_flptld_exp
 
 
   !> Interface declarations to the fxtf_wrapper.c routines.
@@ -71,6 +68,12 @@ module fxt_fwrap
 
   end interface
 
+  public :: fxtf_flptld_type
+  public :: fxtf_flptld_init
+  public :: fxtf_flptld_evl
+  public :: fxtf_flptld_exp
+  public :: fxtf_flptld_m2n, fxtf_flptld_n2m
+
 
 contains
 
@@ -82,14 +85,18 @@ contains
   !!
   !! Note: The modal and nodal data array sizes need to match the flpt
   !! definitions, provided in the fxtf_flptld_init call.
-  subroutine fxtf_flptld_m2n(flpt, modal_data, nodal_data, nModes, nNodes)
+  subroutine fxtf_flptld_m2n(flpt, modal_data, nodal_data)
     !> Description of the Fast Legendre Polynomial Transform
     type(fxtf_flptld_type), intent(in) :: flpt
-    integer, intent(in) :: nModes, nNodes
     !> Modal data
-    real(kind=c_double), target :: modal_data(nModes)
+    real(kind=rk), target :: modal_data(:)
     !> Nodal data
-    real(kind=c_double), target :: nodal_data(nNodes)
+    real(kind=rk), target :: nodal_data(:)
+
+    integer(kind=c_int) :: nNodes, nModes
+
+    nNodes = size(nodal_data)
+    nModes = size(modal_data)
 
     call fxtf_flptld_evl( nodal_data, nNodes, flpt%handle, &
       &                   modal_data, nModes, flpt%work    )
@@ -104,14 +111,18 @@ contains
   !!
   !! Note: The modal and nodal data array sizes need to match the flpt
   !! definitions, provided in the fxtf_flptld_init call.
-  subroutine fxtf_flptld_n2m(flpt, nodal_data, modal_data, nNodes, nModes)
+  subroutine fxtf_flptld_n2m(flpt, nodal_data, modal_data)
     !> Description of the Fast Legendre Polynomial Transform
     type(fxtf_flptld_type) :: flpt
-    integer, intent(in) :: nModes, nNodes
     !> Nodal data
-    real(kind=c_double), target :: nodal_data(nNodes)
+    real(kind=rk), target :: nodal_data(:)
     !> Modal data
-    real(kind=c_double), target :: modal_data(nModes)
+    real(kind=rk), target :: modal_data(:)
+
+    integer(kind=c_int) :: nNodes, nModes
+
+    nNodes = size(nodal_data)
+    nModes = size(modal_data)
 
     call fxtf_flptld_exp( modal_data, nModes, flpt%handle, &
       &                   nodal_data, nNodes, flpt%work    )

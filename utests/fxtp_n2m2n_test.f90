@@ -10,7 +10,8 @@ program test_fxtd_n2m2n
                                 &    ply_poly_project_type
   use ply_prj_header_module,        only: ply_prj_header_type
   use tem_general_module,           only: tem_start, tem_general_type
-  use fxt_fwrap,                    only: fxtf_flptld_type, fxtf_flptld_init
+  use fxt_fwrap,                    only: fxtf_flptld_type, fxtf_flptld_init, &
+    &                                     fxtf_flptld_n2m, fxtf_flptld_m2n
   use ply_fxt_module,               only: ply_fxt_type, &
     &                                     ply_fxt_n2m_1D, ply_fxt_m2n_1D
   use ply_oversample_module,        only: ply_convert2oversample, &
@@ -42,7 +43,7 @@ implicit none
 
 
   !--------- CHECK FXT 2D -----------------------------------!
-  do power = 1,7
+  do power = 1,4
     write(logUnit(10),*) '--------------------------- &
     &              CHECKING FXT TRANSFORMATION FOR ', 2**power
     call check_fxt_2d(power, newRes2)
@@ -55,7 +56,7 @@ implicit none
 
 
   !--------- CHECK FXT 3D -----------------------------------!
-  do power = 1,7
+  do power = 1,4
     write(logUnit(10),*) '---------------------------   CHECKING  &
     &                     FXT TRANSFORMATION  FOR ', 2**power
     call check_fxt_3d (power, newRes3)
@@ -108,16 +109,11 @@ contains
     nNodes = size(v,1)
     nModes = size(u,1)
 
-
-
     ! there ....
     ! transform from physical to wave space
-    call ply_fxt_n2m_1D(  fxt              = fxt,      &
-      &                   nodal_data       = v(:,1),   &
-      &                   modal_data       = u(:,1),   &
-      &                   nNodes           = nNodes,   &
-      &                   nModes           = nModes,   &
-      &                   oversamp_degree  = maxDegree )
+    call fxtf_flptld_n2m( flpt       = fxt%flpt, &
+      &                   nodal_data = v(:,1),   &
+      &                   modal_data = u(:,1)    )
 
     v = 0.0
     write(logunit(10),*) "modal values = "
@@ -125,17 +121,14 @@ contains
 
     ! ...and back again
     ! transform from wave to physical space
-    call ply_fxt_m2n_1D(     fxt        = fxt,      &
-      &                      modal_data = u(:,1),   &
-      &                      nodal_data = v(:,1),   &
-      &                      nNodes     = nNodes,   &
-      &                      nModes     = nModes,   &
-      &                 oversamp_degree = nModes    )
+    call fxtf_flptld_m2n( flpt       = fxt%flpt, &
+      &                   modal_data = u(:,1),   &
+      &                   nodal_data = v(:,1)    )
 
     write(logunit(10),*) 'trafo (after n2m and m2n):', v
     write(logunit(10),*) 'Should be the same as orig.'
 
-    res = maxval(abs(v(:,1) - v_orig) ) 
+    res = maxval(abs(v(:,1) - v_orig))
 
   end subroutine check_fxt_1d
 
@@ -158,7 +151,7 @@ contains
     integer :: iDegX, iDegY, dof, dofOverSamp
 
     basisType = Q_space
-    maxdegree = power
+    maxdegree = 2**power - 1
     header%kind = 'fxt'
     !> todo NA: Check if nodes kind and factor are correctly used for 
     !           fxt here or they should be different
@@ -166,10 +159,10 @@ contains
     header%fxt_header%factor = 2.0_rk
 
     ! define my poly projection type
-    call ply_prj_init_define(me= prj_init,             &
-      &                          header = header ,         &
-      &                          maxPolyDegree= maxdegree, &
-      &                          basisType = basistype )
+    call ply_prj_init_define(me            = prj_init,  &
+      &                      header        = header,    &
+      &                      maxPolyDegree = maxdegree, &
+      &                      basisType     = basistype  )
  
     ! fill the projection body according to the header
     call ply_poly_project_fillbody(me, proj_init=prj_init,scheme_dim=2)
@@ -259,16 +252,17 @@ contains
     integer :: iDegX, iDegY, iDegZ,dof, dofOverSamp
 
     basisType = Q_space
-    maxdegree = power
+    maxdegree = 2**power - 1
     header%kind = 'fxt'
     header%fxt_header%nodes_header%nodes_kind = 'gauss-legendre'
     header%fxt_header%factor = 1.0_rk
 
     ! define my poly projection type
-    call ply_prj_init_define(me= prj_init,             &
-      &                          header = header ,         &
-      &                          maxPolyDegree= maxdegree, &
-      &                          basisType = basistype ) 
+    call ply_prj_init_define(me            = prj_init,  &
+      &                      header        = header,    &
+      &                      maxPolyDegree = maxdegree, &
+      &                      basisType     = basistype  )
+
     ! fill the projection body according to the header
     call ply_poly_project_fillbody(me = me, proj_init=prj_init, scheme_dim=3)
   

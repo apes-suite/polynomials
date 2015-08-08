@@ -46,8 +46,8 @@ module ply_poly_project_module
                                    & ply_facenodes_type
 
   use ply_fxt_module, only: ply_fxt_type, &
-    &                       ply_fxt_m2n_1D,ply_fxt_m2n_3D, ply_fxt_m2n_2D, &                     
-    &                       ply_fxt_n2m_1D,ply_fxt_n2m_3D, ply_fxt_n2m_2D, &                     
+    &                       ply_fxt_m2n_1D,ply_fxt_m2n_3D, ply_fxt_m2n_2D, &
+    &                       ply_fxt_n2m_1D,ply_fxt_n2m_3D, ply_fxt_n2m_2D, &
     &                       ply_fxt_type
   use fxt_fwrap, only: fxtf_flptld_init
 
@@ -548,39 +548,27 @@ contains
     case ('fxt')
       if (dim .eq. 3) then
         do iVar = 1,nVars
-          nNodes = size(nodal_data,1)
-          nModes = nNodes
           call ply_fxt_m2n_3D( fxt = me%body_3d%fxt,             &
             &               modal_data = modal_data(:,iVar),     &
             &               nodal_data = nodal_data(:,iVar),     &
-            &               nModes = nModes,                     &
-            &               nNodes = nNodes,                     &
             &              oversamp_degree = me%oversamp_degree  )
         end do
       end if
 
       if (dim .eq. 2) then
         do iVar = 1,nVars
-          nNodes = size(nodal_data,1)
-          nModes = nNodes
           call ply_fxt_m2n_2D( fxt = me%body_2d%fxt,             &
             &               modal_data = modal_data(:,iVar),     &
             &               nodal_data = nodal_data(:,iVar),     &
-            &               nModes = nModes,                     &
-            &               nNodes = nNodes,                     &
             &              oversamp_degree = me%oversamp_degree  )
         end do
       end if
 
       if (dim .eq. 1) then
         do iVar = 1,nVars
-          nNodes = size(nodal_data(:,iVar))
-          nModes = nNodes
           call ply_fxt_m2n_1D( fxt = me%body_1d%fxt,             &
             &               modal_data = modal_data(:,iVar),     &
             &               nodal_data = nodal_data(:,iVar),     &
-            &               nModes = nModes,                     &
-            &               nNodes = nNodes,                     &
             &              oversamp_degree = me%oversamp_degree  )
         end do
       end if
@@ -655,42 +643,30 @@ contains
     case ('fxt')
       if (dim .eq. 3) then
         do iVar = 1, nVars 
-          nNodes = size(nodal_data,1)
-          nModes = nNodes
           call ply_fxt_n2m_3D(                                  &
             &         fxt              = me%body_3d%fxt,        &
             &         nodal_data       = nodal_data(:,iVar),    &
             &         modal_data       = modal_data(:,iVar),    &
-            &         nNodes           = nNodes,                &
-            &         nModes           = nModes,                &
             &         oversamp_degree  = me%oversamp_degree     )
         end do
       end if
 
       if (dim .eq. 2) then
         do iVar = 1, nVars 
-          nNodes = size(nodal_data,1)
-          nModes = nNodes
           call ply_fxt_n2m_2D(                                  &
             &         fxt              = me%body_2d%fxt,        &
             &         nodal_data       = nodal_data(:,iVar),    &
             &         modal_data       = modal_data(:,iVar),    &
-            &         nNodes           = nNodes,                &
-            &         nModes           = nModes,                &
             &         oversamp_degree  = me%oversamp_degree     )
         end do
       end if
 
       if (dim .eq. 1) then
         do iVar = 1, nVars 
-          nNodes = size(nodal_data,1)
-          nModes = nNodes
           call ply_fxt_n2m_1D(                                  &
             &         fxt              = me%body_1d%fxt,        &
             &         nodal_data       = nodal_data(:,iVar),    &
             &         modal_data       = modal_data(:,iVar),    &
-            &         nNodes           = nNodes,                &
-            &         nModes           = nModes,                &
             &         oversamp_degree  = me%oversamp_degree     )
         end do
       end if
