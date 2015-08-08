@@ -5,6 +5,7 @@ module fxt_fwrap
 
   implicit none
 
+
   !> This datatype provides a handle to the information that FXTPACK needs
   !! to have about the transformation.
   type fxtf_flptld_type
@@ -14,6 +15,10 @@ module fxt_fwrap
     !> Pointer to the working array, that is required by the transformations.
     type(c_ptr) :: work
   end type fxtf_flptld_type
+
+!  public :: fxtf_flptld_type
+!  public :: fxtf_flptld_evl 
+!  public :: fxtf_flptld_exp
 
 
   !> Interface declarations to the fxtf_wrapper.c routines.

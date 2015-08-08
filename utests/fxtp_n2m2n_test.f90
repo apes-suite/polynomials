@@ -9,8 +9,7 @@ program test_fxtd_n2m2n
                                 &    ply_poly_project_n2m, &
                                 &    ply_poly_project_type
   use ply_prj_header_module,        only: ply_prj_header_type
-  use tem_general_module,           only: tem_start
-  use atl_solver_param_module,      only: solver_param_type
+  use tem_general_module,           only: tem_start, tem_general_type
   use fxt_fwrap,                    only: fxtf_flptld_type, fxtf_flptld_init
   use ply_fxt_module,               only: ply_fxt_type, &
     &                                     ply_fxt_n2m_1D, ply_fxt_m2n_1D
@@ -25,12 +24,12 @@ implicit none
   real(kind=rk) :: res2, newRes2
   real(kind=rk) :: res3, newRes3
   integer :: power
-  type(solver_param_type) :: params
+  type(tem_general_type) :: general
 
   ! Init the Treelm environment, needed to init the log Unit
-  call tem_start(codeName = 'Ateles unit test', &
-    &            version  = 'utest',            &
-    &            general  = params%general      )
+  call tem_start(codeName = 'Polynomials unit test', &
+    &            version  = 'utest',                 &
+    &            general  = general                  )
   res1 = 0.0_rk
   res2 = 0.0_rk
   res3 = 0.0_rk
