@@ -11,9 +11,9 @@ program test_fxtd_n2m2n
   use ply_prj_header_module,        only: ply_prj_header_type
   use tem_general_module,           only: tem_start
   use atl_solver_param_module,      only: solver_param_type
-  use fxt_fwrap,                    only: fxtf_flptld_type 
-  use ply_fxt_module,               only:  ply_init_fxt, ply_fxt_type, &
-    &                                      ply_fxt_n2m_1D, ply_fxt_m2n_1D
+  use fxt_fwrap,                    only: fxtf_flptld_type, fxtf_flptld_init
+  use ply_fxt_module,               only: ply_fxt_type, &
+    &                                     ply_fxt_n2m_1D, ply_fxt_m2n_1D
   use ply_oversample_module,        only: ply_convert2oversample, &
     &                                     ply_convertFromOversample
 
@@ -94,7 +94,7 @@ contains
     allocate(u(maxDegree + 1,1))
     allocate(v(nPoints,1))
 
-    call ply_init_fxt(    flpt    = fxt%flpt,  &
+    call fxtf_flptld_init(flpt    = fxt%flpt,  &
       &                   degree  = maxDegree, &
       &                   nPoints = nPoints,   &
       &                   prec    = prec       )

@@ -1,9 +1,8 @@
 program fxtp_test
   use iso_c_binding
   use env_module, only: rk
-  !use fxt_fif
-  use fxt_fwrap
-  use ply_fxt_module, only:  ply_init_fxt
+  use fxt_fwrap, only: fxtf_flptld_type, fxtf_flptld_init, &
+    &                  fxtf_flptld_exp, fxtf_flptld_evl
 
   implicit none
  
@@ -24,7 +23,7 @@ program fxtp_test
   modalLen = nPoints 
   nodalLen = nPoints 
 
-  call ply_init_fxt(    flpt    = flpt,      &
+  call fxtf_flptld_init(flpt    = flpt,      &
     &                   degree  = maxDegree, &
     &                   nPoints = nPoints,   &
     &                   prec    = prec       )
@@ -40,9 +39,8 @@ program fxtp_test
   call fxtf_flptld_exp( modal, modalLen, flpt%handle, &
     &                   nodal, nodalLen, flpt%work    )
 
-  call fxt_error_print()
-
   write(*,*) "modal val", modal
+  nodal = 0.0
 
   ! ...and back again
   ! transform from wave to physical space

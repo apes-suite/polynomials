@@ -1,7 +1,7 @@
 module fxt_fwrap
   use, intrinsic :: iso_c_binding
   use env_module, only: rk
-  use fxt_fif
+  use fxt_fif, only: fxt_flptld_init, fxt_flptld_wsize, fxt_vecld_new
 
   implicit none
 
@@ -16,14 +16,11 @@ module fxt_fwrap
   end type fxtf_flptld_type
 
 
-  !HK: This is totally unnecessary!
-  !HK: The declaration of the interfaces to the C-Routines is in fxt_fif,
-  !HK: which is used above!
-  !HK:
-  !HK: It is absolutely confusing to have two contradicting interface
-  !HK: declarations in the same code!
-  !HK: Also, I am not sure why the declarations in fxt_fif should be
-  !HK: problematic!
+  !> Interface declarations to the fxtf_wrapper.c routines.
+  !!
+  !! Those routines enable the passing of Fortran arrays to the FXTPACK and
+  !! take care of putting the data into the fxt_vecld data structures, which are
+  !! then passed on to the actual fxt_* routines.
   interface
     subroutine fxtf_flptld_evl(v, vn, flpt, u, un, w) bind(c)
       use, intrinsic :: iso_c_binding
@@ -47,32 +44,25 @@ module fxt_fwrap
 
     subroutine fxtf_faltld_evl(v, vn, falt, m, u, un, w) bind(c)
       use, intrinsic :: iso_c_binding
-      type(c_ptr), value :: v
-      integer(kind=c_int) :: vn
+      real(c_double), dimension(*) :: v
+      integer(c_int), value :: vn
       type(c_ptr), value :: falt
-      integer(kind=c_long) :: m
-      type(c_ptr), value :: u
-      integer(kind=c_int) :: un
+      integer(kind=c_long), value :: m
+      real(c_double), dimension(*) :: u
+      integer(c_int), value :: un
       type(c_ptr), value :: w
     end subroutine fxtf_faltld_evl
 
     subroutine fxtf_faltld_exp(u, un, falt, m, v, vn, w) bind(c)
       use, intrinsic :: iso_c_binding
-      type(c_ptr), value :: u
-      integer(kind=c_int) :: un
+      real(c_double), dimension(*) :: u
+      integer(c_int), value :: un
       type(c_ptr), value :: falt
-      integer(kind=c_long) :: m
-      type(c_ptr), value :: v
-      integer(kind=c_int) :: vn
+      integer(kind=c_long), value :: m
+      real(c_double), dimension(*) :: v
+      integer(c_int), value :: vn
       type(c_ptr), value :: w
     end subroutine fxtf_faltld_exp
-
-!HK: Not used anywhere...
-!HK: I would like to keep the modifications to the upstream code
-!HK: to a minimum. So, it would be nice, if we could avoid using it.
-!HK!    subroutine fxt_error_print() bind(c)
-!HK!
-!HK!    end subroutine fxt_error_print
 
   end interface
 
@@ -96,8 +86,8 @@ contains
     !> Nodal data
     real(kind=c_double), target :: nodal_data(nNodes)
 
-!    call fxtf_flptld_evl( c_loc(nodal_data), nNodes, flpt%handle, &
-!      &                   c_loc(modal_data), nModes, flpt%work    )
+    call fxtf_flptld_evl( nodal_data, nNodes, flpt%handle, &
+      &                   modal_data, nModes, flpt%work    )
 
   end subroutine fxtf_flptld_m2n
 
@@ -118,54 +108,54 @@ contains
     !> Modal data
     real(kind=c_double), target :: modal_data(nModes)
 
-    !call fxtf_flptld_exp( c_loc(modal_data), nModes, flpt%handle, &
-    !  &                   c_loc(nodal_data), nNodes, flpt%work    )
+    call fxtf_flptld_exp( modal_data, nModes, flpt%handle, &
+      &                   nodal_data, nNodes, flpt%work    )
 
   end subroutine fxtf_flptld_n2m
 
 
-!  !> Initialize the flpt data structure for fast legendre polynomial
-!  !! transformation via the fxtpack.
-!  subroutine fxtf_flptld_init(flpt, degree, nPoints, prec)
-!    !> Handle to the resulting fast polynomial table.
-!    type(fxtf_flptld_type), intent(out) :: flpt
-!
-!    !> Polynomial degree.
-!    integer, intent(in) :: degree
-!
-!    !> Number of points.
-!    !!
-!    !! Optional, defaults to degree+1.
-!    integer, intent(in), optional :: nPoints
-!
-!    !> Required precision for the transformation.
-!    !!
-!    !! Optional, defaults to 8 times the precision of c_double.
-!    real(kind=c_double), intent(in), optional :: prec
-!
-!    integer(c_long) :: wsize
-!    integer(c_long) :: p
-!    integer(c_long) :: n
-!
-!    real(kind=c_double) :: lprec
-!
-!    n = degree
-!    if (present(nPoints)) then
-!      p = nPoints
-!    else
-!      p = degree + 1
-!    end if
-!
-!    if (present(prec)) then
-!      lprec = prec
-!    else
-!      lprec = 8*epsilon(lprec)
-!    end if
-!
-!    flpt%handle = fxt_flptld_init(p, n, lprec)
-!    wsize = fxt_flptld_wsize(flpt%handle)
-!    flpt%work = fxt_vecld_new(wsize)
-!
-!  end subroutine fxtf_flptld_init
+  !> Initialize the flpt data structure for fast legendre polynomial
+  !! transformation via the fxtpack.
+  subroutine fxtf_flptld_init(flpt, degree, nPoints, prec)
+    !> Handle to the resulting fast polynomial table.
+    type(fxtf_flptld_type), intent(out) :: flpt
+
+    !> Polynomial degree.
+    integer, intent(in) :: degree
+
+    !> Number of points.
+    !!
+    !! Optional, defaults to degree+1.
+    integer, intent(in), optional :: nPoints
+
+    !> Required precision for the transformation.
+    !!
+    !! Optional, defaults to 8 times the precision of c_double.
+    real(kind=c_double), intent(in), optional :: prec
+
+    integer(c_long) :: wsize
+    integer(c_long) :: p
+    integer(c_long) :: n
+
+    real(kind=c_double) :: lprec
+
+    n = degree
+    if (present(nPoints)) then
+      p = nPoints
+    else
+      p = degree + 1
+    end if
+
+    if (present(prec)) then
+      lprec = prec
+    else
+      lprec = 8*epsilon(lprec)
+    end if
+
+    flpt%handle = fxt_flptld_init(p, n, lprec)
+    wsize = fxt_flptld_wsize(flpt%handle)
+    flpt%work = fxt_vecld_new(wsize)
+
+  end subroutine fxtf_flptld_init
 
 end module fxt_fwrap
