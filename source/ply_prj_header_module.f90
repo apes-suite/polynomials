@@ -163,6 +163,7 @@ contains
         write(logUnit(1),*) '      Unknown projection method '//trim(me%kind)//'!'
         write(logUnit(1),*) '      Available methods are:'
         write(logUnit(1),*) '      * l2p - L2 Projection'
+        write(logUnit(1),*) '      * fxt - FXTPACK: Fast Multipole Method'
         if (fftw_available) &
           & write(logUnit(1),*) '      * fpt - Fast Polynomial Transformation'
         write(logUnit(1),*) '      Stopping...'

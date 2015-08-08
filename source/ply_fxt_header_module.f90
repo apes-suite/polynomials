@@ -26,7 +26,8 @@ module ply_fxt_header_module
   !! points for the projection
   type ply_fxt_header_type
     type(ply_nodes_header_type) :: nodes_header
-    real(kind=rk) :: factor
+    real(kind=rk) :: factor = 1.0
+    real(kind=rk) :: prec = epsilon(1.0)
   end type ply_fxt_header_type
 
   interface assignment(=)
@@ -62,22 +63,23 @@ module ply_fxt_header_module
 
   public :: assignment(=)
   public :: ply_fxt_header_type
-  public :: ply_fxt_header_load,  ply_fxt_header_display
+  public :: ply_fxt_header_load, ply_fxt_header_display
   public :: ply_fxt_header_out
 
 
 contains
 
-  !*****************************************************************************!
+  !****************************************************************************!
   subroutine Copy_fxt_header(left,right)
-    !---------------------------------------------------------------------------!
+    !--------------------------------------------------------------------------!
     !> fpt to copy to
     type(ply_fxt_header_type), intent(out) :: left
     !> fpt to copy from
     type(ply_fxt_header_type), intent(in) :: right
-    !---------------------------------------------------------------------------!
+    !--------------------------------------------------------------------------!
 
     left%factor = right%factor
+    left%prec = right%prec
     left%nodes_header = right%nodes_header
 
   end subroutine Copy_fxt_header
@@ -87,32 +89,26 @@ contains
   !****************************************************************************!
   !> Load settings to describe a projection method from a Lua table.
   subroutine ply_fxt_header_load(me, conf, thandle)
-    !---------------------------------------------------------------------------!
+    !--------------------------------------------------------------------------!
     type(ply_fxt_header_type), intent(out) :: me
     type(flu_State)                        :: conf
     integer, intent(in)                    :: thandle
-    !---------------------------------------------------------------------------!
+    !--------------------------------------------------------------------------!
     integer :: iError
-    !---------------------------------------------------------------------------!
+    !--------------------------------------------------------------------------!
 
     ! for fxt gauss-legendre points are used 
-    !> todo: NA : Check if this is correct?
     me%nodes_header%nodes_kind = 'gauss-legendre'
 
     ! fill up fxt header
-    call aot_get_val(L       = conf,                &
-       &             thandle = thandle,             &
-       &             key     = 'factor',            &
-       &             val     = me%factor,           &
-       &             default = 1.0_rk,              &
-       &             ErrCode = iError               )
-    call aot_get_val(L       = conf,                          &
-      &              thandle = thandle,                       &
-      &              key     = 'lobattoPoints',               &
-      &              val     = me%nodes_header%lobattoPoints, &
-      &              ErrCode = iError,                        &
-      &              default = .false.                        )
-    if (me%factor .le. 0) then
+    call aot_get_val(L       = conf,      &
+       &             thandle = thandle,   &
+       &             key     = 'factor',  &
+       &             val     = me%factor, &
+       &             default = 1.0_rk,    &
+       &             ErrCode = iError     )
+
+    if (me%factor <= 0) then
       write(logUnit(1),*) 'ERROR in loading projection: factor for ' // &
         &            'projection has to be larger ' // &
         &            'than 0!'
@@ -120,6 +116,22 @@ contains
       write(logUnit(1),*) 'Stopping...'
       call tem_abort()
     end if
+
+    call aot_get_val(L       = conf,                  &
+       &             thandle = thandle,               &
+       &             key     = 'prec',                &
+       &             val     = me%prec,               &
+       &             default = sqrt(epsilon(1.0_rk)), &
+       &             ErrCode = iError                 )
+
+    !>\todo Check, wether Lobatto Points could be used with FXTPACK.
+    me%nodes_header%lobattoPoints = .false.
+    !!call aot_get_val(L       = conf,                          &
+    !!  &              thandle = thandle,                       &
+    !!  &              key     = 'lobattoPoints',               &
+    !!  &              val     = me%nodes_header%lobattoPoints, &
+    !!  &              ErrCode = iError,                        &
+    !!  &              default = .false.                        )
 
   end subroutine ply_fxt_header_load
   !****************************************************************************!
@@ -147,21 +159,26 @@ contains
 
   !****************************************************************************!
   subroutine ply_fxt_header_display(me)
-    !---------------------------------------------------------------------------!
+    !--------------------------------------------------------------------------!
     type(ply_fxt_header_type), intent(in) :: me
-    !---------------------------------------------------------------------------!
+    !--------------------------------------------------------------------------!
 
     write(logUnit(1),*) ' * Kind of projection method = fxt'
+    write(logUnit(1),*) ' * Precision for the fast multipole: ', me%prec
     write(logUnit(1),*) ' * Factor to use in projection = ', me%factor
-    write(logUnit(1),*) ' * using LobattoPoints =', me%nodes_header%lobattoPoints
+    write(logUnit(1),*) ' * using LobattoPoints =', &
+      &                 me%nodes_header%lobattoPoints
 
-    write(logUnit(1),*) ' NOT using fast polynomial transforms for projection!'
     if (me%factor < 2.0_rk) then
       write(logUnit(1),*) ''
-      write(logUnit(1),*) '+-----------------------------------------------------+'
-      write(logUnit(1),*) '| WARNING, the oversampling factor is smaller than 2! |'
-      write(logUnit(1),*) '|        this might lead to bad projections!          |'
-      write(logUnit(1),*) '+-----------------------------------------------------+'
+      write(logUnit(1),*) &
+        &  '+-----------------------------------------------------+'
+      write(logUnit(1),*) &
+        &  '| WARNING, the oversampling factor is smaller than 2! |'
+      write(logUnit(1),*) &
+        &  '|        this might lead to bad projections!          |'
+      write(logUnit(1),*) &
+        &  '+-----------------------------------------------------+'
     end if
 
   end subroutine ply_fxt_header_display
@@ -206,7 +223,7 @@ contains
     !---------------------------------------------------------------------------
 
     unequality = ( left%nodes_header /= right%nodes_header ) &
-      &         .or. ( left%factor /= right%factor)
+      &          .or. ( left%factor /= right%factor)
 
   end function isUnequal
   !****************************************************************************!

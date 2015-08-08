@@ -67,10 +67,10 @@ implicit none
   end do
 
 
-  !>\todo If everything worked fine, write PASSED on the very last line of output, to
-  !!      indicate a successful run of the unit test:
+  !> If everything worked fine, write PASSED on the very last line of output, to
+  !! indicate a successful run of the unit test:
   write(*,*) res1, res2, res3
-  if(max(res1,res2,res3) .lt.1e-08) then
+  if(max(res1,res2,res3) < 1e-08) then
     write(logUnit(1),*) 'PASSED'
   end if
  
@@ -157,6 +157,7 @@ contains
     !           fxt here or they should be different
     header%fxt_header%nodes_header%nodes_kind = 'gauss-legendre'
     header%fxt_header%factor = 2.0_rk
+    header%fxt_header%prec = sqrt(epsilon(1.0_rk))
 
     ! define my poly projection type
     call ply_prj_init_define(me            = prj_init,  &
@@ -233,7 +234,8 @@ contains
  
     res= maxval( abs(ref_modes-modal_data(:,1)) ) 
 
-  end subroutine  check_fxt_2d
+  end subroutine check_fxt_2d
+
 
   subroutine check_fxt_3D(power, res)
     integer, intent(in) :: power
@@ -256,6 +258,7 @@ contains
     header%kind = 'fxt'
     header%fxt_header%nodes_header%nodes_kind = 'gauss-legendre'
     header%fxt_header%factor = 1.0_rk
+    header%fxt_header%prec = sqrt(epsilon(1.0_rk))
 
     ! define my poly projection type
     call ply_prj_init_define(me            = prj_init,  &

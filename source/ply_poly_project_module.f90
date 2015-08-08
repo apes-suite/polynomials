@@ -321,6 +321,13 @@ contains
 
       end if
     end if
+    if (trim(proj_init%header%kind) == 'fxt') then
+      ! Ensure an even order for the oversampled polynomial representation.
+      ! There is a bug in FXTPACK resulting faulty conversions for odd
+      ! numbers of evaluation points.
+      ! To avoid this, we increase the oversampling order by 1, if it is odd.
+      oversampling_order = oversampling_order + mod(oversampling_order,2)
+    end if
 
     write(logUnit(1),*) 'Using an oversampled order of: ', oversampling_order
     write(logUnit(1),*) 'maxpolydegree is: ', me%maxPolyDegree
@@ -446,20 +453,23 @@ contains
     case ('fxt')
       !> Fill the fxt Legendre Polynomial datatype
       if (scheme_dim >= 3) then
-        call fxtf_flptld_init(flpt    = me%body_3d%fxt%flpt, &
-          &                   degree  = me%oversamp_degree,  &
-          &                   nPoints = me%oversamp_degree+1 )
+        call fxtf_flptld_init(flpt    = me%body_3d%fxt%flpt,            &
+          &                   degree  = me%oversamp_degree,             &
+          &                   nPoints = me%oversamp_degree+1,           &
+          &                   prec    = proj_init%header%fxt_header%prec)
       end if
 
       if (scheme_dim >= 2) then
-        call fxtf_flptld_init(flpt    = me%body_2d%fxt%flpt,   &
-          &                   degree  = me%oversamp_degree,    &
-          &                   nPoints = me%oversamp_degree+1   )
+        call fxtf_flptld_init(flpt    = me%body_2d%fxt%flpt,            &
+          &                   degree  = me%oversamp_degree,             &
+          &                   nPoints = me%oversamp_degree+1,           &
+          &                   prec    = proj_init%header%fxt_header%prec)
       end if
 
-      call fxtf_flptld_init(flpt = me%body_1d%fxt%flpt,      &
-        &                   degree  = me%oversamp_degree,    &
-        &                   nPoints = me%oversamp_degree+1   )
+      call fxtf_flptld_init(flpt    = me%body_1d%fxt%flpt,            &
+        &                   degree  = me%oversamp_degree,             &
+        &                   nPoints = me%oversamp_degree+1,           &
+        &                   prec    = proj_init%header%fxt_header%prec)
 
 
     case default
