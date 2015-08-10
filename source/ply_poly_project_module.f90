@@ -45,11 +45,10 @@ module ply_poly_project_module
                                    & init_gauss_nodes_2d, init_gauss_nodes_1d,&
                                    & ply_facenodes_type
 
-  use ply_fxt_module, only: ply_fxt_type, &
+  use ply_fxt_module, only: ply_fxt_type, ply_init_fxt,                    &
     &                       ply_fxt_m2n_1D,ply_fxt_m2n_3D, ply_fxt_m2n_2D, &
     &                       ply_fxt_n2m_1D,ply_fxt_n2m_3D, ply_fxt_n2m_2D, &
     &                       ply_fxt_type
-  use fxt_fwrap, only: fxtf_flptld_init
 
   implicit none
 
@@ -453,24 +452,28 @@ contains
     case ('fxt')
       !> Fill the fxt Legendre Polynomial datatype
       if (scheme_dim >= 3) then
-        call fxtf_flptld_init(flpt    = me%body_3d%fxt%flpt,            &
-          &                   degree  = me%oversamp_degree,             &
-          &                   nPoints = me%oversamp_degree+1,           &
-          &                   prec    = proj_init%header%fxt_header%prec)
+        call ply_init_fxt(fxt    = me%body_3d%fxt,              &
+          &               header = proj_init%header%fxt_header, &
+          &               degree = me%oversamp_degree,          &
+          &               nDims  = 3,                           &
+          &               nodes  = me%body_3d%nodes,            &
+          &               faces  = me%body_3d%faces             )
       end if
 
       if (scheme_dim >= 2) then
-        call fxtf_flptld_init(flpt    = me%body_2d%fxt%flpt,            &
-          &                   degree  = me%oversamp_degree,             &
-          &                   nPoints = me%oversamp_degree+1,           &
-          &                   prec    = proj_init%header%fxt_header%prec)
+        call ply_init_fxt(fxt    = me%body_2d%fxt,              &
+          &               header = proj_init%header%fxt_header, &
+          &               degree = me%oversamp_degree,          &
+          &               nDims  = 2,                           &
+          &               nodes  = me%body_2d%nodes,            &
+          &               faces  = me%body_2d%faces             )
       end if
-
-      call fxtf_flptld_init(flpt    = me%body_1d%fxt%flpt,            &
-        &                   degree  = me%oversamp_degree,             &
-        &                   nPoints = me%oversamp_degree+1,           &
-        &                   prec    = proj_init%header%fxt_header%prec)
-
+        call ply_init_fxt(fxt    = me%body_1d%fxt,              &
+          &               header = proj_init%header%fxt_header, &
+          &               degree = me%oversamp_degree,          &
+          &               nDims  = 1,                           &
+          &               nodes  = me%body_3d%nodes,            &
+          &               faces  = me%body_3d%faces             )
 
     case default
       write(logUnit(1),*) 'ERROR in initializing projection:'

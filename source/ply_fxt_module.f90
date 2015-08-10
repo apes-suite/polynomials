@@ -2,7 +2,11 @@
 !! fast multipole method.
 module ply_fxt_module
   use env_module, only: rk
-  use fxt_fwrap, only: fxtf_flptld_type, fxtf_flptld_n2m, fxtf_flptld_m2n
+  use fxt_fwrap, only: fxtf_flptld_type, fxtf_flptld_n2m, fxtf_flptld_m2n,&
+    &                  fxtf_flptld_init
+  use ply_fxt_header_module,     only: ply_fxt_header_type
+  use ply_nodes_module,          only: init_gauss_nodes, ply_faceNodes_type, &
+    &                                  init_gauss_nodes_2d, init_gauss_nodes_1d
 
   implicit none
 
@@ -29,25 +33,36 @@ contains
    !!\todo Actually implement filling of ply_fxt_type here.
    !!      Basically needs to set precision and dimension, and call
    !!      fxtf_flptld_init
-   subroutine ply_init_fxt(flpt, nDims, degree, nPoints, prec)
-    !--------------------------------------------------------------------------!
+   subroutine ply_init_fxt(fxt, header, degree, nDims, nodes, faces)
+     !--------------------------------------------------------------------------!
      !> Handle to the resulting fast polynomial table.
-     type(ply_fxt_type), intent(out) :: flpt
+     type(ply_fxt_type), intent(out) :: fxt
+     type(ply_fxt_header_type), intent(in)     :: header
+      !> Polynomial degree.
+     integer, intent(in)                       :: degree
+      !> Number of dimensions to use for this transformation.
+     integer, intent(in)                       :: nDims
+     real(kind=rk), intent(out), allocatable   :: nodes(:,:)
+     type(ply_faceNodes_type), intent(out), allocatable :: faces(:,:)
+     !--------------------------------------------------------------------------!
 
-     !> Number of dimensions to use for this transformation.
-     integer, intent(in) :: nDims
-
-     !> Polynomial degree.
-     integer, intent(in) :: degree
-
-     !> Number of points.
-     !! Optional, defaults to degree+1.
-     integer, intent(in), optional :: nPoints
-
-     !> Required precision for the transformation.
-     !! Optional, defaults to 8 times the precision of c_double.
-     real(kind=rk), intent(in), optional :: prec
-
+     select case(nDims)
+     case(3) 
+       call fxtf_flptld_init( flpt    = fxt%flpt,           &
+          &                   degree  = degree,             &
+          &                   nPoints = degree+1,           &
+          &                   prec    = header%prec)
+     case(2) 
+       call fxtf_flptld_init(flpt    = fxt%flpt,            &
+          &                   degree  = degree,             &
+          &                   nPoints = degree+1,           &
+          &                   prec    = header%prec)
+     case(1) 
+       call fxtf_flptld_init(flpt    = fxt%flpt,           &
+         &                   degree  = degree,             &
+         &                   nPoints = degree+1,           &
+         &                   prec    = header%prec)
+     end select
 
    end subroutine ply_init_fxt
   !****************************************************************************!
