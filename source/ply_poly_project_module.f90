@@ -472,8 +472,8 @@ contains
           &               header = proj_init%header%fxt_header, &
           &               degree = me%oversamp_degree,          &
           &               nDims  = 1,                           &
-          &               nodes  = me%body_3d%nodes,            &
-          &               faces  = me%body_3d%faces             )
+          &               nodes  = me%body_1d%nodes,            &
+          &               faces  = me%body_1d%faces             )
 
     case default
       write(logUnit(1),*) 'ERROR in initializing projection:'

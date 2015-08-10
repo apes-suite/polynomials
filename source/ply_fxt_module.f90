@@ -39,7 +39,7 @@ contains
    !!      Basically needs to set precision and dimension, and call
    !!      fxtf_flptld_init
    subroutine ply_init_fxt(fxt, header, degree, nDims, nodes, faces)
-     !--------------------------------------------------------------------------!
+     !-------------------------------------------------------------------------!
      !> Handle to the resulting fast polynomial table.
      type(ply_fxt_type), intent(out) :: fxt
      type(ply_fxt_header_type), intent(in)     :: header
@@ -49,13 +49,13 @@ contains
      integer, intent(in)                       :: nDims
      real(kind=rk), intent(out), allocatable   :: nodes(:,:)
      type(ply_faceNodes_type), intent(out), allocatable :: faces(:,:)
-     !--------------------------------------------------------------------------!
+     !-------------------------------------------------------------------------!
      real(kind=rk), allocatable :: tmp_weights(:)
      real(kind=rk), allocatable :: gaussp1D(:)
      real(kind=rk), allocatable :: weights1D(:)
      real(kind=rk), allocatable :: leg1D_at_gauss(:,:)
      integer :: iDir, iAlign, nPoints, nDofs, iPoint, lb, ub
-     !--------------------------------------------------------------------------!
+     !-------------------------------------------------------------------------!
      nPoints = degree + 1
      nDofs = nPoints
      allocate(gaussp1D(npoints))
