@@ -45,7 +45,10 @@ module ply_poly_project_module
                                    & init_gauss_nodes_2d, init_gauss_nodes_1d,&
                                    & ply_facenodes_type
 
-  use ply_fxt_module           
+  use ply_fxt_module, only: ply_fxt_type, ply_init_fxt,                    &
+    &                       ply_fxt_m2n_1D,ply_fxt_m2n_3D, ply_fxt_m2n_2D, &
+    &                       ply_fxt_n2m_1D,ply_fxt_n2m_3D, ply_fxt_n2m_2D, &
+    &                       ply_fxt_type
 
   implicit none
 
@@ -97,6 +100,7 @@ module ply_poly_project_module
     !> Kind of projection. Currently available:
     !! - 'l2p', L2-Projection
     !! - 'fpt', Fast Polynomial Transformation. Requires the FFTW.
+    !! - 'fxt', Fast Polynomial Transformation. uses FXTPACK
     character(len=labelLen)       :: kind
 
     !> The maximal polynomial degree per spatial direction.
@@ -194,6 +198,7 @@ contains
 
     left%fpt = right%fpt
     left%l2p = right%l2p
+    left%fxt = right%fxt
     left%nodes = right%nodes
     left%faces = right%faces
     left%nquadpoints = right%nquadpoints
@@ -285,6 +290,8 @@ contains
       over_factor = proj_init%header%fpt_header%factor
     case('l2p')
       over_factor = proj_init%header%l2p_header%factor
+    case('fxt')
+      over_factor = proj_init%header%fxt_header%factor
     end select
 
     ! Find the oversampling order
@@ -312,6 +319,13 @@ contains
         end if
 
       end if
+    end if
+    if (trim(proj_init%header%kind) == 'fxt') then
+      ! Ensure an even order for the oversampled polynomial representation.
+      ! There is a bug in FXTPACK resulting faulty conversions for odd
+      ! numbers of evaluation points.
+      ! To avoid this, we increase the oversampling order by 1, if it is odd.
+      oversampling_order = oversampling_order + mod(oversampling_order,2)
     end if
 
     write(logUnit(1),*) 'Using an oversampled order of: ', oversampling_order
@@ -438,21 +452,28 @@ contains
     case ('fxt')
       !> Fill the fxt Legendre Polynomial datatype
       if (scheme_dim >= 3) then
-        call ply_fxt_init(flpt    = me%body_3d%fxt%flpt, &
-          &               degree  = me%maxPolyDegree,    &
-          &               nPoints = me%maxPolyDegree+1   )
+        call ply_init_fxt(fxt    = me%body_3d%fxt,              &
+          &               header = proj_init%header%fxt_header, &
+          &               degree = me%oversamp_degree,          &
+          &               nDims  = 3,                           &
+          &               nodes  = me%body_3d%nodes,            &
+          &               faces  = me%body_3d%faces             )
       end if
 
       if (scheme_dim >= 2) then
-        call ply_fxt_init(flpt    = me%body_2d%fxt%flpt, &
-          &               degree  = me%MaxPolyDegree,    &
-          &               nPoints = me%maxPolyDegree+1   )
+        call ply_init_fxt(fxt    = me%body_2d%fxt,              &
+          &               header = proj_init%header%fxt_header, &
+          &               degree = me%oversamp_degree,          &
+          &               nDims  = 2,                           &
+          &               nodes  = me%body_2d%nodes,            &
+          &               faces  = me%body_2d%faces             )
       end if
-
-        call ply_fxt_init(flpt = me%body_1d%fxt%flpt,    &
-          &               degree  = me%maxPolyDegree,    &
-          &               nPoints = me%maxPolyDegree+1   )
-
+        call ply_init_fxt(fxt    = me%body_1d%fxt,              &
+          &               header = proj_init%header%fxt_header, &
+          &               degree = me%oversamp_degree,          &
+          &               nDims  = 1,                           &
+          &               nodes  = me%body_1d%nodes,            &
+          &               faces  = me%body_1d%faces             )
 
     case default
       write(logUnit(1),*) 'ERROR in initializing projection:'
@@ -480,11 +501,11 @@ contains
     !! more than one variable, the sum of all components has to be passed (e.g.
     !! 6 when there are two three-dimensional vectors).
     integer, intent(in) :: nVars
-    integer :: nNodes, nModes
     real(kind=rk), intent(inout) :: modal_data(:,:)
     real(kind=rk), intent(inout) :: nodal_data(:,:)
     !--------------------------------------------------------------------------!
     integer :: iVar
+    integer :: nNodes, nModes
     !--------------------------------------------------------------------------!
 
     select case(trim(me%kind))
@@ -538,30 +559,31 @@ contains
       end if
 
     case ('fxt')
-      nNodes = size(nodal_data)
-      nModes = nNodes
       if (dim .eq. 3) then
-        call ply_fxt_m2n( fxt = me%body_3d%fxt,           &
-          &               modal_data = modal_data,        &
-          &               nodal_data = nodal_data,        &         
-          &               nModes = nModes,                &
-          &               nNodes = nNodes                 )
+        do iVar = 1,nVars
+          call ply_fxt_m2n_3D( fxt = me%body_3d%fxt,             &
+            &               modal_data = modal_data(:,iVar),     &
+            &               nodal_data = nodal_data(:,iVar),     &
+            &              oversamp_degree = me%oversamp_degree  )
+        end do
       end if
 
       if (dim .eq. 2) then
-        call ply_fxt_m2n( fxt = me%body_2d%fxt,           &
-          &               modal_data = modal_data,        &
-          &               nodal_data = nodal_data,        &         
-          &               nModes = nModes,                &
-          &               nNodes = nNodes                 )
+        do iVar = 1,nVars
+          call ply_fxt_m2n_2D( fxt = me%body_2d%fxt,             &
+            &               modal_data = modal_data(:,iVar),     &
+            &               nodal_data = nodal_data(:,iVar),     &
+            &              oversamp_degree = me%oversamp_degree  )
+        end do
       end if
 
       if (dim .eq. 1) then
-        call ply_fxt_m2n( fxt = me%body_1d%fxt,           &
-          &               modal_data = modal_data,        & 
-          &               nodal_data = nodal_data,        &         
-          &               nModes = nModes,                &
-          &               nNodes = nNodes                 )
+        do iVar = 1,nVars
+          call ply_fxt_m2n_1D( fxt = me%body_1d%fxt,             &
+            &               modal_data = modal_data(:,iVar),     &
+            &               nodal_data = nodal_data(:,iVar),     &
+            &              oversamp_degree = me%oversamp_degree  )
+        end do
       end if
     end select
 
@@ -578,11 +600,11 @@ contains
     type(ply_poly_project_type), intent(inout) :: me
     integer, intent(in) :: dim
     integer, intent(in) :: nVars
-    integer :: nNodes, nModes
     real(kind=rk), intent(inout) :: nodal_data(:,:)
     real(kind=rk), intent(inout) :: modal_data(:,:)
     !--------------------------------------------------------------------------!
     integer :: iVar
+    integer :: nNodes, nModes
     !--------------------------------------------------------------------------!
 
     select case(trim(me%kind))
@@ -632,30 +654,34 @@ contains
       end if
 
     case ('fxt')
-      nNodes = size(nodal_data)
-      nModes = nNodes
       if (dim .eq. 3) then
-        call ply_fxt_n2m( fxt = me%body_3d%fxt,           &
-          &               nodal_data = nodal_data,        &
-          &               modal_data = modal_data,        &
-          &               nNodes = nNodes,                &
-          &               nModes = nModes                 )
+        do iVar = 1, nVars 
+          call ply_fxt_n2m_3D(                                  &
+            &         fxt              = me%body_3d%fxt,        &
+            &         nodal_data       = nodal_data(:,iVar),    &
+            &         modal_data       = modal_data(:,iVar),    &
+            &         oversamp_degree  = me%oversamp_degree     )
+        end do
       end if
 
       if (dim .eq. 2) then
-        call ply_fxt_n2m( fxt = me%body_2d%fxt,           &
-          &               nodal_data = nodal_data,        &
-          &               modal_data = modal_data,        &
-          &               nNodes = nNodes,                &
-          &               nModes = nModes                 )
+        do iVar = 1, nVars 
+          call ply_fxt_n2m_2D(                                  &
+            &         fxt              = me%body_2d%fxt,        &
+            &         nodal_data       = nodal_data(:,iVar),    &
+            &         modal_data       = modal_data(:,iVar),    &
+            &         oversamp_degree  = me%oversamp_degree     )
+        end do
       end if
 
       if (dim .eq. 1) then
-        call ply_fxt_n2m( fxt = me%body_1d%fxt,           &
-          &               nodal_data = nodal_data,        &
-          &               modal_data = modal_data,        &
-          &               nNodes = nNodes,                &
-          &               nModes = nModes                 )
+        do iVar = 1, nVars 
+          call ply_fxt_n2m_1D(                                  &
+            &         fxt              = me%body_1d%fxt,        &
+            &         nodal_data       = nodal_data(:,iVar),    &
+            &         modal_data       = modal_data(:,iVar),    &
+            &         oversamp_degree  = me%oversamp_degree     )
+        end do
       end if
 
     case default

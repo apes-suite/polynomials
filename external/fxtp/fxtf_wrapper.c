@@ -1,3 +1,7 @@
+/* Interface wrappers to allow interaction with Fortran.
+   These fxtf routines are needed to encapsulate the fxt_vecld data structure
+   and enable the direct passing of Fortran arrays to the FXTPACK routines.
+ */
 #include "fxt_vecld.h"
 #include "fxt_flptld.h"
 #include "fxt_faltld.h"

@@ -1,10 +1,11 @@
 module fxt_fwrap
   use, intrinsic :: iso_c_binding
   use env_module, only: rk
-
-  use fxt_fif
+  use fxt_fif, only: fxt_flptld_init, fxt_flptld_wsize, fxt_vecld_new
 
   implicit none
+
+  private
 
   !> This datatype provides a handle to the information that FXTPACK needs
   !! to have about the transformation.
@@ -17,50 +18,61 @@ module fxt_fwrap
   end type fxtf_flptld_type
 
 
+  !> Interface declarations to the fxtf_wrapper.c routines.
+  !!
+  !! Those routines enable the passing of Fortran arrays to the FXTPACK and
+  !! take care of putting the data into the fxt_vecld data structures, which are
+  !! then passed on to the actual fxt_* routines.
   interface
-    subroutine fxtf_flptld_evl(v, vn, fplt, u, un, w) bind(c)
+    subroutine fxtf_flptld_evl(v, vn, flpt, u, un, w) bind(c)
       use, intrinsic :: iso_c_binding
-      type(c_ptr), value :: v
-      integer(kind=c_int) :: vn
-      type(c_ptr), value :: fplt
-      type(c_ptr), value :: u
-      integer(kind=c_int) :: un
+      real(c_double), dimension(*) :: v
+      integer(c_int), value :: vn
+      type(c_ptr), value :: flpt
+      real(c_double), dimension(*) :: u
+      integer(c_int), value :: un
       type(c_ptr), value :: w
     end subroutine fxtf_flptld_evl
 
-    subroutine fxtf_flptld_exp(u, un, fplt, v, vn, w) bind(c)
+    subroutine fxtf_flptld_exp(u, un, flpt, v, vn, w) bind(c)
       use, intrinsic :: iso_c_binding
-      type(c_ptr), value :: u
-      integer(kind=c_int) :: un
-      type(c_ptr), value :: fplt
-      type(c_ptr), value :: v
-      integer(kind=c_int) :: vn
-      type(c_ptr), value :: w
+      real(c_double), dimension(*)  ::  u
+      integer(c_int), value  :: un
+      type(c_ptr), value  :: flpt
+      real(c_double), dimension(*)  :: v
+      integer(c_int), value :: vn
+      type(c_ptr), value  :: w
     end subroutine fxtf_flptld_exp
 
     subroutine fxtf_faltld_evl(v, vn, falt, m, u, un, w) bind(c)
       use, intrinsic :: iso_c_binding
-      type(c_ptr), value :: v
-      integer(kind=c_int) :: vn
+      real(c_double), dimension(*) :: v
+      integer(c_int), value :: vn
       type(c_ptr), value :: falt
-      integer(kind=c_long) :: m
-      type(c_ptr), value :: u
-      integer(kind=c_int) :: un
+      integer(kind=c_long), value :: m
+      real(c_double), dimension(*) :: u
+      integer(c_int), value :: un
       type(c_ptr), value :: w
     end subroutine fxtf_faltld_evl
 
     subroutine fxtf_faltld_exp(u, un, falt, m, v, vn, w) bind(c)
       use, intrinsic :: iso_c_binding
-      type(c_ptr), value :: u
-      integer(kind=c_int) :: un
+      real(c_double), dimension(*) :: u
+      integer(c_int), value :: un
       type(c_ptr), value :: falt
-      integer(kind=c_long) :: m
-      type(c_ptr), value :: v
-      integer(kind=c_int) :: vn
+      integer(kind=c_long), value :: m
+      real(c_double), dimension(*) :: v
+      integer(c_int), value :: vn
       type(c_ptr), value :: w
     end subroutine fxtf_faltld_exp
 
   end interface
+
+  public :: fxtf_flptld_type
+  public :: fxtf_flptld_init
+  public :: fxtf_flptld_evl
+  public :: fxtf_flptld_exp
+  public :: fxtf_flptld_m2n, fxtf_flptld_n2m
 
 
 contains
@@ -73,17 +85,21 @@ contains
   !!
   !! Note: The modal and nodal data array sizes need to match the flpt
   !! definitions, provided in the fxtf_flptld_init call.
-  subroutine fxtf_flptld_m2n(flpt, modal_data, nodal_data, nModes, nNodes)
+  subroutine fxtf_flptld_m2n(flpt, modal_data, nodal_data)
     !> Description of the Fast Legendre Polynomial Transform
     type(fxtf_flptld_type), intent(in) :: flpt
-    integer, intent(in) :: nModes, nNodes
     !> Modal data
-    real(kind=c_double), target :: modal_data(:)
+    real(kind=rk), target :: modal_data(:)
     !> Nodal data
-    real(kind=c_double), target :: nodal_data(:)
+    real(kind=rk), target :: nodal_data(:)
 
-    call fxtf_flptld_evl( c_loc(nodal_data), nNodes, flpt%handle, &
-      &                   c_loc(modal_data), nModes, flpt%work    )
+    integer(kind=c_int) :: nNodes, nModes
+
+    nNodes = size(nodal_data)
+    nModes = size(modal_data)
+
+    call fxtf_flptld_evl( nodal_data, nNodes, flpt%handle, &
+      &                   modal_data, nModes, flpt%work    )
 
   end subroutine fxtf_flptld_m2n
 
@@ -95,17 +111,21 @@ contains
   !!
   !! Note: The modal and nodal data array sizes need to match the flpt
   !! definitions, provided in the fxtf_flptld_init call.
-  subroutine fxtf_flptld_n2m(flpt, nodal_data, modal_data, nNodes, nModes)
+  subroutine fxtf_flptld_n2m(flpt, nodal_data, modal_data)
     !> Description of the Fast Legendre Polynomial Transform
     type(fxtf_flptld_type) :: flpt
-    integer, intent(in) :: nModes, nNodes
     !> Nodal data
-    real(kind=c_double), target :: nodal_data(nNodes)
+    real(kind=rk), target :: nodal_data(:)
     !> Modal data
-    real(kind=c_double), target :: modal_data(nModes)
+    real(kind=rk), target :: modal_data(:)
 
-    call fxtf_flptld_exp( c_loc(modal_data), nModes, flpt%handle, &
-      &                   c_loc(nodal_data), nNodes, flpt%work    )
+    integer(kind=c_int) :: nNodes, nModes
+
+    nNodes = size(nodal_data)
+    nModes = size(modal_data)
+
+    call fxtf_flptld_exp( modal_data, nModes, flpt%handle, &
+      &                   nodal_data, nNodes, flpt%work    )
 
   end subroutine fxtf_flptld_n2m
 

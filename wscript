@@ -167,7 +167,7 @@ def build(bld):
             target = 'fxtp_obj')
 
        bld( features = 'c',
-            source = ['external/fxtp/fxt_fwrapper.c'],
+            source = ['external/fxtp/fxtf_wrapper.c'],
             use = ['MATH'],
             includes = 'external/fxtp/fxtpack140715',
             target = 'fxtp_wrapper')
