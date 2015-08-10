@@ -8,7 +8,7 @@ module ply_modg_basis_module
   use ply_dof_module,               only: posOfModgCoeffQTens, &
     &                                     nextModgCoeffPTens, getDofsPTens, &
     &                                     Q_space, P_space
-  use ply_space_integration_module, only: gauleg
+  use ply_space_integration_module, only: ply_gaussLegPoints
 
 
   implicit none
@@ -165,11 +165,11 @@ contains
     allocate(w(nPoints))
 
     ! get GL points and weights on reference element [-1;+1]
-    call gauleg(x1    = -1.0_rk,     &
-      &         x2    = 1.0_rk,      &
-      &         x     = GaussPoints, &
-      &         w     = w,           &
-      &         nIntP = nPoints      )
+    call ply_gaussLegPoints(x1    = -1.0_rk,     &
+      &         x2    = 1.0_rk,                  &
+      &         x     = GaussPoints,             &
+      &         w     = w,                       &
+      &         nIntP = nPoints                  )
    
     ! shift the gauss points to
     ! ... the left integral domain, i.e. [-1;0]
@@ -250,11 +250,11 @@ contains
     allocate(w(nPoints))
 
     ! get GL points and weights
-    call gauleg(x1    = -1.0_rk,     &
-      &         x2    = 1.0_rk,      &
-      &         x     = GaussPoints, &
-      &         w     = w,           &
-      &         nIntP = nPoints      )
+    call ply_gaussLegPoints(x1    = -1.0_rk,     &
+      &         x2    = 1.0_rk,                  &
+      &         x     = GaussPoints,             &
+      &         w     = w,                       &
+      &         nIntP = nPoints                  )
 
     ! Calculate values of legendre polynomials
     legendre_standard = legendre_1D(GaussPoints, nFunc-1)

@@ -10,7 +10,7 @@ module ply_space_integration_module
   private
 
   !> Type to specify the space integration of our variational method.
-  type space_quadrature_type
+  type ply_space_quadrature_type
     !> Unique characters specifying the space integration type.
     !! If you add an additional space integration method, then you should
     !! add a unique abbreviation for that here. The following relations
@@ -55,25 +55,25 @@ module ply_space_integration_module
 
     !> \todo add additional stuff related to the space integration here!
 
-  end type space_quadrature_type
+  end type ply_space_quadrature_type
 
   !> interface to create gauss points for pure gauss quadrature on the
   !! reference element. Depending on the given parameters this will create
   !! quadrature points on the reference volume element or the reference
   !! surface element.
-  interface create_volume_gauss_points_cube
-    module procedure create_volume_gauss_points_cube
+  interface ply_create_volume_gauss_points_cube
+    module procedure ply_create_volume_gauss_points_cube
   end interface
 
-  public :: space_quadrature_type,               & 
-    &       create_volume_gauss_points_cube,     &
-    &       create_volume_gauss_points_cube_2d,  &
-    &       create_volume_gauss_points_cube_1d,  &
-    &       create_surface_gauss_points_cube,    &
-    &       create_surface_gauss_points_cube_2d, &
-    &       create_surface_gauss_points_cube_1d, &
-    &       gauleg,                              &
-    &       create_gauss_points_1d
+  public ::ply_space_quadrature_type,               & 
+    &      ply_create_volume_gauss_points_cube,     &
+    &      ply_create_volume_gauss_points_cube_2d,  &
+    &      ply_create_volume_gauss_points_cube_1d,  &
+    &      ply_create_surface_gauss_points_cube,    &
+    &      ply_create_surface_gauss_points_cube_2d, &
+    &      ply_create_surface_gauss_points_cube_1d, &
+    &      ply_gaussLegPoints,                      &
+    &      ply_create_gauss_points_1d
 
 contains
 
@@ -95,7 +95,7 @@ contains
   !!            points(numintpperdirection^3,1:3) = (\xi_{numintpperdirection},
   !!                                           \eta_{numintpperdirection},
   !!                                           \zeta_{numintpperdirection} ) \f$
-  subroutine create_volume_gauss_points_cube( num_intp_per_direction,      &
+  subroutine ply_create_volume_gauss_points_cube( num_intp_per_direction,  &
     &                                         points, weights, refElemMin, &
     &                                         refElemMax                   )
     !---------------------------------------------------------------------------
@@ -120,7 +120,7 @@ contains
     allocate(gaussp1D(num_intp_per_direction))
     allocate(weights1D(num_intp_per_direction))
 
-    call gauleg( x1 = refElemMin, x2 = refElemMax, x = gaussp1D, &
+    call ply_gaussLegPoints( x1 = refElemMin, x2 = refElemMax, x = gaussp1D, &
       &          w = weights1D, nIntP = num_intp_per_direction   )
 
     pointNumber = 1
@@ -139,10 +139,10 @@ contains
         end do
       end do
     end do
-  end subroutine create_volume_gauss_points_cube
+  end subroutine ply_create_volume_gauss_points_cube
 
 
-  subroutine create_volume_gauss_points_cube_2d( num_intp_per_direction,      &
+  subroutine ply_create_volume_gauss_points_cube_2d( num_intp_per_direction,  &
     &                                            points, weights, refElemMin, &
     &                                            refElemMax                   )
     !---------------------------------------------------------------------------
@@ -167,7 +167,7 @@ contains
     allocate(gaussp1D(num_intp_per_direction))
     allocate(weights1D(num_intp_per_direction))
 
-    call gauleg( x1 = refElemMin, x2 = refElemMax, x = gaussp1D, &
+    call ply_gaussLegPoints( x1 = refElemMin, x2 = refElemMax, x = gaussp1D, &
       &          w = weights1D, nIntP = num_intp_per_direction   )
 
     pointNumber = 1
@@ -183,10 +183,10 @@ contains
         pointNumber = pointNumber + 1
       end do
     end do
-  end subroutine create_volume_gauss_points_cube_2d
+  end subroutine ply_create_volume_gauss_points_cube_2d
 
 
-  subroutine create_volume_gauss_points_cube_1d( num_intp_per_direction,      &
+  subroutine ply_create_volume_gauss_points_cube_1d( num_intp_per_direction,  &
     &                                            points, weights, refElemMin, &
     &                                            refElemMax                   )
     !---------------------------------------------------------------------------
@@ -209,7 +209,7 @@ contains
     allocate(gaussp1D(num_intp_per_direction))
     allocate(weights1D(num_intp_per_direction))
 
-    call gauleg( x1 = refElemMin, x2 = refElemMax, x = gaussp1D, &
+    call ply_gaussLegPoints( x1 = refElemMin, x2 = refElemMax, x = gaussp1D, &
       &          w = weights1D, nIntP = num_intp_per_direction   )
 
     pointNumber = 1
@@ -223,10 +223,10 @@ contains
       weights(PointNumber) = weights1D(i)  
       pointNumber = pointNumber + 1
     end do
-  end subroutine create_volume_gauss_points_cube_1d
+  end subroutine ply_create_volume_gauss_points_cube_1d
 
 
-  subroutine create_surface_gauss_points_cube( num_intp_per_direction,      &
+  subroutine ply_create_surface_gauss_points_cube( num_intp_per_direction,  &
     &                                          points, weights, refElemMin, &
     &                                          refElemMax, dir, align       )
     !---------------------------------------------------------------------------
@@ -258,7 +258,7 @@ contains
     allocate(gaussp1D(num_intp_per_direction))
     allocate(weights1D(num_intp_per_direction))
 
-    call gauleg( x1 = refElemMin, x2 = refElemMax, x = gaussp1D, &
+    call ply_gaussLegPoints( x1 = refElemMin, x2 = refElemMax, x = gaussp1D, &
       &          w = weights1D, nIntP = num_intp_per_direction   )
 
     pointNumber = 1
@@ -310,10 +310,10 @@ contains
 
     end select
 
-  end subroutine create_surface_gauss_points_cube
+  end subroutine ply_create_surface_gauss_points_cube
 
 
-  subroutine create_surface_gauss_points_cube_2d(num_intp_per_direction,      &
+  subroutine ply_create_surface_gauss_points_cube_2d(num_intp_per_direction,      &
     &                                            points, weights, refElemMin, &
     &                                            refElemMax, dir, align       )
     !---------------------------------------------------------------------------
@@ -347,7 +347,7 @@ contains
     allocate(gaussp1D(num_intp_per_direction))
     allocate(weights1D(num_intp_per_direction))
 
-    call gauleg( x1 = refElemMin, x2 = refElemMax, x = gaussp1D, &
+    call ply_gaussLegPoints( x1 = refElemMin, x2 = refElemMax, x = gaussp1D, &
       &          w = weights1D, nIntP = num_intp_per_direction   )
 
     pointNumber = 1
@@ -382,10 +382,10 @@ contains
 
     end select
 
-  end subroutine create_surface_gauss_points_cube_2d
+  end subroutine ply_create_surface_gauss_points_cube_2d
 
 
-  subroutine create_surface_gauss_points_cube_1d(points, weights, dir, align)
+  subroutine ply_create_surface_gauss_points_cube_1d(points, weights, dir, align)
     !---------------------------------------------------------------------------
     real(kind=rk), allocatable, intent(out) :: points(:,:)
     real(kind=rk), allocatable, intent(out) :: weights(:)
@@ -424,11 +424,11 @@ contains
 
     end select
 
-  end subroutine create_surface_gauss_points_cube_1d
+  end subroutine ply_create_surface_gauss_points_cube_1d
 
 
-  subroutine create_gauss_points_1d(num_intp_per_direction, numQuadPoints, &
-    &                               points, weights, refElemMin, refElemMax)
+  subroutine ply_create_gauss_points_1d(num_intp_per_direction, numQuadPoints, &
+    &                               points, weights, refElemMin, refElemMax    )
     !---------------------------------------------------------------------------
     integer, intent(in) :: num_intp_per_direction
     integer, intent(out) :: numQuadPoints
@@ -451,7 +451,7 @@ contains
     allocate(gaussp1D(num_intp_per_direction))
     allocate(weights1D(num_intp_per_direction))
 
-    call gauleg( x1 = refElemMin, x2 = refElemMax, x = gaussp1D, &
+    call ply_gaussLegPoints( x1 = refElemMin, x2 = refElemMax, x = gaussp1D, &
       &          w = weights1D, nIntP = num_intp_per_direction)
 
     pointNumber = 1
@@ -462,7 +462,7 @@ contains
       weights(PointNumber) = weights1D(j)
       pointNumber = pointNumber + 1
     end do
-  end subroutine create_gauss_points_1d
+  end subroutine ply_create_gauss_points_1d
 
 
   !> \brief subroutine to create a linearized unique array of surface
@@ -487,7 +487,7 @@ contains
     allocate(weights1D(num_intp_per_direction))
 
     ! create the one dimensional gauss points first
-    call gauleg( x1 = refElemMin, x2 = refElemMax, x = gaussp1D, &
+    call ply_gaussLegPoints( x1 = refElemMin, x2 = refElemMax, x = gaussp1D, &
       &          w = weights1D, nIntP = num_intp_per_direction   )
     ! first, copy the one dimensional integration points...
     points(1:num_intp_per_direction) = gaussp1D(:)
@@ -500,7 +500,7 @@ contains
 
   !> subroutine to create gauss points and weights for one-dimensional
   !! integration on the interval [x1,x2].
-  subroutine gauleg(x1, x2, x, w, nIntP)
+  subroutine ply_gaussLegPoints(x1, x2, x, w, nIntP)
     !---------------------------------------------------------------------------
     !> The coordinates of the gauss points on the interval [-1,1].
     !! The array has the length nIntP.
@@ -551,6 +551,6 @@ contains
 
     end do
 
-  end subroutine gauleg
+  end subroutine ply_gaussLegPoints
 
 end module ply_space_integration_module

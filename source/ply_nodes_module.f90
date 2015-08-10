@@ -6,13 +6,12 @@ module ply_nodes_module
   use tem_aux_module,    only: tem_abort
 
   use ply_space_integration_module,only:&
-                                   & create_surface_gauss_points_cube,   & 
-                                   & create_surface_gauss_points_cube_2d,& 
-                                   & create_surface_gauss_points_cube_1d,& 
-                                   & create_volume_gauss_points_cube,    & 
-                                   & create_volume_gauss_points_cube_2d, & 
-                                   & create_volume_gauss_points_cube_1d, & 
-                                   & create_gauss_points_1d
+                                   & ply_create_surface_gauss_points_cube,   & 
+                                   & ply_create_surface_gauss_points_cube_2d,& 
+                                   & ply_create_surface_gauss_points_cube_1d,& 
+                                   & ply_create_volume_gauss_points_cube,    & 
+                                   & ply_create_volume_gauss_points_cube_2d, & 
+                                   & ply_create_volume_gauss_points_cube_1d 
   use ply_chebPoint_module,only: create_volume_cheb_points_cube,           &
                                & create_volume_cheb_points_cube_2d,        &
                                & create_volume_cheb_points_cube_1d,        &
@@ -59,7 +58,7 @@ module ply_nodes_module
     real(kind=rk), allocatable :: tmp_weights(:)
     !--------------------------------------------------------------------------!
 
-    call create_volume_gauss_points_cube(           &
+    call ply_create_volume_gauss_points_cube(       &
       & num_intp_per_direction = nQuadPointsPerDir, &
       & points                 = nodes,             &
       & weights                = weights,           &
@@ -71,7 +70,7 @@ module ply_nodes_module
     do iDir = 1,3
       do iAlign = 1,2
         faces(iDir,iAlign)%nquadpoints = nQuadPointsPerDir**2
-        call create_surface_gauss_points_cube(                  &
+        call ply_create_surface_gauss_points_cube(              &
           & num_intp_per_direction = nQuadPointsPerDir,         &
           & points                 = faces(iDir,iAlign)%points, &
           & weights                = tmp_weights,               &
@@ -148,7 +147,7 @@ subroutine init_cheb_nodes(me, nodes, faces, nQuadPointsPerDir )
     !--------------------------------------------------------------------------!
 
     ! Build Gauss-Legendre Points in the volume, 2d
-    call create_volume_gauss_points_cube_2d(        &
+    call ply_create_volume_gauss_points_cube_2d(    &
       & num_intp_per_direction = nQuadPointsPerDir, &
       & points                 = nodes,             &
       & weights                = weights,           &
@@ -161,7 +160,7 @@ subroutine init_cheb_nodes(me, nodes, faces, nQuadPointsPerDir )
       do iAlign = 1,2
 
         faces(iDir,iAlign)%nquadpoints = nQuadPointsPerDir
-        call create_surface_gauss_points_cube_2d(               &
+        call ply_create_surface_gauss_points_cube_2d(           &
           & num_intp_per_direction = nQuadPointsPerDir,         &
           & points                 = faces(iDir,iAlign)%points, &
           & weights                = tmp_weights,               &
@@ -239,7 +238,7 @@ subroutine init_cheb_nodes(me, nodes, faces, nQuadPointsPerDir )
     !--------------------------------------------------------------------------!
 
     ! Build the Gauss nodes on the reference element (volume)
-    call create_volume_gauss_points_cube_1d(        &
+    call ply_create_volume_gauss_points_cube_1d(    &
       & num_intp_per_direction = nQuadPointsPerDir, &
       & points                 = nodes,             &
       & weights                = weights,           &
@@ -252,11 +251,11 @@ subroutine init_cheb_nodes(me, nodes, faces, nQuadPointsPerDir )
       do iAlign = 1,2
 
         faces(iDir,iAlign)%nquadpoints = 1
-        call create_surface_gauss_points_cube_1d( &
-          & points  = faces(iDir,iAlign)%points,  &
-          & weights = tmp_weights,                &
-          & Dir     = iDir,                       &
-          & Align   = iAlign                      )
+        call ply_create_surface_gauss_points_cube_1d( &
+          & points  = faces(iDir,iAlign)%points,      &
+          & weights = tmp_weights,                    &
+          & Dir     = iDir,                           &
+          & Align   = iAlign                          )
       deallocate(tmp_weights)
       end do
     end do

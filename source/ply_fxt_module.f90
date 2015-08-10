@@ -7,10 +7,10 @@ module ply_fxt_module
   use ply_fxt_header_module,     only: ply_fxt_header_type
   use ply_nodes_module,          only: init_gauss_nodes, ply_faceNodes_type, &
     &                                  init_gauss_nodes_2d, init_gauss_nodes_1d
-  use ply_space_integration_module, only: create_surface_gauss_points_cube, &
-    &                                     create_surface_gauss_points_cube_2d, &
-    &                                     create_surface_gauss_points_cube_1d, &
-    &                                     gauleg
+  use ply_space_integration_module, only: ply_create_surface_gauss_points_cube, &
+    &                                     ply_create_surface_gauss_points_cube_2d, &
+    &                                     ply_create_surface_gauss_points_cube_1d, &
+    &                                     ply_gaussLegPoints
   use ply_modg_basis_module,     only: legendre_1D
 
   implicit none
@@ -64,7 +64,7 @@ contains
 
      ! create the quadrature points for volume and on the face
      ! for the oversampled projection
-     call gauleg( x1 = -1.0_rk, x2 = 1.0_rk, nIntP = nPoints, &
+     call ply_gaussLegPoints( x1 = -1.0_rk, x2 = 1.0_rk, nIntP = nPoints, &
        &          w = weights1D, x = gaussp1D                    )
 
      leg1D_at_gauss = legendre_1D(gaussp1D, degree)
@@ -97,7 +97,7 @@ contains
        do iDir = 1,3
          do iAlign = 1,2
            faces(iDir,iAlign)%nquadpoints = nPoints**2
-           call create_surface_gauss_points_cube( &
+           call ply_create_surface_gauss_points_cube(                 &
              &    num_intp_per_direction = nPoints,                   &
              &    points                 = faces(iDir,iAlign)%points, &
              &    weights                = tmp_weights,               &
@@ -128,7 +128,7 @@ contains
        do iDir = 1,2
          do iAlign = 1,2
            faces(iDir,iAlign)%nquadpoints = nPoints
-           call create_surface_gauss_points_cube_2d(                  &
+           call ply_create_surface_gauss_points_cube_2d(              &
              &    num_intp_per_direction = nPoints,                   &
              &    points                 = faces(iDir,iAlign)%points, &
              &    weights                = tmp_weights,               &
@@ -153,11 +153,11 @@ contains
       iDir = 1
       do iAlign = 1,2
         faces(iDir,iAlign)%nquadpoints = 1
-        call create_surface_gauss_points_cube_1d(   &
-          &    points  = faces(iDir,iAlign)%points, &
-          &    weights = tmp_weights,               &
-          &    dir     = idir,                      &
-          &    align   = iAlign                     )
+        call ply_create_surface_gauss_points_cube_1d(   &
+          &    points  = faces(iDir,iAlign)%points,     &
+          &    weights = tmp_weights,                   &
+          &    dir     = idir,                          &
+          &    align   = iAlign                         )
         deallocate(tmp_weights)
       end do
      end select
