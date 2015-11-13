@@ -46,6 +46,7 @@ module ply_legFpt_module
   end interface
 
   public :: ply_legFpt_type, ply_init_legFpt, ply_legToPnt, ply_pntToLeg
+  public :: ply_legToPnt_multDim, ply_PntToLeg_multDim
   public :: assignment(=)
 
 
@@ -220,6 +221,27 @@ contains
   end subroutine ply_legToPnt
   !****************************************************************************
 
+  !****************************************************************************
+  !> Subroutine to transform Legendre expansion to point values
+  !! at Chebyshev nodes in nDims dimensions.
+  subroutine ply_legToPnt_multDim(fpt, legCoeffs, pntVal, lobattoPoints, nDims)
+   !---------------------------------------------------------------------------
+   type(ply_legFpt_type), intent(inout) :: fpt
+   real(kind=rk), intent(inout) :: legCoeffs(:) 
+   real(kind=rk), intent(inout) :: pntVal(:)
+   logical, intent(in) :: lobattoPoints
+   integer, intent(in) :: nDims 
+   !---------------------------------------------------------------------------
+   integer :: iDim
+   !---------------------------------------------------------------------------
+   do iDim = 1, nDims
+     call ply_legToPnt( fpt           = fpt,          &
+                        legCoeffs     = legCoeffs,    &
+                        pntVal        = pntVal,       &
+                        lobattoPoints = lobattoPoints )
+   end do
+  end subroutine ply_legToPnt_multDim
+  !****************************************************************************
 
   !****************************************************************************
   !> Subroutine to transform Legendre expansion to point values
@@ -276,6 +298,29 @@ contains
      &                        params  = fpt%chebToLegParams )
 
   end subroutine ply_pntToLeg
+  !****************************************************************************
+
+  !****************************************************************************
+  !> Subroutine to transform point values at Chebyshev nodes to 
+  !!  Legendre expansion in nDims dimensions.
+  subroutine ply_PntToLeg_multDim(fpt, pntVal, legCoeffs, lobattoPoints, nDims)
+   !---------------------------------------------------------------------------
+   type(ply_legFpt_type), intent(inout) :: fpt
+   real(kind=rk), intent(inout) :: pntVal(:)
+   real(kind=rk), intent(inout) :: legCoeffs(:) 
+   logical, intent(in) :: lobattoPoints
+   integer, intent(in) :: nDims 
+   !---------------------------------------------------------------------------
+   integer :: iDim
+   !---------------------------------------------------------------------------
+   do iDim = 1, nDims
+     call ply_PntToLeg( fpt           = fpt,          &
+                        pntVal        = pntVal,       &
+                        legCoeffs     = legCoeffs,    &
+                        lobattoPoints = lobattoPoints )
+   end do
+  end subroutine ply_PntToLeg_multDim
+  !****************************************************************************
 
 end module ply_legFpt_module
 

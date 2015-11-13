@@ -22,10 +22,12 @@ module ply_poly_project_module
     &                                    ply_fill_dynProjectArray, &
     &                                    ply_prj_init_type
 
-  use ply_LegFpt_module,           only: ply_legFpt_type, &
-    &                                    ply_init_legFpt, &
-    &                                    ply_legToPnt,    &
-    &                                    ply_PntToLeg,    &
+  use ply_LegFpt_module,           only: ply_legFpt_type,      &
+    &                                    ply_init_legFpt,      &
+    &                                    ply_legToPnt,         &
+    &                                    ply_PntToLeg,         &
+    &                                    ply_pntToLeg_multDim, &
+    &                                    ply_legToPnt_multDim, &
     &                                    assignment(=)
   use ply_legFpt_2D_module,        only: ply_init_legfpt_2D, &
     &                                    ply_pntToLeg_2D,    &
@@ -389,37 +391,37 @@ contains
         &    faces = me%body_1d%faces,                      &
         &    nQuadPointsPerDir = me%nQuadPointsPerDir       )
 
-      if (scheme_dim >= 2) then
-        call ply_init_legfpt_2d(                                               &
-          &    maxPolyDegree    = me%oversamp_degree,                          &
-          &    nvars            = nvars,                                       &
-          &    fpt              = me%body_2d%fpt,                              &
-          &    lobattoPoints    = me%lobattoPoints,                            &
-          &    blocksize        = proj_init%header%fpt_header%blocksize,       &
-          &    subblockingWidth = proj_init%header%fpt_header%subblockingWidth )
-        call init_cheb_nodes_2d(                              &
-          &    me = proj_init%header%fpt_header%nodes_header, &
-          &    nodes = me%body_2d%nodes,                      &
-          &    faces = me%body_2d%faces,                      &
-          &    nQuadPointsPerDir = me%nQuadPointsPerDir       )
-      end if
-
-      if (scheme_dim >= 3) then
-        call ply_init_legfpt_3d(                                               &
-          &    maxPolyDegree    = me%oversamp_degree,                          &
-          &    nvars            = nvars ,                                      &
-          &    fpt              = me%body_3D%fpt,                              &
-          &    lobattoPoints    = me%lobattoPoints,                            &
-          &    blocksize        = proj_init%header%fpt_header%blocksize,       &
-          &    approx_terms     = proj_init%header%fpt_header%approx_terms,    &
-          &    striplen         = proj_init%header%fpt_header%striplen,        &
-          &    subblockingWidth = proj_init%header%fpt_header%subblockingWidth )
-        call init_cheb_nodes(                                 &
-          &    me = proj_init%header%fpt_header%nodes_header, &
-          &    nodes = me%body_3d%nodes,                      &
-          &    faces = me%body_3d%faces,                      &
-          &    nQuadPointsPerDir = me%nQuadPointsPerDir       )
-      end if
+!      if (scheme_dim >= 2) then
+!        call ply_init_legfpt_2d(                                               &
+!          &    maxPolyDegree    = me%oversamp_degree,                          &
+!          &    nvars            = nvars,                                       &
+!          &    fpt              = me%body_2d%fpt,                              &
+!          &    lobattoPoints    = me%lobattoPoints,                            &
+!          &    blocksize        = proj_init%header%fpt_header%blocksize,       &
+!          &    subblockingWidth = proj_init%header%fpt_header%subblockingWidth )
+!        call init_cheb_nodes_2d(                              &
+!          &    me = proj_init%header%fpt_header%nodes_header, &
+!          &    nodes = me%body_2d%nodes,                      &
+!          &    faces = me%body_2d%faces,                      &
+!          &    nQuadPointsPerDir = me%nQuadPointsPerDir       )
+!      end if
+!
+!      if (scheme_dim >= 3) then
+!        call ply_init_legfpt_3d(                                               &
+!          &    maxPolyDegree    = me%oversamp_degree,                          &
+!          &    nvars            = nvars ,                                      &
+!          &    fpt              = me%body_3D%fpt,                              &
+!          &    lobattoPoints    = me%lobattoPoints,                            &
+!          &    blocksize        = proj_init%header%fpt_header%blocksize,       &
+!          &    approx_terms     = proj_init%header%fpt_header%approx_terms,    &
+!          &    striplen         = proj_init%header%fpt_header%striplen,        &
+!          &    subblockingWidth = proj_init%header%fpt_header%subblockingWidth )
+!        call init_cheb_nodes(                                 &
+!          &    me = proj_init%header%fpt_header%nodes_header, &
+!          &    nodes = me%body_3d%nodes,                      &
+!          &    faces = me%body_3d%faces,                      &
+!          &    nQuadPointsPerDir = me%nQuadPointsPerDir       )
+!      end if
 
     case('l2p')
       !> Fill the L2 projection datatype
@@ -536,27 +538,50 @@ contains
       end select
 
     case ('fpt')
-
-      if (dim .eq. 3 ) then
-         call ply_LegToPnt_3D( fpt = me%body_3d%fpt,           &
-            &                  pntVal = nodal_data,            &
-            &                  legCoeffs = modal_data,         &
-            &                  nVars = nVars,                  &
-            &                  lobattoPoints = me%lobattoPoints)
-      elseif (dim .eq. 2 ) then
-         call ply_LegToPnt_2D( fpt = me%body_2d%fpt,           &
-            &                  pntVal = nodal_data,            &
-            &                  legCoeffs = modal_data,         &
-            &                  nVars = nVars,                  &
-            &                  lobattoPoints = me%lobattoPoints)
-      else !1d
-        do iVar = 1,nVars
-          call ply_LegToPnt( fpt = me%body_1d%fpt,           &
-             &               pntVal = nodal_data(:,iVar),    &
-             &               legCoeffs = modal_data(:,iVar), &
-             &               lobattoPoints = me%lobattoPoints)
+        do iVar = 1, nVars
+         call ply_LegToPnt_multDim( fpt = me%body_3d%fpt,             &
+            &                       pntVal = nodal_data(:,iVar),      &
+            &                       legCoeffs = modal_data(:,iVar),   &
+            &                       lobattoPoints = me%lobattoPoints, &
+            &                       nDims = dim                       )
         end do
-      end if
+!      elseif (dim .eq. 2 ) then
+!        do iVar = 1, nVars
+!         call ply_LegToPnt_multDim( fpt = me%body_2d%fpt,             &
+!            &                       pntVal = nodal_data(:,iVar),      &
+!            &                       legCoeffs = modal_data(:,iVar),   &
+!            &                       lobattoPoints = me%lobattoPoints, &
+!            &                       nDims = 2                         )
+!        end do
+!      else !1d
+!        do iVar = 1,nVars
+!          call ply_LegToPnt( fpt = me%body_1d%fpt,           &
+!             &               pntVal = nodal_data(:,iVar),    &
+!             &               legCoeffs = modal_data(:,iVar), &
+!             &               lobattoPoints = me%lobattoPoints)
+!        end do
+!      end if
+
+!      if (dim .eq. 3 ) then
+!         call ply_LegToPnt_3D( fpt = me%body_3d%fpt,           &
+!            &                  pntVal = nodal_data,            &
+!            &                  legCoeffs = modal_data,         &
+!            &                  nVars = nVars,                  &
+!            &                  lobattoPoints = me%lobattoPoints)
+!      elseif (dim .eq. 2 ) then
+!         call ply_LegToPnt_2D( fpt = me%body_2d%fpt,           &
+!            &                  pntVal = nodal_data,            &
+!            &                  legCoeffs = modal_data,         &
+!            &                  nVars = nVars,                  &
+!            &                  lobattoPoints = me%lobattoPoints)
+!      else !1d
+!        do iVar = 1,nVars
+!          call ply_LegToPnt( fpt = me%body_1d%fpt,           &
+!             &               pntVal = nodal_data(:,iVar),    &
+!             &               legCoeffs = modal_data(:,iVar), &
+!             &               lobattoPoints = me%lobattoPoints)
+!        end do
+!      end if
 
     case ('fxt')
       if (dim .eq. 3) then
@@ -632,26 +657,43 @@ contains
 
     case ('fpt')
       !projection via fpt
-      if (dim .eq. 3 ) then
-         call ply_pntToLeg_3D( fpt = me%body_3d%fpt,           &
-            &                  nVars = nVars,                  &
-            &                  pntVal = nodal_data,            &
-            &                  legCoeffs = modal_data,         &
-            &                  lobattoPoints = me%lobattoPoints)
-      elseif (dim .eq. 2 ) then
-         call ply_pntToLeg_2D( fpt = me%body_2d%fpt,           &
-            &                  nVars = nVars,                  &
-            &                  pntVal = nodal_data,            &
-            &                  legCoeffs = modal_data,         &
-            &                  lobattoPoints = me%lobattoPoints)
-      else !1d
-         do iVar = 1,nVars
-           call ply_pntToLeg( fpt = me%body_1d%fpt,           &
-              &               pntVal = nodal_data(:,iVar),    &
-              &               legCoeffs = modal_data(:,iVar), &
-              &               lobattoPoints = me%lobattoPoints)
-         end do
-      end if
+!      if (dim .eq. 3 ) then
+        do iVar = 1, nVars
+         call ply_pntToLeg_multDim( fpt = me%body_3d%fpt,             &
+         !   &                       nVars = nVars,                    &
+            &                       pntVal = nodal_data(:,iVar),      &
+            &                       legCoeffs = modal_data(:,iVar),   &
+            &                       lobattoPoints = me%lobattoPoints, &
+            &                       nDims = dim                       )
+        end do
+        
+!        do iVar = 1,nVars  
+!         call ply_pntToLeg_multDim( fpt = me%body_2d%fpt,             &
+!         !   &                       nVars = nVars,                    &
+!            &                       pntVal = nodal_data(:,iVar),      &
+!            &                       legCoeffs = modal_data(:,iVar),   &
+!            &                       lobattoPoints = me%lobattoPoints, &
+!            &                       nDims = 2                         )
+!        end do
+!         call ply_pntToLeg_3D( fpt = me%body_3d%fpt,           &
+!            &                  nVars = nVars,                  &
+!            &                  pntVal = nodal_data,            &
+!            &                  legCoeffs = modal_data,         &
+!            &                  lobattoPoints = me%lobattoPoints)
+!      elseif (dim .eq. 2 ) then
+!         call ply_pntToLeg_2D( fpt = me%body_2d%fpt,           &
+!            &                  nVars = nVars,                  &
+!            &                  pntVal = nodal_data,            &
+!            &                  legCoeffs = modal_data,         &
+!            &                  lobattoPoints = me%lobattoPoints)
+!      else !1d
+!         do iVar = 1,nVars
+!           call ply_pntToLeg( fpt = me%body_1d%fpt,           &
+!              &               pntVal = nodal_data(:,iVar),    &
+!              &               legCoeffs = modal_data(:,iVar), &
+!              &               lobattoPoints = me%lobattoPoints)
+!         end do
+!      end if
 
     case ('fxt')
       if (dim .eq. 3) then
