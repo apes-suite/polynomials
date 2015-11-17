@@ -75,7 +75,7 @@ module ply_modg_basis_module
   !!   |                      |  \     /                         \n
   !!   |                      |   -----                          \n
   !!   |----------|-->        |-----------|-->                   \n
-  !!  -1             x         +1             x                  \n
+  !!  -1          0  x        0           +1  x                  \n
   !! \n
   !! This datatype stores all the coefficients to calculate the necessary
   !! L2 projections to transfer polynomial functions between coarser and
@@ -126,7 +126,7 @@ module ply_modg_basis_module
     &       faceValLeftBndTestGrad, faceValRightBndTestGrad,               & 
     &       faceValLeftBndgradTest, faceValRightBndgradTest,               &
     &       faceValLeftBndDiffAns, faceValRightBndDiffAns,                 &
-    &       init_modg_covolumeCoeffs
+    &       init_modg_covolumeCoeffs, integrateLeg
 
 contains
 
@@ -151,11 +151,11 @@ contains
     !! Gaussian weights
     real(kind=rk), allocatable  :: w(:)
     !! legendre polynomila values left on [-1;0]
-    real(kind=rk) :: legendre_left(1:max(2, nFunc), nPoints)
-    real(kind=rk) :: legendre_left_shifted(1:max(2, nFunc), nPoints)
+    real(kind=rk) :: legendre_left(nFunc, nPoints)
+    real(kind=rk) :: legendre_left_shifted(nFunc, nPoints)
     !! legendre polynomila values right on [0;+1]
-    real(kind=rk) :: legendre_right(1:max(2, nFunc), nPoints)
-    real(kind=rk) :: legendre_right_shifted(1:max(2, nFunc), nPoints)
+    real(kind=rk) :: legendre_right(nFunc, nPoints)
+    real(kind=rk) :: legendre_right_shifted(nFunc, nPoints)
     integer :: iFunc, jFunc
     !---------------------------------------------------------------------------
 
@@ -238,11 +238,11 @@ contains
     !! Gaussian weights
     real(kind=rk), allocatable  :: w(:)
     !! legendre polynomial values [-1,1]
-    real(kind=rk) :: legendre_standard(1:max(2, nFunc), nPoints)
+    real(kind=rk) :: legendre_standard(nFunc, nPoints)
     !! legendre polynomila values left shift
-    real(kind=rk) :: legendre_left(1:max(2, nFunc), nPoints)
+    real(kind=rk) :: legendre_left(nFunc, nPoints)
     !! legendre polynomila values right shift
-    real(kind=rk) :: legendre_right(1:max(2, nFunc), nPoints)
+    real(kind=rk) :: legendre_right(nFunc, nPoints)
     integer :: iFunc, jFunc
     !---------------------------------------------------------------------------
 
@@ -287,6 +287,57 @@ contains
 
   end subroutine init_modg_multilevelCoeffs
 
+
+  !> Integrate the integrand function in Legendre basis, and represent the
+  !! integral again in the Legendre basis up to the maximal degree.
+  !!
+  !! The maximal degree needs to be one higher than the maximal degree of the
+  !! integrand in order to fully represent the integral, otherwise the result
+  !! is truncated and only an approximation up to maxdegree is obtained.
+  !!
+  !! The integral needs to have a length of maxdegree+1.
+  !! maxdegree needs to be non-negative. Thus, integral needs to be an array
+  !! with a length of at least 1!
+  !!
+  !! Implemented property of Legendre Polynomials:
+  !! L_i(x) = 1/(2*i + 1) * d/dx [ L_{i+1}(x) - L_{i-1}(x) ]
+  pure function integrateLeg(integrand, maxdegree) result(integral)
+    !> Coefficients of the function to integrate in Legendre basis.
+    real(kind=rk), intent(in) :: integrand(:)
+
+    !> Maximal polynomial degree for the integral, should be larger than the
+    !! degree of the integrand
+    integer, intent(in) :: maxdegree
+
+    !> Legendre coefficients of the resulting integral.
+    real(kind=rk) :: integral(maxdegree+1)
+
+    integer :: nOrigModes
+    integer :: commonModes
+    integer :: iMode
+
+    nOrigModes = size(integrand)
+    commonModes = min(nOrigModes-1, maxdegree+1)
+
+    if (nOrigModes >= 2) then
+      integral(1) = -1.0_rk/3.0_rk * integrand(2)
+    else
+      integral(1) = 0.0_rk
+    end if
+    do iMode=2,commonModes
+      integral(iMode) = integrand(iMode-1)/real(2*iMode-3, kind=rk) &
+        &             - integrand(iMode+1)/real(2*iMode+1, kind=rk)
+    end do
+    do iMode=max(nOrigModes,2),min(maxDegree+1,nOrigModes+1)
+      integral(iMode) = integrand(iMode-1)/real(2*iMode-3, kind=rk)
+    end do
+    do iMode=nOrigModes+2,maxDegree+1
+      integral(iMode) = 0.0_rk
+    end do
+
+  end function integrateLeg
+
+
   !> Evaluate all 1D Legendre polynomials at a given set
   !! of points up to the given degree.
   pure function legendre_1D(points, degree) result(one_dim_eval)
@@ -295,7 +346,7 @@ contains
     !> Degree up to which to evaluate the polynomials
     integer,intent(in) ::degree
     !> Resulting vector of all mode values at all points
-    real(kind=rk) :: one_dim_eval(1:max(2,degree+1), size(points))
+    real(kind=rk) :: one_dim_eval(degree+1, size(points))
 
     integer :: iDegree
     real(kind=rk) :: n_q
@@ -303,18 +354,21 @@ contains
     !> init the first two Legendre polynomials.
     !! ... the first Legendre polynomial is 1
     one_dim_eval(1, :) = 1
-    !! ... the second Legendre polynomial is x
-    one_dim_eval(2, :) = points(:)
 
-    do iDegree = 2, degree
-      n_q = 1.0_rk / real(iDegree , kind=rk)
-      !> Recursive polynomial evaluation:
-      !! \f$ n L_{n}(x)= (2n - 1) x L_{n-1}(x) - (n-1)L_{n-2}(x) \f$
-      one_dim_eval(iDegree + 1,:) &
-        &  = n_q * ( (2*iDegree-1) * points(:)*one_dim_eval(iDegree,:) &
-        &           -(iDegree-1) * one_dim_eval(iDegree-1,:) &
-        &          )
-    end do
+    if (degree > 0) then
+      !! ... the second Legendre polynomial is x
+      one_dim_eval(2, :) = points(:)
+
+      do iDegree = 2, degree
+        n_q = 1.0_rk / real(iDegree , kind=rk)
+        !> Recursive polynomial evaluation:
+        !! \f$ n L_{n}(x)= (2n - 1) x L_{n-1}(x) - (n-1)L_{n-2}(x) \f$
+        one_dim_eval(iDegree + 1,:) &
+          &  = n_q * ( (2*iDegree-1) * points(:)*one_dim_eval(iDegree,:) &
+          &           -(iDegree-1) * one_dim_eval(iDegree-1,:) &
+          &          )
+      end do
+    end if
   end function legendre_1D
 
 

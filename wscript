@@ -183,7 +183,15 @@ def build(bld):
            use = ['FFTW3', 'NAG', 'tem_objs', 'fftw_mod_obj', 'aotus'],
            target = 'ply_objs')
 
-       test_dep = ['tem_objs', 'ply_objs', 'fxtp_wrap_obj', 'fxtp_obj', 'fxtp_wrapper']
+       bld(
+           features = 'fc fcprogram',
+           source = ['peons/approximate_1D_jump.f90'],
+           use = ['FFTW3', 'NAG', 'tem_objs', 'ply_objs', 'fftw_mod_obj',
+                  'fxtp_wrap_obj', 'fxtp_obj', 'fxtp_wrapper', 'aotus'],
+           target = 'approximate_1D_jump')
+
+       test_dep = ['FFTW3', 'NAG', 'tem_objs', 'ply_objs', 'fftw_mod_obj',
+                   'fxtp_wrap_obj', 'fxtp_obj', 'fxtp_wrapper', 'aotus']
        utests(bld = bld, use = test_dep)
 
     else:
