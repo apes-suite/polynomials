@@ -391,37 +391,37 @@ contains
         &    faces = me%body_1d%faces,                      &
         &    nQuadPointsPerDir = me%nQuadPointsPerDir       )
 
-!      if (scheme_dim >= 2) then
-!        call ply_init_legfpt_2d(                                               &
-!          &    maxPolyDegree    = me%oversamp_degree,                          &
-!          &    nvars            = nvars,                                       &
-!          &    fpt              = me%body_2d%fpt,                              &
-!          &    lobattoPoints    = me%lobattoPoints,                            &
-!          &    blocksize        = proj_init%header%fpt_header%blocksize,       &
-!          &    subblockingWidth = proj_init%header%fpt_header%subblockingWidth )
-!        call init_cheb_nodes_2d(                              &
-!          &    me = proj_init%header%fpt_header%nodes_header, &
-!          &    nodes = me%body_2d%nodes,                      &
-!          &    faces = me%body_2d%faces,                      &
-!          &    nQuadPointsPerDir = me%nQuadPointsPerDir       )
-!      end if
-!
-!      if (scheme_dim >= 3) then
-!        call ply_init_legfpt_3d(                                               &
-!          &    maxPolyDegree    = me%oversamp_degree,                          &
-!          &    nvars            = nvars ,                                      &
-!          &    fpt              = me%body_3D%fpt,                              &
-!          &    lobattoPoints    = me%lobattoPoints,                            &
-!          &    blocksize        = proj_init%header%fpt_header%blocksize,       &
-!          &    approx_terms     = proj_init%header%fpt_header%approx_terms,    &
-!          &    striplen         = proj_init%header%fpt_header%striplen,        &
-!          &    subblockingWidth = proj_init%header%fpt_header%subblockingWidth )
-!        call init_cheb_nodes(                                 &
-!          &    me = proj_init%header%fpt_header%nodes_header, &
-!          &    nodes = me%body_3d%nodes,                      &
-!          &    faces = me%body_3d%faces,                      &
-!          &    nQuadPointsPerDir = me%nQuadPointsPerDir       )
-!      end if
+      if (scheme_dim >= 2) then
+        call ply_init_legfpt_2d(                                               &
+          &    maxPolyDegree    = me%oversamp_degree,                          &
+          &    nvars            = nvars,                                       &
+          &    fpt              = me%body_2d%fpt,                              &
+          &    lobattoPoints    = me%lobattoPoints,                            &
+          &    blocksize        = proj_init%header%fpt_header%blocksize,       &
+          &    subblockingWidth = proj_init%header%fpt_header%subblockingWidth )
+        call init_cheb_nodes_2d(                              &
+          &    me = proj_init%header%fpt_header%nodes_header, &
+          &    nodes = me%body_2d%nodes,                      &
+          &    faces = me%body_2d%faces,                      &
+          &    nQuadPointsPerDir = me%nQuadPointsPerDir       )
+      end if
+
+      if (scheme_dim >= 3) then
+        call ply_init_legfpt_3d(                                               &
+          &    maxPolyDegree    = me%oversamp_degree,                          &
+          &    nvars            = nvars ,                                      &
+          &    fpt              = me%body_3D%fpt,                              &
+          &    lobattoPoints    = me%lobattoPoints,                            &
+          &    blocksize        = proj_init%header%fpt_header%blocksize,       &
+          &    approx_terms     = proj_init%header%fpt_header%approx_terms,    &
+          &    striplen         = proj_init%header%fpt_header%striplen,        &
+          &    subblockingWidth = proj_init%header%fpt_header%subblockingWidth )
+        call init_cheb_nodes(                                 &
+          &    me = proj_init%header%fpt_header%nodes_header, &
+          &    nodes = me%body_3d%nodes,                      &
+          &    faces = me%body_3d%faces,                      &
+          &    nQuadPointsPerDir = me%nQuadPointsPerDir       )
+      end if
 
     case('l2p')
       !> Fill the L2 projection datatype
