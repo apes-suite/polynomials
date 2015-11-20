@@ -194,6 +194,10 @@ def build(bld):
                    'fxtp_wrap_obj', 'fxtp_obj', 'fxtp_wrapper', 'aotus']
        utests(bld = bld, use = test_dep)
 
+       if bld.env.LIB_FFTW3:
+          utests(bld = bld, use = test_dep, path = 'utests/with_fftw')
+
+
     else:
        bld(
            features = 'coco',
