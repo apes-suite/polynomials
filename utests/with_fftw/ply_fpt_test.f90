@@ -8,14 +8,13 @@ program ply_fpt_test
     &                                 ply_legFpt_type, &
     &                                 ply_legToPnt
   use ply_modg_basis_module,    only: legendre_1D
-  use tem_general_module,       only: tem_start
-  use ply_solver_param_module,  only: solver_param_type
+  use tem_general_module,       only: tem_general_type, tem_start
 
   implicit none
 
   integer :: iDegree, iBSize
   real(kind=rk) :: res, newRes
-  type(solver_param_type) :: params
+  type(tem_general_type) :: general
 
   integer, parameter :: nDegrees = 14
   integer, parameter :: degree(nDegrees) = [  1,  2,  3,   4,   5,   9,  31, &
@@ -26,7 +25,7 @@ program ply_fpt_test
   ! Init the Treelm environment, needed to init the log Unit
   call tem_start(codeName = 'Ateles unit test', &
     &            version  = 'utest',            &
-    &            general  = params%general      )
+    &            general  = general             )
 
 
   res = 0.0_rk
