@@ -20,13 +20,16 @@ module ply_sampling_module
   use tem_tools_module, only: upper_to_lower
   use tem_topology_module, only: tem_coordofid
   use tem_tracking_module, only: tem_tracking_type
-  use tem_varSys_module, only: tem_varsys_type, tem_varSys_op_type,            &
-    &                          tem_varSys_proc_point, tem_varSys_proc_element, &
-    &                          tem_varSys_proc_setParams,                      & 
-    &                          tem_varSys_proc_getParams,                      &
-    &                          tem_varSys_proc_setupIndices,                   &
-    &                          tem_varSys_proc_getValOfIndex,                  &
-    &                          tem_varSys_init, tem_varSys_append_stateVar
+  use tem_varsys_module, only: tem_varSys_proc_element, tem_varSys_proc_point, &
+    &                          tem_varSys_proc_getParams, &
+    &                          tem_varSys_proc_setParams, &
+    &                          tem_varSys_proc_setupIndices, &
+    &                          tem_varSys_proc_getValOfIndex, &
+    &                          tem_varsys_append_statevar, &
+    &                          tem_varSys_init, &
+    &                          tem_varSys_type, tem_varSys_op_type, &
+    &                          tem_varSys_getParams_dummy, &
+    &                          tem_varSys_setParams_dummy
 
   use ply_dof_module, only: q_space, p_space, getDofsQtens, getDofsPtens, &
     &                       nextModgCoeffQTens, nextModgCoeffPTens
@@ -230,10 +233,11 @@ contains
     real(kind=rk) :: point_spacing, point_start
     procedure(tem_varSys_proc_element), pointer :: get_element => NULL()
     procedure(tem_varSys_proc_point), pointer :: get_point => NULL()
-    procedure(tem_varSys_proc_setParams), pointer :: set_params => Null()
-    procedure(tem_varSys_proc_getParams), pointer :: get_params => Null()
-    procedure(tem_varSys_proc_setupIndices), pointer ::setup_indices => NULL()
-    procedure(tem_varSys_proc_getValOfIndex), pointer :: get_ValOfIndex => NULL()
+    procedure(tem_varSys_proc_setParams), pointer :: set_params => NULL()
+    procedure(tem_varSys_proc_getParams), pointer :: get_params => NULL()
+    procedure(tem_varSys_proc_setupIndices), pointer :: setup_indices => NULL()
+    procedure(tem_varSys_proc_getValOfIndex), pointer :: get_valOfIndex &
+      &                                                  => NULL()
     !----------------------------------------------------------------------!
 
     ! Procedure to do...
@@ -325,12 +329,12 @@ contains
       allocate(vardat(maxdofs*nOrigElems))
       allocate(points(n1D_childs))
 
-      get_point   => Null()
       get_element => get_sampled_element
-      set_params => Null()
-      get_params => Null()
-      setup_indices => Null()
-      get_valOfIndex => Null()
+      get_params => tem_varSys_getparams_dummy
+      set_params => tem_varSys_setparams_dummy
+      nullify(get_point)
+      nullify(setup_indices)
+      nullify(get_valOfIndex)
 
       do iChild=1,n1D_childs
         points(iChild) = point_start + ((iChild-1) * point_spacing)
@@ -424,12 +428,12 @@ contains
             &                                                  %val(varpos), &
             &                              nComponents = nComponents,        &
             &                              method_data = c_loc(resdat),      &
-            &                              get_point   = get_point,          &
-            &                              get_element = get_element,        &
-            &                              set_params = set_params,          &
-            &                              get_params = get_params,          &
-            &                              setup_indices = setup_indices,    & 
-            &                              get_valOfIndex = get_valOfIndex   )
+            &                              set_params     = set_params,     &
+            &                              get_point      = get_point,      &
+            &                              get_element    = get_element,    &
+            &                              get_params     = get_params,     &
+            &                              setup_indices  = setup_indices,  &
+            &                              get_valofindex = get_valofindex  )
 
           ! now nullify resdat again, to allow its usage for another allocation:
           nullify(resdat)
