@@ -188,9 +188,7 @@ contains
     type(ply_prj_header_type), intent(in) :: me
     type(aot_out_type) :: conf
     !-------------------------------------------------------------------------!
-    integer :: iError
-    !-------------------------------------------------------------------------!
-    
+
     call aot_out_val( put_conf = conf,   &
       &               vname    = 'kind', &
       &               val      = me%kind )

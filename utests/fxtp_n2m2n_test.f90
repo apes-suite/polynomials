@@ -21,7 +21,7 @@ program test_fxtd_n2m2n
 implicit none
 
 
-  real(kind=rk) :: res1, newRes1
+  real(kind=rk) :: res1
   real(kind=rk) :: res2, newRes2
   real(kind=rk) :: res3, newRes3
   integer :: power
@@ -144,7 +144,6 @@ contains
     real(kind=rk), allocatable    :: modal_data(:,:)
     real(kind=rk), allocatable    :: oversamp_modal(:,:)
     real(kind=rk), allocatable    :: ref_modes(:)
-    type(ply_fxt_type) :: fxt
     !-----------for init
     integer ::basisType, maxdegree, i
     !-----------for oversamp
@@ -251,7 +250,6 @@ contains
     integer ::basisType, maxdegree, i
     !-----------for oversamp
     real(kind=rk), allocatable    :: oversamp_modal(:,:)
-    integer :: iDegX, iDegY, iDegZ,dof, dofOverSamp
 
     basisType = Q_space
     maxdegree = 2**power - 1

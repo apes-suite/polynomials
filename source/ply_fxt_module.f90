@@ -185,8 +185,6 @@ contains
      real(kind=rk), target, intent(inout) :: modal_data(:)
      integer, intent(in) :: oversamp_degree
      !-----------------------------------------------------------!
-     integer :: ub, lb, iLine
-     !-----------------------------------------------------------!
 
      call fxtf_flptld_m2n(flpt       = fxt%flpt,   &
        &                  modal_data = modal_data, &

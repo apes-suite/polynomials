@@ -118,7 +118,6 @@ contains
     !! with those.
     real(kind=rk), intent(inout) :: modalCoeffs(:,:)
     !--------------------------------------------------------------------------
-    integer :: pos
     integer :: oversamp_degree
     integer :: mpd1, mpd1_square, mpd1_cube
     integer :: iDegX, iDegY, iDegZ, idof, dof, dofOverSamp
@@ -185,7 +184,6 @@ contains
     !> Truncated state for one element obtained from the modalCoeffs
     real(kind=rk), intent(inout) :: state(:,:)
     !--------------------------------------------------------------------------
-    integer :: pos
     integer :: oversamp_degree
     integer :: mpd1, mpd1_square, mpd1_cube
     integer :: iDegX, iDegY, iDegZ, idof, dof, dofOverSamp
@@ -257,7 +255,6 @@ contains
     !! by this routine.
     integer, intent(in), optional :: nScalars
     !--------------------------------------------------------------------------
-    integer :: pos
     integer :: oversamp_degree
     integer :: mpd1, mpd1_square
     integer :: iDegX, iDegY, iDegZ, idof, dof, dofOverSamp, nPVars
@@ -333,7 +330,6 @@ contains
     !! by this routine.
     integer, intent(in), optional :: nScalars
     !--------------------------------------------------------------------------
-    integer :: pos
     integer :: oversamp_degree
     integer :: mpd1, mpd1_square
     integer :: iDegX, iDegY, iDegZ, idof, dof, dofOverSamp, nPVars
