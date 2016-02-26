@@ -320,7 +320,8 @@ contains
             end select
 
           else
-            ! Both input and target ar P polynomials
+
+            ! Both input and target are P polynomials
             select case(target_dim)
             case (1)
               subresdat(:minord, iElem) = indat(:minord)
