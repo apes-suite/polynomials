@@ -362,7 +362,7 @@ contains
           &                      elempos = elempos,       &
           &                      time    = time,          &
           &                      tree    = orig_mesh,     &
-          &                      n       = nOrigElems,    &
+          &                      nElems  = nOrigElems,    &
           &                      nDofs   = vardofs(iVar), &
           &                      res     = vardat         )
 
