@@ -32,6 +32,7 @@ def configure(conf):
        if conf.env.LIB_FFTW3:
           conf.all_envs[''].FCFLAGS_FFTW3 = conf.env.CFLAGS_FFTW3
           conf.all_envs[''].LIB_FFTW3 = conf.env.LIB_FFTW3
+          conf.all_envs[''].INCLUDES_FFTW3 = conf.env.INCLUDES_FFTW3
        else:
           # Try to link the fftw without any further options.
           conf.check(lib='fftw3', uselib_store='FFTW3', mandatory=False)
