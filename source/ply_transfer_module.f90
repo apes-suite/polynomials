@@ -1,3 +1,8 @@
+!> This module provides routines to transfer degrees of freedom from one
+!! polynomial representation to another.
+!!
+!! These routines allow the copying of data from one order and polynomial space
+!! into another.
 module ply_transfer_module
   use env_module, only: rk
 
@@ -7,17 +12,35 @@ module ply_transfer_module
 
   implicit none
 
+  private
+
+  public :: ply_transfer_dofs_1D
+  public :: ply_transfer_dofs_2D
+  public :: ply_transfer_dofs_3D
+
 
 contains
 
 
   ! ************************************************************************ !
+  !> Transfer of degrees of freedom from one polynomial to another in 1D.
+  !!
+  !! If the indat is larger than outdat, the higher modes are truncated.
+  !! If outdat is larger, higher modes are padded with zeros.
   subroutine ply_transfer_dofs_1D( indat, indegree, outdat, outdegree )
     ! -------------------------------------------------------------------- !
+    !> Input data to transfer to output data.
     real(kind=rk), intent(in) :: indat(:)
+
+    !> Degree of the input polynomial. There are indegree+1 modes expected
+    !! in indat.
     integer, intent(in) :: indegree
 
+    !> Output data to fill with input data.
     real(kind=rk), intent(out) :: outdat(:)
+
+    !> Degree of the output polynomial. There are outdegree+1 modes expected
+    !! in outdat.
     integer, intent(in) :: outdegree
     ! -------------------------------------------------------------------- !
     integer :: minOrd
@@ -33,15 +56,36 @@ contains
 
 
   ! ************************************************************************ !
+  !> Transfer of degrees of freedom from one polynomial to another in 2D.
+  !!
+  !! If the indat is larger than outdat, the higher modes are truncated.
+  !! If outdat is larger, higher modes are padded with zeros.
+  !!
+  !! When different multidimensional polynomial layouts are used, the modes
+  !! are copied to to the corresponding locations.
   subroutine ply_transfer_dofs_2D( indat, inspace, indegree,   &
     &                              outdat, outspace, outdegree )
     ! -------------------------------------------------------------------- !
+    !> Input data to transfer to output data.
     real(kind=rk), intent(in) :: indat(:)
+
+    !> Multi-dimensional polynomial layout of the input data.
+    !!
+    !! Has to be either [[Q_Space]] or [[P_Space]].
     integer, intent(in) :: inspace
+
+    !> Maximal polynomial degree in the input data.
     integer, intent(in) :: indegree
 
+    !> Output data to fill with input data.
     real(kind=rk), intent(out) :: outdat(:)
+
+    !> Multi-dimensional polynomial layout of the output data.
+    !!
+    !! Has to be either [[Q_Space]] or [[P_Space]].
     integer, intent(in) :: outspace
+
+    !> Maximal polynomial degree in the output data.
     integer, intent(in) :: outdegree
     ! -------------------------------------------------------------------- !
     integer :: outdofs
@@ -144,15 +188,36 @@ contains
 
 
   ! ************************************************************************ !
+  !> Transfer of degrees of freedom from one polynomial to another in 3D.
+  !!
+  !! If the indat is larger than outdat, the higher modes are truncated.
+  !! If outdat is larger, higher modes are padded with zeros.
+  !!
+  !! When different multidimensional polynomial layouts are used, the modes
+  !! are copied to to the corresponding locations.
   subroutine ply_transfer_dofs_3D( indat, inspace, indegree,   &
     &                              outdat, outspace, outdegree )
     ! -------------------------------------------------------------------- !
+    !> Input data to transfer to output data.
     real(kind=rk), intent(in) :: indat(:)
+
+    !> Multi-dimensional polynomial layout of the input data.
+    !!
+    !! Has to be either [[Q_Space]] or [[P_Space]].
     integer, intent(in) :: inspace
+
+    !> Maximal polynomial degree in the input data.
     integer, intent(in) :: indegree
 
+    !> Output data to fill with input data.
     real(kind=rk), intent(out) :: outdat(:)
+
+    !> Multi-dimensional polynomial layout of the output data.
+    !!
+    !! Has to be either [[Q_Space]] or [[P_Space]].
     integer, intent(in) :: outspace
+
+    !> Maximal polynomial degree in the output data.
     integer, intent(in) :: outdegree
     ! -------------------------------------------------------------------- !
     integer :: outdofs
