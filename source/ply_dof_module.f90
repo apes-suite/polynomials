@@ -1,4 +1,3 @@
-?? include "ply_dof_module.inc"
 !> Module provides subroutines, functions and datatypes regarding
 !! cell local degrees of freedoms.
 module ply_dof_module
@@ -8,7 +7,9 @@ module ply_dof_module
 
   private
 
-  public :: posOfModgCoeffQTens, nextModgCoeffQTens, getDofsQTens
+  !! The routine posOfModgCoeffQTens is not available anymore. Use the macro
+  !! from ply_dof_module.inc instead.
+  public :: nextModgCoeffQTens, getDofsQTens
   public :: posOfModgCoeffPTens, nextModgCoeffPTens, getDofsPTens
   public :: posOfModgCoeffPTens2D, nextModgCoeffPTens2D, getDofsPTens2D
   public :: posOfModgCoeffQTens2D, nextModgCoeffQTens2D, getDofsQTens2D
@@ -42,31 +43,6 @@ module ply_dof_module
 
 
 contains
-
-  !> Return the position of a given ansatz function combination in the
-  !! linearized list of modal coefficients for Q-Tensor product polynomials.
-  !! 
-  !! There is also a CoCo posOfModgCoeffQTens text available to inline this
-  !! function. See ply_dof_module.inc for further details.
-  pure function posOfModgCoeffQTens(ansFuncX, ansFuncY, ansFuncZ, &
-    &                               maxDegree) result(pos)
-    !---------------------------------------------------------------------------
-    !> Ansatz function index in x direction. First ansatz function has index 1.
-    integer, intent(in) :: ansFuncX
-    !> Ansatz function index in y direction. First ansatz function has index 1.
-    integer, intent(in) :: ansFuncY
-    !> Ansatz function index in z direction. First ansatz function has index 1.
-    integer, intent(in) :: ansFuncZ
-    !> The maximal polynomial degree per spatial direction
-    integer, intent(in) :: maxDegree
-    !> The position of the modal coefficient in the list of modal coefficients.
-    integer :: pos
-    !---------------------------------------------------------------------------
-
-?? copy :: posOfModgCoeffQTens(ansFuncX, ansFuncY, ansFuncZ, maxdegree, pos)
-
-  end function posOfModgCoeffQTens
-
 
   !> The x, y and z ansatz degrees are turned into the degrees of the next
   !! ansatz function in the linearized Q tensor
@@ -351,8 +327,8 @@ contains
     !> The position of the modal coefficient in the list of modal coefficients.
     integer :: pos
     !---------------------------------------------------------------------------
-    
-    pos = ansFuncX 
+
+    pos = ansFuncX
 
   end function posOfModgCoeffQTens1D
 
