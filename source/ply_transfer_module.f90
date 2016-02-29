@@ -330,4 +330,232 @@ contains
   ! ************************************************************************ !
 
 
+  ! ************************************************************************ !
+  ! Some testing routines....                                                !
+  ! ************************************************************************ !
+
+  ! ************************************************************************ !
+  !> Test for ply_transfer_dofs_1d.
+  subroutine ply_test_transfer_1d(success, lu)
+    ! -------------------------------------------------------------------- !
+    !> Indicator whether the check was successful.
+    !!
+    !! True if all tests pass successfully, otherwise false.
+    logical, intent(out) :: success
+
+    !> A logunit to write messages to.
+    integer, intent(in) :: lu
+    ! -------------------------------------------------------------------- !
+
+    real(kind=rk) :: smallpoly(3)
+    real(kind=rk) :: largepoly(5)
+    real(kind=rk) :: tmp(22)
+    real(kind=rk) :: eps
+    logical :: test_ok
+
+    success = .true.
+
+    eps = epsilon(smallpoly(1))
+
+    ! Test small to large
+    write(lu,*) '1D check transfer small to large:'
+    smallpoly = [16.0_rk, 8.0_rk, 4.0_rk]
+    call ply_transfer_dofs_1d( indat     = smallpoly, &
+      &                        indegree  = 2,         &
+      &                        outdat    = largepoly, &
+      &                        outdegree = 4          )
+
+    test_ok = ( all(abs(largepoly(:3) - smallpoly) < eps) &
+      &         .and. all(abs(largepoly(4:)) < eps)       )
+    if (test_ok) then
+      write(lu,*) '  OK'
+    else
+      write(lu,*) '  FAILED!'
+      write(lu,*) '   small:', smallpoly
+      write(lu,*) '   large:', largepoly
+    end if
+
+    success = (success .and. test_ok)
+
+    write(lu,*) '----------------------------------------------------------'
+
+    ! Test section (equally sized)
+    tmp = -5.0_rk
+    write(lu,*) '1D check transfer to equal sized but section:'
+    call ply_transfer_dofs_1d( indat     = smallpoly, &
+      &                        indegree  = 2,         &
+      &                        outdat    = tmp(6:8),  &
+      &                        outdegree = 2          )
+    test_ok = ( all(abs(tmp(6:8) - smallpoly) < eps)  &
+      &         .and. all(abs(tmp(:5)+5.0_rk) < eps)  &
+      &         .and. all(abs(tmp(10:)+5.0_rk) < eps) )
+
+    if (test_ok) then
+      write(lu,*) '  OK'
+    else
+      write(lu,*) '  FAILED!'
+      write(lu,*) '   small:', smallpoly
+      write(lu,*) '     tmp:', tmp
+    end if
+
+    success = (success .and. test_ok)
+
+    write(lu,*) '----------------------------------------------------------'
+
+    ! Test large to small
+    write(lu,*) '1D check transfer large to small:'
+    largepoly = [16.0_rk, -8.0_rk, 4.0_rk, -2.0_rk, 1.0_rk]
+    call ply_transfer_dofs_1d( indat     = largepoly, &
+      &                        indegree  = 4,         &
+      &                        outdat    = smallpoly, &
+      &                        outdegree = 2          )
+
+    test_ok = ( all(abs(largepoly(:3) - smallpoly) < eps) )
+
+    if (test_ok) then
+      write(lu,*) '  OK'
+    else
+      write(lu,*) '  FAILED!'
+      write(lu,*) '   large:', largepoly
+      write(lu,*) '   small:', smallpoly
+    end if
+
+    success = (success .and. test_ok)
+
+    write(lu,*) '----------------------------------------------------------'
+
+    if (success) then
+      write(lu,*) 'Successfully passed checks for ply_transfer_dofs_1d.'
+    else
+      write(lu,*) 'FAILED checks for ply_transfer_dofs_1d!'
+    end if
+
+  end subroutine ply_test_transfer_1d
+  ! ************************************************************************ !
+
+
+  ! ************************************************************************ !
+  !> Test for ply_transfer_dofs_2d.
+  subroutine ply_test_transfer_2d(success, lu)
+    ! -------------------------------------------------------------------- !
+    !> Indicator whether the check was successful.
+    !!
+    !! True if all tests pass successfully, otherwise false.
+    logical, intent(out) :: success
+
+    !> A logunit to write messages to.
+    integer, intent(in) :: lu
+    ! -------------------------------------------------------------------- !
+
+    real(kind=rk) :: smallq(9)
+    real(kind=rk) :: largeq(25)
+    real(kind=rk) :: smallp(6)
+    real(kind=rk) :: largep(15)
+    real(kind=rk) :: tmp(22)
+    real(kind=rk) :: eps
+    logical :: test_ok
+
+    success = .true.
+
+    eps = epsilon(smallq(1))
+
+    ! Test small to large Q-Q
+    write(lu,*) '2D Q check transfer small to large:'
+    smallq = [ 16.0_rk,  8.0_rk, 4.0_rk, &
+      &        27.0_rk,  9.0_rk, 3.0_rk, &
+      &       125.0_rk, 25.0_rk, 5.0_rk  ]
+    call ply_transfer_dofs_2d( indat     = smallq,  &
+      &                        indegree  = 2,       &
+      &                        inspace   = Q_Space, &
+      &                        outspace  = Q_Space, &
+      &                        outdat    = largeq,  &
+      &                        outdegree = 4        )
+
+    test_ok = ( all(abs(largeq(:3) - smallq(:3)) < eps) &
+      &         .and. all(abs(largeq(4:5)) < eps)       )
+    test_ok = test_ok &
+      &       .and. ( all(abs(largeq(6:8) - smallq(4:6)) < eps) &
+      &               .and. all(abs(largeq(9:10)) < eps)        )
+    test_ok = test_ok &
+      &       .and. ( all(abs(largeq(11:13) - smallq(7:9)) < eps) &
+      &               .and. all(abs(largeq(14:)) < eps)           )
+    if (test_ok) then
+      write(lu,*) '  OK'
+    else
+      write(lu,*) '  FAILED!'
+      write(lu,*) '   small:', smallq
+      write(lu,*) '   large:', largeq
+    end if
+
+    success = (success .and. test_ok)
+
+    write(lu,*) '----------------------------------------------------------'
+
+    ! Test section (equally sized)
+    tmp = -5.0_rk
+    write(lu,*) '2D Q check transfer to equal sized but section:'
+    call ply_transfer_dofs_2d( indat     = smallq,    &
+      &                        indegree  = 2,         &
+      &                        inspace   = Q_Space, &
+      &                        outspace  = Q_Space, &
+      &                        outdat    = tmp(6:14), &
+      &                        outdegree = 2          )
+    test_ok = ( all(abs(tmp(6:14) - smallq) < eps) &
+      &         .and. all(abs(tmp(:5)+5.0_rk) < eps)      &
+      &         .and. all(abs(tmp(15:)+5.0_rk) < eps)     )
+
+    if (test_ok) then
+      write(lu,*) '  OK'
+    else
+      write(lu,*) '  FAILED!'
+      write(lu,*) '   small:', smallq
+      write(lu,*) '     tmp:', tmp
+    end if
+
+    success = (success .and. test_ok)
+
+    write(lu,*) '----------------------------------------------------------'
+
+    ! Test large to small
+    write(lu,*) '2D Q check transfer large to small:'
+    largeq = [ 16.0_rk, -8.0_rk,  4.0_rk, -2.0_rk, 1.0_rk, &
+      &        -8.0_rk,  4.0_rk, -2.0_rk,  1.0_rk, 0.5_rk, &
+      &         4.0_rk, -2.0_rk,  1.0_rk, -0.5_rk, 0.3_rk, &
+      &        -2.0_rk,  1.0_rk, -0.5_rk,  0.3_rk, 0.1_rk, &
+      &         1.0_rk, -0.5_rk,  0.3_rk, -0.1_rk, 0.0_rk  ]
+    call ply_transfer_dofs_2d( indat     = largeq, &
+      &                        indegree  = 4,      &
+      &                        inspace   = Q_Space, &
+      &                        outspace  = Q_Space, &
+      &                        outdat    = smallq, &
+      &                        outdegree = 2       )
+
+    test_ok = ( all(abs(largeq(:3) - smallq(:3)) < eps) )
+    test_ok = test_ok &
+      &       .and. ( all(abs(largeq(6:8) - smallq(4:6)) < eps) )
+    test_ok = test_ok &
+      &       .and. ( all(abs(largeq(11:13) - smallq(7:9)) < eps) )
+
+    if (test_ok) then
+      write(lu,*) '  OK'
+    else
+      write(lu,*) '  FAILED!'
+      write(lu,*) '   large:', largeq
+      write(lu,*) '   small:', smallq
+    end if
+
+    success = (success .and. test_ok)
+
+    write(lu,*) '----------------------------------------------------------'
+
+    if (success) then
+      write(lu,*) 'Successfully passed checks for ply_transfer_dofs_1d.'
+    else
+      write(lu,*) 'FAILED checks for ply_transfer_dofs_1d!'
+    end if
+
+  end subroutine ply_test_transfer_2d
+  ! ************************************************************************ !
+
+
 end module ply_transfer_module
