@@ -1,3 +1,4 @@
+?? include "ply_dof_module.inc"
 !> Module providing datatypes and routines for a fast
 !! transformation of Legendre expansion to point values.
 !! \author{Jens Zudrop}
@@ -12,7 +13,6 @@ module ply_legFpt_2D_module
                                   & ply_fpt_exec_striped, &
                                   & ply_legToCheb_param, ply_chebToLeg_param, &
                                   & assignment(=)
-  use ply_dof_module,         only: posOfModgCoeffQTens
   use ply_nodes_module,       only: ply_faceNodes_type
   use fftw_wrap
   use ply_legFpt_module,      only: ply_legFpt_type, &
@@ -41,8 +41,8 @@ contains
   !****************************************************************************
   !> Subroutine to initialize the fast polynomial transformation
   !! for Legendre expansion.
-  !! VK: change maxPolyDegree to number of quadpoints to include the dealising factor 
-  subroutine ply_init_legFpt_2D( maxPolyDegree, nVars, fpt, blocksize, & 
+  !! VK: change maxPolyDegree to number of quadpoints to include the dealising factor
+  subroutine ply_init_legFpt_2D( maxPolyDegree, nVars, fpt, blocksize, &
     &                            lobattoPoints, subblockingWidth )
     !---------------------------------------------------------------------------
     integer, intent(in) :: maxPolyDegree
@@ -52,7 +52,7 @@ contains
     integer, intent(in), optional :: blocksize
     !> Use Chebyshev-Lobtatto Points (true) or simple Chebyshev points (false)
     logical, intent(in), optional :: lobattoPoints
-    !> The width of the subblocks used during the unrolled base exchange to 
+    !> The width of the subblocks used during the unrolled base exchange to
     !! ensure a better cache usage.
     integer, optional, intent(in) :: subblockingWidth
     !---------------------------------------------------------------------------
@@ -90,16 +90,16 @@ contains
 
     ! If we have OpenMP parallelism, we have to init FFTW with the
     ! corrseponding function call
-    !$ fftwMultThread = fftw_init_threads() 
+    !$ fftwMultThread = fftw_init_threads()
     !$ if(fftwMultThread.eq.0) then
     !$   write(logUnit(1),*) 'ERROR in ply_init_legFpt_2D: Not able to init OpenMP parallel FFTW, stopping...'
-    !$   call tem_abort()    
+    !$   call tem_abort()
     !$ end if
 
     ! Tell FFTW how many threads at max we want to use: at max
     ! we use the number of OMP threads in the current team.
     !$ call fftw_plan_with_nthreads( omp_get_max_threads() )
-    
+
     if(.not.lob) then
       ! Init the DCT III ( Leg -> Point values )
       fpt%planChebToPnt = fftw_plan_r2r_2d( n0 = fpt%legToChebParams%n,&
@@ -154,11 +154,11 @@ contains
    !> The FPT parameters.
    type(ply_legFpt_type), intent(inout) :: fpt
    !> The Legendre coefficients to convert to point values (Chebyshev nodes).
-   !! \attention Although this array serves as input only, it is modified 
+   !! \attention Although this array serves as input only, it is modified
    !! inside of this routine by the underlying FPT algorithm. So, when
    !! this routine returns from its call the original values of pntVal will
    !! be modified.
-   real(kind=rk), intent(inout) :: legCoeffs(:) 
+   real(kind=rk), intent(inout) :: legCoeffs(:)
    !> The resulting point values (Chebyshev nodes).
    real(kind=rk), intent(inout) :: pntVal(:)
    logical, intent(in) :: lobattoPoints
@@ -184,7 +184,7 @@ contains
 
      ! Normalize the coefficients of the Chebyshev polynomials due
      ! to the unnormalized version of DCT-III in the FFTW.
-     !$OMP DO 
+     !$OMP DO
      do iFunc = 1, fpt%legToChebParams%n**2
        iFuncX = (iFunc-1)/fpt%legToChebParams%n+1
        iFuncY = mod(iFunc-1,fpt%legToChebParams%n)+1
@@ -209,35 +209,35 @@ contains
    else
 
      ! Normalization factor for the DCT I of the transformation to point values
-     !$OMP DO 
+     !$OMP DO
      do iFunc = 1, (fpt%legToChebParams%n-2)**2
        iFuncX = (iFunc-1)/(fpt%legToChebParams%n-2)+2
        iFuncY = mod(iFunc-1,fpt%legToChebParams%n-2)+2
-       funcIndex = posOfModgCoeffQTens(iFuncX, iFuncY, 1, fpt%legToChebParams%n-1)
+?? copy :: posOfModgCoeffQTens(iFuncX, iFuncY, 1, fpt%legToChebParams%n-1, funcIndex)
        legCoeffs(funcIndex) = legCoeffs(funcIndex) / 4.0_rk
      end do
      !$OMP END DO
      !$OMP DO
      do iFuncX = 2, fpt%legToChebParams%n-1
-       funcIndex = posOfModgCoeffQTens(1,iFuncX,1,fpt%legToChebParams%n-1)
+?? copy :: posOfModgCoeffQTens(1, iFuncX, 1, fpt%legToChebParams%n-1, funcIndex)
        legCoeffs(funcIndex) = legCoeffs(funcIndex)/2.0_rk
-       funcIndex = posOfModgCoeffQTens(iFuncX,1,1,fpt%legToChebParams%n-1)
+?? copy :: posOfModgCoeffQTens(iFuncX, 1, 1, fpt%legToChebParams%n-1, funcIndex)
        legCoeffs(funcIndex) = legCoeffs(funcIndex)/2.0_rk
-       funcIndex = posOfModgCoeffQTens(fpt%legToChebParams%n,iFuncX,1,fpt%legToChebParams%n-1)
+?? copy :: posOfModgCoeffQTens(fpt%legToChebParams%n, iFuncX, 1, fpt%legToChebParams%n-1, funcIndex)
        legCoeffs(funcIndex) = legCoeffs(funcIndex)/2.0_rk
-       funcIndex = posOfModgCoeffQTens(iFuncX,fpt%legToChebParams%n,1,fpt%legToChebParams%n-1)
+?? copy :: posOfModgCoeffQTens(iFuncX, fpt%legToChebParams%n, 1, fpt%legToChebParams%n-1, funcIndex)
        legCoeffs(funcIndex) = legCoeffs(funcIndex)/2.0_rk
      end do
      !$OMP END DO
 
-     ! Transform Chebyshev expansion to point values at 
+     ! Transform Chebyshev expansion to point values at
      ! Lobatto-Chebyshev nodes by DCT I
      !$OMP SINGLE
      call fftw_execute_r2r( fpt%planChebToPnt, legCoeffs(:), pntVal(:) )
      !$OMP END SINGLE
 
    end if
- 
+
   end subroutine ply_legToPnt_2D_singVar
   !****************************************************************************
 
@@ -250,11 +250,11 @@ contains
    !> The FPT parameters.
    type(ply_legFpt_type), intent(inout) :: fpt
    !> The Legendre coefficients to convert to point values (Chebyshev nodes).
-   !! \attention Although this array serves as input only, it is modified 
+   !! \attention Although this array serves as input only, it is modified
    !! inside of this routine by the underlying FPT algorithm. So, when
    !! this routine returns from its call the original values of pntVal will
    !! be modified.
-   real(kind=rk), intent(inout) :: legCoeffs(:,:) 
+   real(kind=rk), intent(inout) :: legCoeffs(:,:)
    !> The resulting point values (Chebyshev nodes).
    real(kind=rk), intent(inout) :: pntVal(:,:)
    !> The number of scalar variables to transform.
@@ -280,13 +280,13 @@ contains
     !> Parameters of the Fast Polynomial transformation.
     type(ply_legFpt_type), intent(inout) :: fpt
     !> The point values to transform to 2D modal Legendre expansion.
-    !! \attention Although this array serves as input only, it is modified 
+    !! \attention Although this array serves as input only, it is modified
     !! inside of this routine by the underlying DCT algorithm. So, when
     !! this routine returns from its call the original values of pntVal will
     !! be modified.
     real(kind=rk), intent(inout) :: pntVal(:)
     !> The Legendre coefficients.
-    real(kind=rk), intent(inout) :: legCoeffs(:) 
+    real(kind=rk), intent(inout) :: legCoeffs(:)
     logical, intent(in) :: lobattoPoints
     !---------------------------------------------------------------------------
     integer :: iFunc, iFuncX, iFuncY, funcIndex
@@ -308,16 +308,16 @@ contains
         iFuncX = (iFunc-1)/fpt%chebToLegParams%n + 1
         iFuncY = mod(iFunc-1,fpt%chebToLegParams%n) + 1
         normFactor = ((-1)**(iFuncX-1)) &
-                 & * ((-1)**(iFuncY-1)) & 
+                 & * ((-1)**(iFuncY-1)) &
                  & * inv_ndofs
                legCoeffs(iFunc) = legCoeffs(iFunc) * normFactor
       end do
       !$OMP END DO
       !$OMP DO
       do iFuncX = 1, fpt%chebToLegParams%n
-        funcIndex = posOfModgCoeffQTens(1,iFuncX,1, fpt%chebToLegParams%n-1)
+?? copy :: posOfModgCoeffQTens(1, iFuncX, 1, fpt%chebToLegParams%n-1, funcIndex)
         legCoeffs(funcIndex) = legCoeffs(funcIndex) * 0.5_rk
-        funcIndex = posOfModgCoeffQTens(iFuncX,1,1, fpt%chebToLegParams%n-1)
+?? copy :: posOfModgCoeffQTens(iFuncX, 1, 1, fpt%chebToLegParams%n-1, funcIndex)
         legCoeffs(funcIndex) = legCoeffs(funcIndex) * 0.5_rk
       end do
       !$OMP END DO
@@ -329,24 +329,24 @@ contains
       call fftw_execute_r2r( fpt%planPntToCheb, pntVal(:), legCoeffs(:) )
       !$OMP END SINGLE
 
-      ! Apply normalization 
+      ! Apply normalization
       !$OMP DO
       do iFunc = 1, (fpt%chebToLegParams%n-2)**2
         iFuncX = (iFunc-1)/(fpt%chebToLegParams%n-3+1) + 2
         iFuncY = mod(iFunc-1,fpt%chebToLegParams%n-2) + 2
-        funcIndex = posOfModgCoeffQTens(iFuncX, iFuncY, 1, fpt%chebToLegParams%n-1)
+?? copy :: posOfModgCoeffQTens(iFuncX, iFuncY, 1, fpt%chebToLegParams%n-1, funcIndex)
         legCoeffs(funcIndex) = legCoeffs(funcIndex) * 4.0_rk
       end do
       !$OMP END DO
       !$OMP DO
       do iFuncX = 2, fpt%chebToLegParams%n-1
-        funcIndex = posOfModgCoeffQTens(1,iFuncX,1, fpt%chebToLegParams%n-1)
+?? copy :: posOfModgCoeffQTens(1, iFuncX, 1, fpt%chebToLegParams%n-1, funcIndex)
         legCoeffs(funcIndex) = legCoeffs(funcIndex) * 2.0_rk
-        funcIndex = posOfModgCoeffQTens(iFuncX,1,1, fpt%chebToLegParams%n-1)
+?? copy :: posOfModgCoeffQTens(iFuncX, 1, 1, fpt%chebToLegParams%n-1, funcIndex)
         legCoeffs(funcIndex) = legCoeffs(funcIndex) * 2.0_rk
-        funcIndex = posOfModgCoeffQTens(fpt%chebToLegParams%n,iFuncX,1, fpt%chebToLegParams%n-1)
+?? copy :: posOfModgCoeffQTens(fpt%chebToLegParams%n, iFuncX, 1, fpt%chebToLegParams%n-1, funcIndex)
         legCoeffs(funcIndex) = legCoeffs(funcIndex) * 2.0_rk
-        funcIndex = posOfModgCoeffQTens(iFuncX,fpt%chebToLegParams%n,1, fpt%chebToLegParams%n-1)
+?? copy :: posOfModgCoeffQTens(iFuncX, fpt%chebToLegParams%n, 1, fpt%chebToLegParams%n-1, funcIndex)
         legCoeffs(funcIndex) = legCoeffs(funcIndex) * 2.0_rk
       end do
       !$OMP END DO
@@ -381,15 +381,15 @@ contains
    !> Parameters of the Fast Polynomial transformation.
    type(ply_legFpt_type), intent(inout) :: fpt
    !> The point values to transform to 2D modal Legendre expansion.
-   !! \attention Although this array serves as input only, it is modified 
+   !! \attention Although this array serves as input only, it is modified
    !! inside of this routine by the underlying DCT algorithm. So, when
    !! this routine returns from its call the original values of pntVal will
    !! be modified.
    real(kind=rk), intent(inout) :: pntVal(:,:)
    !> The Legendre coefficients.
-   real(kind=rk), intent(inout) :: legCoeffs(:,:) 
+   real(kind=rk), intent(inout) :: legCoeffs(:,:)
    !> The number of scalar variables to transform.
-   integer, intent(in) :: nVars  
+   integer, intent(in) :: nVars
    logical, intent(in) :: lobattoPoints
    !---------------------------------------------------------------------------
    integer :: iVar
