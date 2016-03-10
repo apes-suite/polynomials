@@ -202,6 +202,17 @@ def build(bld):
        test_dep = ['FFTW3', 'NAG', 'tem_objs', bld.env.mpi_mem_c_obj,
                    'ply_objs', 'fftw_mod_obj', 'fxtp_wrap_obj', 'fxtp_obj',
                    'fxtp_wrapper', 'aotus']
+
+       utest_sources = bld.path.ant_glob('utests/*_module.f90')
+
+       bld(
+         features = 'fc',
+         source   = utest_sources,
+         use      = ['tem_objs', 'aotus', 'ply_objs'],
+         target   = 'ply_utest_objs')
+
+       test_dep.append('ply_utest_objs')
+
        utests(bld = bld, use = test_dep)
 
        if bld.env.LIB_FFTW3:
