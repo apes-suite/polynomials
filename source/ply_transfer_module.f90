@@ -172,14 +172,7 @@ contains
 
         ! Both input and output are P polynomials
         min_dofs = (minord*(minord+1))/2
-        out_X = 1
-        out_Y = 1
-        do iDof=1,min_dofs
-          out_pos = posOfModgCoeffPTens2D(out_X, out_Y, 0, outdegree)
-          in_pos = posOfModgCoeffPTens2D(out_X, out_Y, 0, indegree)
-          outdat(out_pos) = indat(in_pos)
-          call nextModgCoeffPTens2D(out_X, out_Y, out_Z, minord-1)
-        end do
+        outdat(:min_dofs) = indat(:min_dofs)
 
       end if ispace_op
 
@@ -316,15 +309,7 @@ contains
 
         ! Both input and output are P polynomials
         min_dofs = ( (minord+2)*((minord*(minord+1))/2) ) / 3
-        out_X = 1
-        out_Y = 1
-        out_Z = 1
-        do iDof=1,min_dofs
-          out_pos = posOfModgCoeffPTens(out_X, out_Y, out_Z, outdegree)
-          in_pos = posOfModgCoeffPTens(out_X, out_Y, out_Z, indegree)
-          outdat(out_pos) = indat(in_pos)
-          call nextModgCoeffPTens(out_X, out_Y, out_Z, minord-1)
-        end do
+        outdat(:min_dofs) = indat(:min_dofs)
 
       end if ispace_op
 
