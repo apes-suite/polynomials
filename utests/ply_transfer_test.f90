@@ -18,6 +18,11 @@ program ply_transfer_test
 
   passed_tests = passed_tests .and. test_ok
 
+  call ply_test_transfer_3d( success = test_ok,   &
+    &                        lu      = stdOutUnit )
+
+  passed_tests = passed_tests .and. test_ok
+
   if (passed_tests) write(*,*) 'PASSED'
 
 end program ply_transfer_test

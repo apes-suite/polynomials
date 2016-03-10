@@ -349,7 +349,6 @@ contains
     write(lu,*) '----------------------------------------------------------'
 
     ! Test equal max degree P2Q
-    tmp = -5.0_rk
     write(lu,*) '2D P2Q check transfer to equal sized:'
     call ply_transfer_dofs_2d( indat     = smallp,  &
       &                        indegree  = 2,       &
@@ -507,6 +506,536 @@ contains
 
 
   end subroutine ply_test_transfer_2d
+  ! ************************************************************************ !
+
+
+  ! ************************************************************************ !
+  !> Test for ply_transfer_dofs_3d.
+  subroutine ply_test_transfer_3d(success, lu)
+    ! -------------------------------------------------------------------- !
+    !> Indicator whether the check was successful.
+    !!
+    !! True if all tests pass successfully, otherwise false.
+    logical, intent(out) :: success
+
+    !> A logunit to write messages to.
+    integer, intent(in) :: lu
+    ! -------------------------------------------------------------------- !
+
+    real(kind=rk) :: smallq(27)
+    real(kind=rk) :: largeq(125)
+    real(kind=rk) :: smallp(10)
+    real(kind=rk) :: largep(35)
+    real(kind=rk) :: tmp(200)
+    real(kind=rk) :: eps
+    real(kind=rk) :: maxmode
+    integer :: iMode
+    logical :: test_ok
+
+    ! Note: 3D P-Poly is numbered as:
+    !
+    ! Z = 1                 !   Z = 2
+    !                       !  
+    ! y-mode                !   y-mode
+    ! | x->  1  2  3  4  5  !   | x->  1  2  3  4
+    ! v                     !   v
+    ! 1      1  2  5 11 21  !   1      4  8 15 26
+    ! 2      3  6 12 22     !   2      9 16 27
+    ! 3      7 13 23        !   3     17 28
+    ! 4     14 24           !   4     29
+    ! 5     25              !
+    !                       !
+    ! ------------------------------------------------
+    !                 !                !
+    ! Z = 3           !   Z = 4        !   Z = 5   
+    !                 !                !           
+    ! y-mode          !   y-mode       !   y-mode  
+    ! | x->  1  2  3  !   | x->  1  2  !   | x->  1
+    ! v               !   v            !   v       
+    ! 1     10 18 30  !   1     20 33  !   1     35
+    ! 2     19 31     !   2     34     !
+    ! 3     32        !                !
+    !                 !                !
+    ! ------------------------------------------------
+
+    success = .true.
+
+    eps = epsilon(smallq(1))
+
+    ! Test small to large Q-Q
+    largeq = 3.14_rk
+    write(lu,*) '3D Q check transfer small to large:'
+    maxmode = real(size(smallq),kind=rk)
+    do iMode=1,size(smallq)
+      smallq(iMode) = maxmode - real(iMode-1, kind=rk)
+    end do
+    call ply_transfer_dofs_3d( indat     = smallq,  &
+      &                        indegree  = 2,       &
+      &                        inspace   = Q_Space, &
+      &                        outspace  = Q_Space, &
+      &                        outdat    = largeq,  &
+      &                        outdegree = 4        )
+
+    ! Z=1
+    test_ok = ( all(abs(largeq(:3) - smallq(:3)) < eps) &
+      &         .and. all(abs(largeq(4:5)) < eps)       )
+    test_ok = test_ok                                           &
+      &       .and. ( all(abs(largeq(6:8) - smallq(4:6)) < eps) &
+      &               .and. all(abs(largeq(9:10)) < eps)        )
+    test_ok = test_ok                                             &
+      &       .and. ( all(abs(largeq(11:13) - smallq(7:9)) < eps) &
+      &               .and. all(abs(largeq(14:25)) < eps)         )
+
+    ! Z=2
+    test_ok = test_ok                                               &
+      &       .and. ( all(abs(largeq(26:28) - smallq(10:12)) < eps) &
+      &               .and. all(abs(largeq(29:30)) < eps)           )
+    test_ok = test_ok                                               &
+      &       .and. ( all(abs(largeq(31:33) - smallq(13:15)) < eps) &
+      &               .and. all(abs(largeq(34:35)) < eps)           )
+    test_ok = test_ok                                               &
+      &       .and. ( all(abs(largeq(36:38) - smallq(16:18)) < eps) &
+      &               .and. all(abs(largeq(39:50)) < eps)           )
+
+    ! Z=3
+    test_ok = test_ok                                               &
+      &       .and. ( all(abs(largeq(51:53) - smallq(19:21)) < eps) &
+      &               .and. all(abs(largeq(54:55)) < eps)           )
+    test_ok = test_ok                                               &
+      &       .and. ( all(abs(largeq(56:58) - smallq(22:24)) < eps) &
+      &               .and. all(abs(largeq(59:60)) < eps)           )
+    test_ok = test_ok                                               &
+      &       .and. ( all(abs(largeq(61:63) - smallq(25:27)) < eps) &
+      &               .and. all(abs(largeq(64:)) < eps)             )
+
+    if (test_ok) then
+      write(lu,*) '  OK'
+    else
+      write(lu,*) '  FAILED!'
+      write(lu,*) '   small:', smallq
+      write(lu,*) '   large:', largeq
+    end if
+
+    success = (success .and. test_ok)
+
+    write(lu,*) '----------------------------------------------------------'
+
+    ! Test section (equally sized) Q-Q
+    tmp = -5.0_rk
+    write(lu,*) '3D Q check transfer to equal sized but section:'
+    call ply_transfer_dofs_3d( indat     = smallq,     &
+      &                        indegree  = 2,          &
+      &                        inspace   = Q_Space,    &
+      &                        outspace  = Q_Space,    &
+      &                        outdat    = tmp(11:37), &
+      &                        outdegree = 2          )
+    test_ok = ( all(abs(tmp(11:37) - smallq) < eps)   &
+      &         .and. all(abs(tmp(:10)+5.0_rk) < eps) &
+      &         .and. all(abs(tmp(38:)+5.0_rk) < eps) )
+
+    if (test_ok) then
+      write(lu,*) '  OK'
+    else
+      write(lu,*) '  FAILED!'
+      write(lu,*) '   small:', smallq
+      write(lu,*) '     tmp:', tmp
+    end if
+
+    success = (success .and. test_ok)
+
+    write(lu,*) '----------------------------------------------------------'
+
+    ! Test large to small Q-Q
+    write(lu,*) '3D Q check transfer large to small:'
+    maxmode = real(size(largeq),kind=rk)
+    do iMode=1,size(largeq)
+      largeq(iMode) = maxmode - real(iMode-1, kind=rk)
+    end do
+    call ply_transfer_dofs_3d( indat     = largeq,  &
+      &                        indegree  = 4,       &
+      &                        inspace   = Q_Space, &
+      &                        outspace  = Q_Space, &
+      &                        outdat    = smallq,  &
+      &                        outdegree = 2        )
+
+    ! Z=1
+    test_ok = all(abs(largeq(:3) - smallq(:3)) < eps)
+    test_ok = test_ok .and. all(abs(largeq(6:8) - smallq(4:6)) < eps)
+    test_ok = test_ok .and. all(abs(largeq(11:13) - smallq(7:9)) < eps)
+
+    ! Z=2
+    test_ok = test_ok .and. all(abs(largeq(26:28) - smallq(10:12)) < eps)
+    test_ok = test_ok .and. all(abs(largeq(31:33) - smallq(13:15)) < eps)
+    test_ok = test_ok .and. all(abs(largeq(36:38) - smallq(16:18)) < eps)
+
+    ! Z=3
+    test_ok = test_ok .and. all(abs(largeq(51:53) - smallq(19:21)) < eps)
+    test_ok = test_ok .and. all(abs(largeq(56:58) - smallq(22:24)) < eps)
+    test_ok = test_ok .and. all(abs(largeq(61:63) - smallq(25:27)) < eps)
+
+    if (test_ok) then
+      write(lu,*) '  OK'
+    else
+      write(lu,*) '  FAILED!'
+      write(lu,*) '   large:', largeq
+      write(lu,*) '   small:', smallq
+    end if
+
+    success = (success .and. test_ok)
+
+    write(lu,*) '----------------------------------------------------------'
+
+    ! Test small to large P-P
+    write(lu,*) '3D P check transfer small to large:'
+    maxmode = real(size(smallp),kind=rk)
+    do iMode=1,size(smallp)
+      smallp(iMode) = maxmode - real(iMode-1, kind=rk)
+    end do
+    call ply_transfer_dofs_3d( indat     = smallp,  &
+      &                        indegree  = 2,       &
+      &                        inspace   = P_Space, &
+      &                        outspace  = P_Space, &
+      &                        outdat    = largep,  &
+      &                        outdegree = 4        )
+
+    test_ok = ( all(abs(largep(:10) - smallp) < eps) &
+      &         .and. all(abs(largep(11:)) < eps)    )
+    if (test_ok) then
+      write(lu,*) '  OK'
+    else
+      write(lu,*) '  FAILED!'
+      write(lu,*) '   small:', smallp
+      write(lu,*) '   large:', largep
+    end if
+
+    success = (success .and. test_ok)
+
+    write(lu,*) '----------------------------------------------------------'
+
+    ! Test section (equally sized) P-P
+    tmp = -5.0_rk
+    write(lu,*) '3D P check transfer to equal sized but section:'
+    call ply_transfer_dofs_3d( indat     = smallp,    &
+      &                        indegree  = 2,         &
+      &                        inspace   = P_Space,   &
+      &                        outspace  = P_Space,   &
+      &                        outdat    = tmp(6:15), &
+      &                        outdegree = 2          )
+    test_ok = ( all(abs(tmp(6:15) - smallp) < eps)    &
+      &         .and. all(abs(tmp(:5)+5.0_rk) < eps)  &
+      &         .and. all(abs(tmp(16:)+5.0_rk) < eps) )
+
+    if (test_ok) then
+      write(lu,*) '  OK'
+    else
+      write(lu,*) '  FAILED!'
+      write(lu,*) '   small:', smallp
+      write(lu,*) '     tmp:', tmp
+    end if
+
+    success = (success .and. test_ok)
+
+    write(lu,*) '----------------------------------------------------------'
+
+    ! Test large to small P-P
+    write(lu,*) '3D P check transfer large to small:'
+    maxmode = real(size(largep),kind=rk)
+    do iMode=1,size(largep)
+      largep(iMode) = maxmode - real(iMode-1, kind=rk)
+    end do
+    call ply_transfer_dofs_3d( indat     = largep,  &
+      &                        indegree  = 4,       &
+      &                        inspace   = P_Space, &
+      &                        outspace  = P_Space, &
+      &                        outdat    = smallp,  &
+      &                        outdegree = 2        )
+
+    test_ok = ( all(abs(largep(:10) - smallp) < eps) )
+
+    if (test_ok) then
+      write(lu,*) '  OK'
+    else
+      write(lu,*) '  FAILED!'
+      write(lu,*) '   large:', largep
+      write(lu,*) '   small:', smallp
+    end if
+
+    success = (success .and. test_ok)
+
+    write(lu,*) '----------------------------------------------------------'
+
+    ! Test small to large P2Q
+    write(lu,*) '3D P2Q check transfer small to large:'
+    largeq = -1.0_rk
+    maxmode = real(size(smallp),kind=rk)
+    do iMode=1,size(smallp)
+      smallp(iMode) = maxmode - real(iMode-1, kind=rk)
+    end do
+    call ply_transfer_dofs_3d( indat     = smallp,  &
+      &                        indegree  = 2,       &
+      &                        inspace   = P_Space, &
+      &                        outspace  = Q_Space, &
+      &                        outdat    = largeq,  &
+      &                        outdegree = 4        )
+
+    ! Z=1
+    test_ok = ( all(abs(largeq(:3) - smallp([1,2,5])) < eps) &
+      &         .and. all(abs(largeq(4:5)) < eps)            )
+    test_ok = test_ok                                             &
+      &       .and. ( all(abs(largeq(6:7) - smallp([3,6])) < eps) &
+      &               .and. all(abs(largeq(8:10)) < eps)          )
+    test_ok = test_ok                                     &
+      &       .and. ( abs(largeq(11) - smallp(7)) < eps   &
+      &               .and. all(abs(largeq(12:25)) < eps) )
+
+    ! Z=2
+    test_ok = test_ok                                               &
+      &       .and. ( all(abs(largeq(26:27) - smallp([4,8])) < eps) &
+      &               .and. all(abs(largeq(28:30)) < eps)          )
+    test_ok = test_ok                                     &
+      &       .and. ( abs(largeq(31) - smallp(9)) < eps   &
+      &               .and. all(abs(largeq(32:50)) < eps) )
+
+    ! Z=3
+    test_ok = test_ok                                      &
+      &       .and. ( (abs(largeq(51) - smallp(10)) < eps) &
+      &               .and. all(abs(largeq(52:)) < eps)    )
+
+    if (test_ok) then
+      write(lu,*) '  OK'
+    else
+      write(lu,*) '  FAILED!'
+      write(lu,*) '   small:', smallp
+      write(lu,*) '   large:', largeq
+    end if
+
+    success = (success .and. test_ok)
+
+    write(lu,*) '----------------------------------------------------------'
+
+    ! Test equal max degree P2Q
+    write(lu,*) '3D P2Q check transfer to equal sized:'
+    call ply_transfer_dofs_3d( indat     = smallp,  &
+      &                        indegree  = 2,       &
+      &                        inspace   = P_Space, &
+      &                        outspace  = Q_Space, &
+      &                        outdat    = smallq,  &
+      &                        outdegree = 2        )
+
+    ! Z=1
+    test_ok = ( all(abs(smallq(:3) - smallp([1,2,5])) < eps) )
+    test_ok = test_ok                                             &
+      &       .and. ( all(abs(smallq(4:5) - smallp([3,6])) < eps) &
+      &               .and. (abs(smallq(6)) < eps)                )
+    test_ok = test_ok                                    &
+      &       .and. ( (abs(smallq(7) - smallp(7)) < eps) &
+      &               .and. all(abs(smallq(8:9)) < eps)  )
+
+    ! Z=2
+    test_ok = test_ok                                               &
+      &       .and. ( all(abs(smallq(10:11) - smallp([4,8])) < eps) &
+      &               .and. (abs(smallq(12)) < eps)                 )
+    test_ok = test_ok                                     &
+      &       .and. ( (abs(smallq(13) - smallp(9)) < eps) &
+      &               .and. all(abs(smallq(14:18)) < eps) )
+
+    ! Z=3
+    test_ok = test_ok                                      &
+      &       .and. ( (abs(smallq(19) - smallp(10)) < eps) &
+      &               .and. all(abs(smallq(20:)) < eps)    )
+
+    if (test_ok) then
+      write(lu,*) '  OK'
+    else
+      write(lu,*) '  FAILED!'
+      write(lu,*) '   Ppoly:', smallp
+      write(lu,*) '   Qpoly:', smallq
+    end if
+
+    success = (success .and. test_ok)
+
+    write(lu,*) '----------------------------------------------------------'
+
+    ! Test large to small P2Q
+    write(lu,*) '3D P2Q check transfer large to small:'
+    maxmode = real(size(largep),kind=rk)
+    do iMode=1,size(largep)
+      largep(iMode) = maxmode - real(iMode-1, kind=rk)
+    end do
+    call ply_transfer_dofs_3d( indat     = largep,  &
+      &                        indegree  = 4,       &
+      &                        inspace   = P_Space, &
+      &                        outspace  = Q_Space, &
+      &                        outdat    = smallq,  &
+      &                        outdegree = 2        )
+
+    ! Z=1
+    test_ok = ( all(abs(smallq(:3) - largep([1,2,5])) < eps) )
+    test_ok = test_ok                                                &
+      &       .and. ( all(abs(smallq(4:6) - largep([3,6,12])) < eps) )
+    test_ok = test_ok                                                 &
+      &       .and. ( all(abs(smallq(7:9) - largep([7,13,23])) < eps) )
+
+    ! Z=2
+    test_ok = test_ok                                                  &
+      &       .and. ( all(abs(smallq(10:12) - largep([4,8,15])) < eps) )
+    test_ok = test_ok                                                  &
+      &       .and. ( all(abs(smallq(13:15) - largep([9,16,27])) < eps) )
+    test_ok = test_ok                                                 &
+      &       .and. ( all(abs(smallq(16:17) - largep([17,28])) < eps) &
+      &               .and. (abs(smallq(18)) < eps)                   )
+
+    ! Z=3
+    test_ok = test_ok                                                    &
+      &       .and. ( all(abs(smallq(19:21) - largep([10,18,30])) < eps) )
+    test_ok = test_ok                                                 &
+      &       .and. ( all(abs(smallq(22:23) - largep([19,31])) < eps) &
+      &               .and. (abs(smallq(24)) < eps)                   )
+    test_ok = test_ok                                      &
+      &       .and. ( (abs(smallq(25) - largep(32)) < eps) &
+      &               .and. all(abs(smallq(26:)) < eps)    )
+
+    if (test_ok) then
+      write(lu,*) '  OK'
+    else
+      write(lu,*) '  FAILED!'
+      write(lu,*) '   largeP:', largep
+      write(lu,*) '   smallQ:', smallq
+    end if
+
+    success = (success .and. test_ok)
+
+    write(lu,*) '----------------------------------------------------------'
+
+    ! Test small to large Q2P
+    write(lu,*) '3D Q2P check transfer small to large:'
+    largep = -1.0_rk
+    maxmode = real(size(smallq),kind=rk)
+    do iMode=1,size(smallq)
+      smallq(iMode) = maxmode - real(iMode-1, kind=rk)
+    end do
+    call ply_transfer_dofs_3d( indat     = smallq,  &
+      &                        indegree  = 2,       &
+      &                        inspace   = Q_Space, &
+      &                        outspace  = P_Space, &
+      &                        outdat    = largep,  &
+      &                        outdegree = 4        )
+
+    ! Z=1
+    test_ok = ( all(abs(smallq(:3) - largep([1,2,5])) < eps) &
+      &         .and. all(abs(largep([11,21])) < eps)        )
+    test_ok = test_ok                                                &
+      &       .and. ( all(abs(smallq(4:6) - largep([3,6,12])) < eps) &
+      &               .and. (abs(largep(22)) < eps)                 )
+    test_ok = test_ok                                           &
+      &       .and. ( all(abs(smallq(7:9) - largep([7,13,23])) < eps) &
+      &               .and. all(abs(largep([14,24,25])) < eps)        )
+
+    ! Z=2
+    test_ok = test_ok                                                  &
+      &       .and. ( all(abs(smallq(10:12) - largep([4,8,15])) < eps) &
+      &               .and. (abs(largep(26)) < eps)                    )
+    test_ok = test_ok .and. all(abs(smallq(13:15) - largep([9,16,27])) < eps)
+    test_ok = test_ok .and. all(abs(smallq(16:17) - largep([17,28])) < eps)
+    test_ok = test_ok .and. (abs(largep(29)) < eps)
+
+    ! Z=3
+    test_ok = test_ok .and. all(abs(smallq(19:21) - largep([10,18,30])) < eps)
+    test_ok = test_ok .and. all(abs(smallq(22:23) - largep([19,31])) < eps)
+    test_ok = test_ok .and. (abs(smallq(25) - largep(32)) < eps)
+    test_ok = test_ok .and. all(abs(largep([20,33,34,35])) < eps)
+
+    if (test_ok) then
+      write(lu,*) '  OK'
+    else
+      write(lu,*) '  FAILED!'
+      write(lu,*) '   small:', smallq
+      write(lu,*) '   large:', largep
+    end if
+
+    success = (success .and. test_ok)
+
+    write(lu,*) '----------------------------------------------------------'
+
+    ! Test equal max degree Q2P
+    tmp = -5.0_rk
+    write(lu,*) '3D Q2P check transfer to equal sized:'
+    call ply_transfer_dofs_3d( indat     = smallq,  &
+      &                        indegree  = 2,       &
+      &                        inspace   = Q_Space, &
+      &                        outspace  = P_Space, &
+      &                        outdat    = smallp,  &
+      &                        outdegree = 2        )
+
+    ! Z=1
+    test_ok = ( all(abs(smallq(:3) - smallp([1,2,5])) < eps) )
+    test_ok = test_ok .and. all(abs(smallq(4:5) - smallp([3,6])) < eps)
+    test_ok = test_ok .and. (abs(smallq(7) - smallp(7)) < eps)
+
+    ! Z=2
+    test_ok = test_ok .and. all(abs(smallq(10:11) - smallp([4,8])) < eps)
+    test_ok = test_ok .and. (abs(smallq(13) - smallp(9)) < eps)
+
+    ! Z=3
+    test_ok = test_ok .and. (abs(smallq(19) - smallp(10)) < eps)
+
+    if (test_ok) then
+      write(lu,*) '  OK'
+    else
+      write(lu,*) '  FAILED!'
+      write(lu,*) '   Qpoly:', smallq
+      write(lu,*) '   Ppoly:', smallp
+    end if
+
+    success = (success .and. test_ok)
+
+    write(lu,*) '----------------------------------------------------------'
+
+    ! Test large to small Q2P
+    write(lu,*) '3D Q2P check transfer large to small:'
+    maxmode = real(size(largeq),kind=rk)
+    do iMode=1,size(largeq)
+      largeq(iMode) = maxmode - real(iMode-1, kind=rk)
+    end do
+    call ply_transfer_dofs_3d( indat     = largeq,  &
+      &                        indegree  = 4,       &
+      &                        inspace   = Q_Space, &
+      &                        outspace  = P_Space, &
+      &                        outdat    = smallp,  &
+      &                        outdegree = 2        )
+
+    ! Z=1
+    test_ok = ( all(abs(largeq(:3) - smallp([1,2,5])) < eps) )
+    test_ok = test_ok .and. all(abs(largeq(6:7) - smallp([3,6])) < eps)
+    test_ok = test_ok .and. (abs(largeq(11) - smallp(7)) < eps)
+
+    ! Z=2
+    test_ok = test_ok .and. all(abs(largeq(26:27) - smallp([4,8])) < eps)
+    test_ok = test_ok .and. (abs(largeq(31) - smallp(9)) < eps)
+
+    ! Z=3
+    test_ok = test_ok .and. (abs(largeq(51) - smallp(10)) < eps)
+
+    if (test_ok) then
+      write(lu,*) '  OK'
+    else
+      write(lu,*) '  FAILED!'
+      write(lu,*) '   largeQ:', largeq
+      write(lu,*) '   smallP:', smallp
+    end if
+
+    success = (success .and. test_ok)
+
+    write(lu,*) '----------------------------------------------------------'
+
+    if (success) then
+      write(lu,*) 'Successfully passed checks for ply_transfer_dofs_3d.'
+    else
+      write(lu,*) 'FAILED checks for ply_transfer_dofs_3d!'
+    end if
+
+
+  end subroutine ply_test_transfer_3d
   ! ************************************************************************ !
 
 

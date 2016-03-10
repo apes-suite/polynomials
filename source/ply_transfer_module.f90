@@ -140,7 +140,8 @@ contains
             call nextModgCoeffPTens2D(in_X, in_Y, in_Z, indegree)
             if ((in_X <= minord) .and. (in_Y <= minord)) EXIT
           end do
-          if ((in_X > minord) .or. (in_Y > minord)) EXIT
+          if ( (in_X > minord) .or. (in_Y > minord) &
+             & .or. (in_X+in_Y-2 > indegree)        ) EXIT
         end do
 
       end if ispace_oq
@@ -163,7 +164,8 @@ contains
             call nextModgCoeffPTens2D(out_X, out_Y, out_Z, outdegree)
             if ((out_X <= minord) .and. (out_Y <= minord)) EXIT
           end do
-          if ((out_X > minord) .or. (out_Y > minord)) EXIT
+          if ( (out_X > minord) .or. (out_Y > minord) &
+            &  .or. (out_X+out_Y-2 > outdegree)       ) EXIT
         end do
 
       else ispace_op
@@ -280,7 +282,8 @@ contains
               &                   .and. (in_Z <= minord) ) EXIT
           end do
           if ( (in_X > minord) .or. (in_Y > minord) &
-            &                  .or. (in_Z > minord) ) EXIT
+            &                  .or. (in_Z > minord) &
+            &  .or. (in_X+in_Y+in_Z-3 > indegree)   ) EXIT
         end do
 
       end if ispace_oq
@@ -304,8 +307,9 @@ contains
             if ((out_X <= minord) .and. (out_Y <= minord) &
               &                   .and. (out_Z <= minord) ) EXIT
           end do
-          if ((out_X > minord) .or. (out_Y > minord) &
-            &                  .or. (out_Z > minord) ) EXIT
+          if ( (out_X > minord) .or. (out_Y > minord) &
+            &                   .or. (out_Z > minord) &
+            &  .or. (out_X+out_Y+out_Z-3 > outdegree) ) EXIT
         end do
 
       else ispace_op
