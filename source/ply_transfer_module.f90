@@ -10,6 +10,7 @@ module ply_transfer_module
     &                       posOfModgCoeffPTens, nextModgCoeffPTens2D, &
     &                       nextModgCoeffPTens
 
+
   implicit none
 
   private
@@ -17,6 +18,7 @@ module ply_transfer_module
   public :: ply_transfer_dofs_1D
   public :: ply_transfer_dofs_2D
   public :: ply_transfer_dofs_3D
+  public :: ply_transfer_P_dim
 
 
 contains
@@ -316,6 +318,139 @@ contains
     end select ospace
 
   end subroutine ply_transfer_dofs_3d
+  ! ************************************************************************ !
+
+
+  ! ************************************************************************ !
+  !> Transfer the polynomial in P representation from on dimension to
+  !! another one.
+  subroutine ply_transfer_P_dim( indat, indim, outdat, outdim, degree )
+    ! -------------------------------------------------------------------- !
+    !> Input data to transfer to output data.
+    real(kind=rk), intent(in) :: indat(:)
+
+    !> Dimension of the input polynomial.
+    integer, intent(in) :: indim
+
+    !> Output data to fill with input data.
+    real(kind=rk), intent(out) :: outdat(:)
+
+    !> Dimension of the output polynomial.
+    integer, intent(in) :: outdim
+
+    !> Maximal polynomial degree in the output data.
+    integer, intent(in) :: degree
+    ! -------------------------------------------------------------------- !
+    integer :: nInDofs, nOutDofs
+    integer :: iMode
+    integer :: iPos
+    integer :: iX, iY, iZ
+    ! -------------------------------------------------------------------- !
+
+    in_d: select case(indim)
+    case(1) in_d
+
+      i1_out_d: select case(outdim)
+      case(1) i1_out_d
+        outdat = indat
+
+      case(2) i1_out_d
+        outdat = 0.0_rk
+        do iMode=1,degree+1
+          iPos = posOfModgCoeffPTens2D( ansFuncX  = iMode, &
+            &                           ansFuncY  = 1,     &
+            &                           ansFuncZ  = 1,     &
+            &                           maxDegree = degree )
+          outdat(iPos) = indat(iMode)
+        end do
+
+      case(3) i1_out_d
+        outdat = 0.0_rk
+        do iMode=1,degree+1
+          iPos = posOfModgCoeffPTens( ansFuncX  = iMode, &
+            &                         ansFuncY  = 1,     &
+            &                         ansFuncZ  = 1,     &
+            &                         maxDegree = degree )
+          outdat(iPos) = indat(iMode)
+        end do
+
+      end select i1_out_d
+
+
+    case(2) in_d
+
+      i2_out_d: select case(outdim)
+      case(1) i2_out_d
+        do iMode=1,degree+1
+          iPos = posOfModgCoeffPTens2D( ansFuncX  = iMode, &
+            &                           ansFuncY  = 1,     &
+            &                           ansFuncZ  = 1,     &
+            &                           maxDegree = degree )
+          outdat(iMode) = indat(iPos)
+        end do
+
+      case(2) i2_out_d
+        outdat = indat
+
+      case(3) i2_out_d
+        outdat = 0.0_rk
+        nInDofs = ((degree+1)*(degree+2))/2
+        iX = 1
+        iY = 1
+        iZ = 1
+        do iMode=1,nInDofs
+          iPos = posOfModgCoeffPTens( ansFuncX  = iX,    &
+            &                         ansFuncY  = iY,    &
+            &                         ansFuncZ  = iZ,    &
+            &                         maxDegree = degree )
+          outdat(iPos) = indat(iMode)
+          call nextModgCoeffPTens2D( ansFuncX  = iX,    &
+            &                        ansFuncY  = iY,    &
+            &                        ansFuncZ  = iZ,    &
+            &                        maxDegree = degree )
+        end do
+
+      end select i2_out_d
+
+
+    case(3) in_d
+
+      i3_out_d: select case(outdim)
+      case(1) i3_out_d
+        do iMode=1,degree+1
+          iPos = posOfModgCoeffPTens( ansFuncX  = iMode, &
+            &                         ansFuncY  = 1,     &
+            &                         ansFuncZ  = 1,     &
+            &                         maxDegree = degree )
+          outdat(iMode) = indat(iPos)
+        end do
+
+      case(2) i3_out_d
+        nOutDofs = ((degree+1)*(degree+2))/2
+        iX = 1
+        iY = 1
+        iZ = 1
+        do iMode=1,nOutDofs
+          iPos = posOfModgCoeffPTens( ansFuncX  = iX,    &
+            &                         ansFuncY  = iY,    &
+            &                         ansFuncZ  = iZ,    &
+            &                         maxDegree = degree )
+          outdat(iMode) = indat(iPos)
+          call nextModgCoeffPTens2D( ansFuncX  = iX,    &
+            &                        ansFuncY  = iY,    &
+            &                        ansFuncZ  = iZ,    &
+            &                        maxDegree = degree )
+        end do
+
+      case(3) i3_out_d
+        outdat = indat
+
+      end select i3_out_d
+
+
+    end select in_d
+
+  end subroutine ply_transfer_P_dim
   ! ************************************************************************ !
 
 
