@@ -1,3 +1,4 @@
+!> Test module for the routines in [[ply_transfer_module]]
 module ply_transfer_test_module
   use env_module, only: rk
 
@@ -9,10 +10,6 @@ module ply_transfer_test_module
 
 contains
 
-
-  ! ************************************************************************ !
-  ! Some testing routines....                                                !
-  ! ************************************************************************ !
 
   ! ************************************************************************ !
   !> Test for ply_transfer_dofs_1d.
@@ -182,7 +179,7 @@ contains
 
     write(lu,*) '----------------------------------------------------------'
 
-    ! Test section (equally sized)
+    ! Test section (equally sized) Q-Q
     tmp = -5.0_rk
     write(lu,*) '2D Q check transfer to equal sized but section:'
     call ply_transfer_dofs_2d( indat     = smallq,    &
@@ -207,7 +204,7 @@ contains
 
     write(lu,*) '----------------------------------------------------------'
 
-    ! Test large to small
+    ! Test large to small Q-Q
     write(lu,*) '2D Q check transfer large to small:'
     largeq = [ 16.0_rk, -8.0_rk,  4.0_rk, -2.0_rk, 1.0_rk, &
       &        -8.0_rk,  4.0_rk, -2.0_rk,  1.0_rk, 0.5_rk, &
@@ -233,6 +230,85 @@ contains
       write(lu,*) '  FAILED!'
       write(lu,*) '   large:', largeq
       write(lu,*) '   small:', smallq
+    end if
+
+    success = (success .and. test_ok)
+
+    write(lu,*) '----------------------------------------------------------'
+
+    ! Test small to large P-P
+    write(lu,*) '2D P check transfer small to large:'
+    smallp = [ 6.0_rk, 5.0_rk, 4.0_rk, &
+      &        3.0_rk, 2.0_rk,         &
+      &        1.0_rk                  ]
+    call ply_transfer_dofs_2d( indat     = smallp,  &
+      &                        indegree  = 2,       &
+      &                        inspace   = P_Space, &
+      &                        outspace  = P_Space, &
+      &                        outdat    = largep,  &
+      &                        outdegree = 4        )
+
+    test_ok = ( all(abs(largep(:6) - smallp) < eps) &
+      &         .and. all(abs(largep(7:)) < eps)    )
+    if (test_ok) then
+      write(lu,*) '  OK'
+    else
+      write(lu,*) '  FAILED!'
+      write(lu,*) '   small:', smallp
+      write(lu,*) '   large:', largep
+    end if
+
+    success = (success .and. test_ok)
+
+    write(lu,*) '----------------------------------------------------------'
+
+    ! Test section (equally sized) P-P
+    tmp = -5.0_rk
+    write(lu,*) '2D P check transfer to equal sized but section:'
+    call ply_transfer_dofs_2d( indat     = smallp,    &
+      &                        indegree  = 2,         &
+      &                        inspace   = P_Space,   &
+      &                        outspace  = P_Space,   &
+      &                        outdat    = tmp(6:11), &
+      &                        outdegree = 2          )
+    test_ok = ( all(abs(tmp(6:11) - smallp) < eps)    &
+      &         .and. all(abs(tmp(:5)+5.0_rk) < eps)  &
+      &         .and. all(abs(tmp(12:)+5.0_rk) < eps) )
+
+    if (test_ok) then
+      write(lu,*) '  OK'
+    else
+      write(lu,*) '  FAILED!'
+      write(lu,*) '   small:', smallp
+      write(lu,*) '     tmp:', tmp
+    end if
+
+    success = (success .and. test_ok)
+
+    write(lu,*) '----------------------------------------------------------'
+
+    ! Test large to small P-P
+    write(lu,*) '2D P check transfer large to small:'
+    largep = [ 15.0_rk,                                  &
+      &        14.0_rk, 13.0_rk,                         &
+      &        12.0_rk, 11.0_rk, 10.0_rk,                &
+      &         9.0_rk,  8.0_rk,  7.0_rk, 6.0_rk,        &
+      &         5.0_rk,  4.0_rk,  3.0_rk, 2.0_rk, 1.0_rk ]
+    call ply_transfer_dofs_2d( indat     = largep,  &
+      &                        indegree  = 4,       &
+      &                        inspace   = P_Space, &
+      &                        outspace  = P_Space, &
+      &                        outdat    = smallp,  &
+      &                        outdegree = 2        )
+
+    test_ok = ( all(abs(largep(:6) - smallp(:6)) < eps) )
+
+    if (test_ok) then
+      write(lu,*) '  OK'
+    else
+      write(lu,*) '  FAILED!'
+      write(lu,*) '   large:', largep
+      write(lu,*) '   small:', smallp
     end if
 
     success = (success .and. test_ok)
