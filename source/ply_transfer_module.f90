@@ -323,6 +323,7 @@ contains
 
 
   ! ************************************************************************ !
+  !> Small helping routine to wrap transfers in all allowed dimensions.
   subroutine ply_transfer_dofs( indat, inspace, indegree,          &
     &                           outdat, outspace, outdegree, ndims )
     ! -------------------------------------------------------------------- !
@@ -384,6 +385,9 @@ contains
   ! ************************************************************************ !
   !> Transfer the polynomial in P representation from on dimension to
   !! another one.
+  !!
+  !! Only needed for P polynomials, for Q this trivially copying of
+  !! contiguous memory.
   subroutine ply_transfer_P_dim( indat, indim, outdat, outdim, degree )
     ! -------------------------------------------------------------------- !
     !> Input data to transfer to output data.
