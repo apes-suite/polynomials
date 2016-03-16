@@ -18,6 +18,7 @@ module ply_transfer_module
   public :: ply_transfer_dofs_1D
   public :: ply_transfer_dofs_2D
   public :: ply_transfer_dofs_3D
+  public :: ply_transfer_dofs
   public :: ply_transfer_P_dim
 
 
@@ -318,6 +319,65 @@ contains
     end select ospace
 
   end subroutine ply_transfer_dofs_3d
+  ! ************************************************************************ !
+
+
+  ! ************************************************************************ !
+  subroutine ply_transfer_dofs( indat, inspace, indegree,          &
+    &                           outdat, outspace, outdegree, ndims )
+    ! -------------------------------------------------------------------- !
+    !> Input data to transfer to output data.
+    real(kind=rk), intent(in) :: indat(:)
+
+    !> Multi-dimensional polynomial layout of the input data.
+    !!
+    !! Has to be either [[Q_Space]] or [[P_Space]].
+    integer, intent(in) :: inspace
+
+    !> Maximal polynomial degree in the input data.
+    integer, intent(in) :: indegree
+
+    !> Output data to fill with input data.
+    real(kind=rk), intent(out) :: outdat(:)
+
+    !> Multi-dimensional polynomial layout of the output data.
+    !!
+    !! Has to be either [[Q_Space]] or [[P_Space]].
+    integer, intent(in) :: outspace
+
+    !> Maximal polynomial degree in the output data.
+    integer, intent(in) :: outdegree
+
+    !> Number of dimensions in the polynomials to transfer
+    integer, intent(in) :: ndims
+    ! -------------------------------------------------------------------- !
+
+    select case(ndims)
+    case(1)
+      call ply_transfer_dofs_1D( indat     = indat,    &
+        &                        indegree  = indegree, &
+        &                        outdat    = outdat,   &
+        &                        outdegree = outdegree )
+
+    case(2)
+      call ply_transfer_dofs_2D( indat     = indat,    &
+        &                        inspace   = inspace,  &
+        &                        indegree  = indegree, &
+        &                        outdat    = outdat,   &
+        &                        outspace  = outspace, &
+        &                        outdegree = outdegree )
+
+    case(3)
+      call ply_transfer_dofs_3D( indat     = indat,    &
+        &                        inspace   = inspace,  &
+        &                        indegree  = indegree, &
+        &                        outdat    = outdat,   &
+        &                        outspace  = outspace, &
+        &                        outdegree = outdegree )
+
+    end select
+
+  end subroutine ply_transfer_dofs
   ! ************************************************************************ !
 
 

@@ -15,6 +15,8 @@ module ply_subresolution_module
     &                       posOfModgCoeffPTens, nextModgCoeffPTens2D, &
     &                       nextModgCoeffPTens
 
+  use ply_transfer_module, only: ply_transfer_P_dim, ply_transfer_dofs
+
   implicit none
 
   type ply_subresolution_type
@@ -123,9 +125,11 @@ contains
     character(len=pathLen) :: datfile
     integer :: target_Dofs
     integer :: in_dofs
-    integer :: min_dofs
+    integer :: read_dofs
+    integer :: pre_dofs
     integer :: pdim
     real(kind=rk), allocatable :: indat(:)
+    real(kind=rk), allocatable :: predat(:)
     character(len=4) :: datext
     integer :: rl
     integer :: fUnit
@@ -139,8 +143,13 @@ contains
     integer :: tt_off, tt_zoff
     integer :: in_off, in_zoff
     integer :: minOrd
+    integer :: in_dim
+    integer :: recs_per_elem
     !--------------------------------------------------------------------------!
 
+    ! Seeder always writes three-dimensional data.
+    ! Assume an input dimension of 3:
+    in_dim = 3
 
     ! Only need to do anything, if there is actually a subresolution property.
     ! Checking this via the association status of the property header.
@@ -168,21 +177,32 @@ contains
 
       end select
 
+      ! We read the complete data per element in most cases.
+      recs_per_elem = 1
+
       ! Figure out input polynomial representation.
       select case(me%basistype)
       case (Q_Space)
         in_dofs = (me%polydegree+1)**3
 
+        if (target_dim < in_dim) then
+          read_dofs = (me%polydegree+1)**target_dim
+          recs_per_elem = (me%polydegree+1)**(in_dim-target_dim)
+        else
+          read_dofs = in_dofs
+        end if
+
       case (P_Space)
         in_dofs = me%polydegree+1
-        do pdim=2,3
+        do pdim=2,in_dim
           in_dofs = (in_dofs * (me%polydegree+pdim) ) / pdim
         end do
+        read_dofs = in_dofs
 
       end select
 
       ! Allocate arrays accordingly.
-      allocate(indat(in_dofs))
+      allocate(indat(read_dofs))
       allocate(subresdat(target_dofs, nElems))
 
       inquire(iolength=rl) indat
@@ -200,160 +220,49 @@ contains
 
       subresdat = 0.0_rk
 
-      do iElem=1,nElems
+      if  ( (me%basistype == P_Space) .and. (target_dim < in_dim) ) then
 
-        read(fUnit, rec=offset+iElem) indat
+        pre_dofs = me%polydegree+1
+        do pdim=2,target_dim
+          pre_dofs = (pre_dofs * (me%polydegree+pdim) ) / pdim
+        end do
+        allocate(predat(pre_dofs))
 
-        select case(target_space)
-        case (Q_Space)
-          if (me%basistype == Q_Space) then
-            ! Both, target and input are Q Polynomials
-            select case(target_dim)
-            case (1)
-              subresdat(:minord, iElem) = indat(:minord)
+        do iElem=1,nElems
 
-            case (2)
-              do tt_Y=0,minord-1
-                tt_off = tt_Y*(target_degree+1)
-                in_off = tt_Y*(me%polydegree+1)
-                subresdat(tt_off+1:tt_off+minord, iElem) &
-                  &  = indat(in_off+1:in_off+minord)
-              end do
+          read(fUnit, rec=offset+iElem) indat
 
-            case (3)
-              do tt_Z=0,minord-1
-                tt_zoff = tt_Z*(target_degree+1)**2
-                in_zoff = tt_Z*(me%polydegree+1)**2
-                do tt_Y=0,minord-1
-                  tt_off = tt_Y*(target_degree+1) + tt_zoff
-                  in_off = tt_Y*(me%polydegree+1) + in_zoff
-                  subresdat(tt_off+1:tt_off+minord, iElem) &
-                    &  = indat(in_off+1:in_off+minord)
-                end do
-              end do
-            end select
+          call ply_transfer_P_dim( indat  = indat,        &
+            &                      indim  = in_dim,       &
+            &                      outdat = predat,       &
+            &                      outdim = target_dim,   &
+            &                      degree = me%polydegree )
+          call ply_transfer_dofs( indat     = predat,              &
+            &                     inspace   = me%basistype,        &
+            &                     indegree  = me%polydegree,       &
+            &                     outdat    = subresdat(:, iElem), &
+            &                     outspace  = target_space,        &
+            &                     outdegree = target_degree,       &
+            &                     ndims     = target_dim           )
+        end do
 
-          else
+      else
 
-            ! Target is Q, but input is P
-            select case(target_dim)
-            case (1)
-              subresdat(:minord, iElem) = indat(:minord)
+        do iElem=1,nElems
 
-            case (2)
-              in_X = 1
-              in_Y = 1
-              do iDof=1,in_dofs
-                in_pos = posOfModgCoeffPTens2D(in_X, in_Y, 0, me%polydegree)
-                tt_pos = in_X + (target_degree+1)*(in_Y-1)
-                subresdat(tt_pos, iElem) = indat(in_pos)
-                ! Ensure, that next iteration is in the target range
-                do istep=iDof,in_dofs
-                  call nextModgCoeffPTens2D(in_X, in_Y, in_Z, me%polydegree)
-                  if ((in_X <= minord) .and. (in_Y <= minord)) EXIT
-                end do
-                if ((in_X > minord) .or. (in_Y > minord)) EXIT
-              end do
+          read(fUnit, rec=(offset+iElem-1)*recs_per_elem+1) indat
 
-            case (3)
-              in_X = 1
-              in_Y = 1
-              in_Z = 1
-              do iDof=1,in_dofs
-                in_pos = posOfModgCoeffPTens(in_X, in_Y, in_Z, me%polydegree)
-                tt_pos = in_X + (target_degree+1)*( (in_Y-1) &
-                  &                                + (target_degree+1)*(in_Z-1))
-                subresdat(tt_pos, iElem) = indat(in_pos)
-                ! Ensure, that next iteration is in the target range
-                do istep=iDof,in_dofs
-                  call nextModgCoeffPTens(in_X, in_Y, in_Z, me%polydegree)
-                  if ( (in_X <= minord) .and. (in_Y <= minord) &
-                    &                   .and. (in_Z <= minord) ) EXIT
-                end do
-                if ( (in_X > minord) .or. (in_Y > minord) &
-                  &                  .or. (in_Z > minord) ) EXIT
-              end do
-            end select
-          end if
+          call ply_transfer_dofs( indat     = indat,               &
+            &                     inspace   = me%basistype,        &
+            &                     indegree  = me%polydegree,       &
+            &                     outdat    = subresdat(:, iElem), &
+            &                     outspace  = target_space,        &
+            &                     outdegree = target_degree,       &
+            &                     ndims     = target_dim           )
 
-        case (P_Space)
-          if (me%basistype == Q_Space) then
-            ! Target is P, input is Q
-            select case(target_dim)
-            case (1)
-              subresdat(:minord, iElem) = indat(:minord)
+        end do
 
-            case (2)
-              tt_X = 1
-              tt_Y = 1
-              do iDof=1,target_dofs
-                tt_pos = posOfModgCoeffPTens2D(tt_X, tt_Y, 0, target_degree)
-                in_pos = tt_X + (me%polydegree+1)*(tt_Y-1)
-                subresdat(tt_pos, iElem) = indat(in_pos)
-                ! Ensure, that next iteration is in the target range
-                do istep=iDof,target_dofs
-                  call nextModgCoeffPTens2D(tt_X, tt_Y, tt_Z, target_degree)
-                  if ((tt_X <= minord) .and. (tt_Y <= minord)) EXIT
-                end do
-                if ((tt_X > minord) .or. (tt_Y > minord)) EXIT
-              end do
-
-            case (3)
-              tt_X = 1
-              tt_Y = 1
-              tt_Z = 1
-              do iDof=1,target_dofs
-                tt_pos = posOfModgCoeffPTens(tt_X, tt_Y, tt_Z, target_degree)
-                in_pos = tt_X + (me%polydegree+1)*( (tt_Y-1) &
-                  &                                + (me%polydegree+1)*(tt_Z-1))
-                subresdat(tt_pos, iElem) = indat(in_pos)
-                ! Ensure, that next iteration is in the target range
-                do istep=iDof,target_dofs
-                  call nextModgCoeffPTens(tt_X, tt_Y, tt_Z, target_degree)
-                  if ((tt_X <= minord) .and. (tt_Y <= minord) &
-                    &                  .and. (tt_Z <= minord) ) EXIT
-                end do
-                if ((tt_X > minord) .or. (tt_Y > minord) &
-                  &                 .or. (tt_Z > minord) ) EXIT
-              end do
-
-            end select
-
-          else
-
-            ! Both input and target are P polynomials
-            select case(target_dim)
-            case (1)
-              subresdat(:minord, iElem) = indat(:minord)
-
-            case (2)
-              min_dofs = (minord*(minord+1))/2
-              tt_X = 1
-              tt_Y = 1
-              do iDof=1,min_dofs
-                tt_pos = posOfModgCoeffPTens2D(tt_X, tt_Y, 0, target_degree)
-                in_pos = posOfModgCoeffPTens2D(tt_X, tt_Y, 0, me%polydegree)
-                subresdat(tt_pos, iElem) = indat(in_pos)
-                call nextModgCoeffPTens2D(tt_X, tt_Y, tt_Z, minord-1)
-              end do
-
-            case (3)
-              min_dofs = ( (minord+2)*((minord*(minord+1))/2) ) / 3
-              tt_X = 1
-              tt_Y = 1
-              tt_Z = 1
-              do iDof=1,min_dofs
-                tt_pos = posOfModgCoeffPTens(tt_X, tt_Y, tt_Z, target_degree)
-                in_pos = posOfModgCoeffPTens(tt_X, tt_Y, tt_Z, me%polydegree)
-                subresdat(tt_pos, iElem) = indat(in_pos)
-                call nextModgCoeffPTens(tt_X, tt_Y, tt_Z, minord-1)
-              end do
-            end select
-          end if
-
-        end select
-
-      end do
+      end if
 
       close(fUnit)
 
