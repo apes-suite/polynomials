@@ -71,6 +71,11 @@ module ply_sampling_module
   end type vdata_type
 
 
+  !> Required to make use of c_loc and accessing an array.
+  type capsule_array_type
+    real(kind=rk), allocatable :: dat(:)
+  end type capsule_array_type
+
 contains
 
 
@@ -203,10 +208,10 @@ contains
     type(treelmesh_type) :: tmp_mesh(0:1)
     type(tem_BC_prop_type) :: tmp_bcs(0:1)
     type(tem_subtree_type) :: tmp_subtree
+    type(capsule_array_type), pointer :: res
     real(kind=rk), allocatable :: vardat(:)
     real(kind=rk), allocatable :: points(:)
     real(kind=rk), allocatable :: pointval(:,:)
-    real(kind=rk), pointer :: resdat(:)
     integer, allocatable :: vardofs(:)
     integer, allocatable :: elempos(:)
     integer :: pointCoord(4)
@@ -369,7 +374,8 @@ contains
         if (tracking%subtree%useGlobalMesh) then
 
           nChilds = 8**me%max_nLevels
-          allocate(resdat(nComponents*nChilds*nOrigElems))
+          allocate(res)
+          allocate(res%dat(nComponents*nChilds*nOrigElems))
 
           do iChild=1,nChilds
             pointCoord = tem_CoordofID( int(iChild, kind=long_k), &
@@ -389,7 +395,7 @@ contains
                 parentpos = (iElem-1)*vardofs(iVar)*nComponents
                 childpos = (iElem - 1)*nChilds*nComponents &
                   &      + (iChild - 1)*nComponents
-                resdat(childpos+iComp) = legval*vardat(parentpos+iComp)
+                res%dat(childpos+iComp) = legval*vardat(parentpos+iComp)
               end do
             end do
 
@@ -414,20 +420,20 @@ contains
                     &       + (iDof-1)*nComponents
                   childpos = (iElem - 1)*nChilds*nComponents &
                     &      + (iChild - 1)*nComponents
-                  resdat(childpos+iComp) = resdat(childpos+iComp) &
-                    &                    + legval*vardat(parentpos+iComp)
+                  res%dat(childpos+iComp) = res%dat(childpos+iComp) &
+                    &                     + legval*vardat(parentpos+iComp)
                 end do
               end do
             end do
 
           end do
 
-          ! assign resdat as method data to the variable in the resvars.
+          ! assign res as method data to the variable in the resvars.
           call tem_varSys_append_stateVar( me          = resvars,            &
             &                              varname     = varsys%varname      &
             &                                                  %val(varpos), &
             &                              nComponents = nComponents,        &
-            &                              method_data = c_loc(resdat),      &
+            &                              method_data = c_loc(res),         &
             &                              set_params     = set_params,     &
             &                              get_point      = get_point,      &
             &                              get_element    = get_element,    &
@@ -435,8 +441,8 @@ contains
             &                              setup_indices  = setup_indices,  &
             &                              get_valofindex = get_valofindex  )
 
-          ! now nullify resdat again, to allow its usage for another allocation:
-          nullify(resdat)
+          ! now nullify res again, to allow its usage for another allocation:
+          nullify(res)
 
         else
           write(logunit(1),*) 'Not yet supported non-global subtrees!'
@@ -498,7 +504,7 @@ contains
     !!         (iDof-1)*fun%nComponents + iComp
     real(kind=rk), intent(out) :: res(:)
     !----------------------------------------------------------------------!
-    real(kind=rk), pointer :: p(:)
+    type(capsule_array_type), pointer :: p
     integer :: datlen(1)
     integer :: iElem
     integer :: nComps
@@ -507,11 +513,11 @@ contains
     nComps = fun%nComponents
     datlen = tree%nElems * nComps
 
-    call c_f_pointer(fun%method_data, p, shape=datlen)
+    call c_f_pointer(fun%method_data, p)
 
     do iElem=1,n
       res(1+(iElem-1)*nComps:iElem*nComps) &
-        &  = p(1+(elempos(iElem)-1)*nComps:elempos(iElem)*nComps)
+        &  = p%dat(1+(elempos(iElem)-1)*nComps:elempos(iElem)*nComps)
     end do
 
   end subroutine get_sampled_element
