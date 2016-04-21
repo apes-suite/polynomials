@@ -7,7 +7,6 @@
 
 module ply_leg_diff_module
   use env_module,                only: rk, labelLen
-  use ply_dof_module,           only: posOfModgCoeffPTens
 
   implicit none
 

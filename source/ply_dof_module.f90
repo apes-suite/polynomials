@@ -10,7 +10,7 @@ module ply_dof_module
   !! The routine posOfModgCoeffQTens is not available anymore. Use the macro
   !! from ply_dof_module.inc instead.
   public :: nextModgCoeffQTens, getDofsQTens
-  public :: posOfModgCoeffPTens, nextModgCoeffPTens, getDofsPTens
+  public :: nextModgCoeffPTens, getDofsPTens
   public :: posOfModgCoeffPTens2D, nextModgCoeffPTens2D, getDofsPTens2D
   public :: posOfModgCoeffQTens2D, nextModgCoeffQTens2D, getDofsQTens2D
   public :: posOfModgCoeffPTens1D, nextModgCoeffPTens1D, getDofsPTens1D
@@ -88,34 +88,6 @@ contains
     dofs = (maxPolyDegree+1)**3
 
   end function getDofsQTens
-
-
-  !> Return the position of a given ansatz function combination in the
-  !! linearized list of modal coefficients for P-Tensor product polynomials.
-  pure function posOfModgCoeffPTens(ansFuncX, ansFuncY, ansFuncZ, maxdegree) &
-    &           result(pos)
-    !---------------------------------------------------------------------------
-    !> Ansatz function index in x direction. First ansatz function has index 1.
-    integer, intent(in) :: ansFuncX
-    !> Ansatz function index in y direction. First ansatz function has index 1.
-    integer, intent(in) :: ansFuncY
-    !> Ansatz function index in z direction. First ansatz function has index 1.
-    integer, intent(in) :: ansFuncZ
-    !> The maximal polynomial degree per spatial direction
-    integer, intent(in) :: maxdegree
-    !---------------------------------------------------------------------------
-    integer :: pos, degSum, layerStart, blockStart, polyOrd
-    !---------------------------------------------------------------------------
-
-    polyOrd = maxdegree + 1
-
-    ! integer divisions are no mistake here.
-    degSum = (ansFuncX-1) + (ansFuncY-1) + (ansFuncZ-1)
-    layerStart = ((degSum) * (degSum+1) * (degSum+2)) / 6 + 1
-    blockStart = (ansFuncZ-1) * (degSum+1) - ((ansFuncZ-2) * (ansFuncZ-1)) / 2
-    pos = layerStart + blockStart + (ansFuncY-1)
-
-  end function posOfModgCoeffPTens
 
 
   !> The x, y and z ansatz degrees are turned into the degrees of the next

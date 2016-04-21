@@ -12,8 +12,7 @@ module ply_subresolution_module
   use tem_tools_module, only: upper_to_lower
 
   use ply_dof_module, only: P_Space, Q_space, posOfModgCoeffPTens2D, &
-    &                       posOfModgCoeffPTens, nextModgCoeffPTens2D, &
-    &                       nextModgCoeffPTens
+    &                       nextModgCoeffPTens2D, nextModgCoeffPTens
 
   use ply_transfer_module, only: ply_transfer_P_dim, ply_transfer_dofs
 
