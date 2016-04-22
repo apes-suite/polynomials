@@ -1,3 +1,4 @@
+?? include "ply_dof_module.inc"
 !> Unit test to check functionallity of memory transpose in the 3D fpt module
 !!  fast polynomial transformations.
 !! The ply_legfpt_3D_module must NOT do the transformation via fpt! 
@@ -10,7 +11,7 @@ program ply_fpt_memory_test
   use ply_legFpt_3D_module,     only: ply_init_legFpt_3D, &
     &                                 ply_legToPnt_3D
   use ply_modg_basis_module,    only: evalLegendreTensPoly
-  use ply_dof_module,           only: posOfModgCoeffQTens, Q_space
+  use ply_dof_module,           only: Q_space
 
   implicit none
 
@@ -151,7 +152,7 @@ contains
     do iPolyX = 1, maxPolyDegree+1
       do iPolyY = 1, maxPolyDegree+1
         do iPolyZ = 1, maxPolyDegree+1
-          funcIndex = posOfModgCoeffQTens(iPolyX, iPolyY, iPolyZ, maxPolyDegree)
+?? copy :: posOfModgCoeffQTens(iPolyX, iPolyY, iPolyZ, maxPolyDegree, funcIndex)
           do iVar = 1, nVars
             refVal(:,iVar) = refVal(:,iVar) + &
                    & legValChebPnt(funcIndex,:) * legCoeffs(funcIndex, iVar)
