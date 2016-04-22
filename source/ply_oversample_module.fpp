@@ -1,10 +1,10 @@
+?? include "ply_dof_module.inc"
 !> This module provides functions to transfer polynomials from and to the
 !! oversampled representation for nodal treatments.
 module ply_oversample_module
 
   use env_module,               only: rk, labelLen
-  use ply_dof_module,           only: posOfModgCoeffPTens,   &
-    &                                 posOfModgCoeffPTens2D, &
+  use ply_dof_module,           only: posOfModgCoeffPTens2D, &
     &                                 nextModgCoeffPTens,    &
     &                                 nextModgCoeffPTens2D,  &
     &                                 Q_space, P_space
@@ -152,7 +152,7 @@ contains
       iDegZ = 1
       !$OMP SINGLE
       do idof = 1, poly_proj%body_3d%min_dofs
-        dof = posOfModgCoeffPTens(iDegX, iDegY, iDegZ, poly_proj%maxPolyDegree)
+?? copy :: posOfModgCoeffPTens(iDegX, iDegY, iDegZ, dof)
         dofOverSamp = iDegX + ( iDegY-1  &
           &                     + (iDegZ-1)*(oversamp_degree+1) &
           &                   ) * (oversamp_degree+1)
@@ -215,7 +215,7 @@ contains
       iDegZ = 1
       !$OMP SINGLE
       do idof = 1, poly_proj%body_3d%min_dofs
-        dof = posOfModgCoeffPTens(iDegX, iDegY, iDegZ, poly_proj%maxPolyDegree)
+?? copy :: posOfModgCoeffPTens(iDegX, iDegY, iDegZ, dof)
         dofOverSamp = iDegX + ( iDegY-1  &
           &                     + (iDegZ-1)*(oversamp_degree+1) &
           &                   ) * (oversamp_degree+1)

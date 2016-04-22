@@ -1,3 +1,4 @@
+?? include "ply_dof_module.inc"
 !> This module provides routines to transfer degrees of freedom from one
 !! polynomial representation to another.
 !!
@@ -7,7 +8,7 @@ module ply_transfer_module
   use env_module, only: rk
 
   use ply_dof_module, only: P_Space, Q_space, posOfModgCoeffPTens2D, &
-    &                       posOfModgCoeffPTens, nextModgCoeffPTens2D, &
+    &                       nextModgCoeffPTens2D, &
     &                       nextModgCoeffPTens
 
 
@@ -267,7 +268,7 @@ contains
         in_Y = 1
         in_Z = 1
         do iDof=1,indofs
-          in_pos = posOfModgCoeffPTens(in_X, in_Y, in_Z, indegree)
+?? copy :: posOfModgCoeffPTens(in_X, in_Y, in_Z, in_pos)
           out_pos = in_X + (outdegree+1)*( (in_Y-1) &
             &                             + (outdegree+1)*(in_Z-1))
           outdat(out_pos) = indat(in_pos)
@@ -293,7 +294,7 @@ contains
         out_Y = 1
         out_Z = 1
         do iDof=1,outdofs
-          out_pos = posOfModgCoeffPTens(out_X, out_Y, out_Z, outdegree)
+?? copy :: posOfModgCoeffPTens(out_X, out_Y, out_Z, out_pos)
           in_pos = out_X + (indegree+1)*( (out_Y-1) &
             &                                + (indegree+1)*(out_Z-1))
           outdat(out_pos) = indat(in_pos)
@@ -431,10 +432,7 @@ contains
       case(3) i1_out_d
         outdat = 0.0_rk
         do iMode=1,degree+1
-          iPos = posOfModgCoeffPTens( ansFuncX  = iMode, &
-            &                         ansFuncY  = 1,     &
-            &                         ansFuncZ  = 1,     &
-            &                         maxDegree = degree )
+?? copy :: posOfModgCoeffPTens( iMode, 1, 1, iPos )
           outdat(iPos) = indat(iMode)
         end do
 
@@ -463,10 +461,7 @@ contains
         iY = 1
         iZ = 1
         do iMode=1,nInDofs
-          iPos = posOfModgCoeffPTens( ansFuncX  = iX,    &
-            &                         ansFuncY  = iY,    &
-            &                         ansFuncZ  = iZ,    &
-            &                         maxDegree = degree )
+?? copy :: posOfModgCoeffPTens( iX, iY, iZ, iPos )
           outdat(iPos) = indat(iMode)
           call nextModgCoeffPTens2D( ansFuncX  = iX,    &
             &                        ansFuncY  = iY,    &
@@ -482,10 +477,7 @@ contains
       i3_out_d: select case(outdim)
       case(1) i3_out_d
         do iMode=1,degree+1
-          iPos = posOfModgCoeffPTens( ansFuncX  = iMode, &
-            &                         ansFuncY  = 1,     &
-            &                         ansFuncZ  = 1,     &
-            &                         maxDegree = degree )
+?? copy :: posOfModgCoeffPTens( iMode, 1, 1, iPos )
           outdat(iMode) = indat(iPos)
         end do
 
@@ -495,10 +487,7 @@ contains
         iY = 1
         iZ = 1
         do iMode=1,nOutDofs
-          iPos = posOfModgCoeffPTens( ansFuncX  = iX,    &
-            &                         ansFuncY  = iY,    &
-            &                         ansFuncZ  = iZ,    &
-            &                         maxDegree = degree )
+?? copy :: posOfModgCoeffPTens( iX, iY, iZ, iPos )
           outdat(iMode) = indat(iPos)
           call nextModgCoeffPTens2D( ansFuncX  = iX,    &
             &                        ansFuncY  = iY,    &
