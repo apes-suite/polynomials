@@ -146,7 +146,6 @@ program approximate_1D_jump
   end do
 
   call init( me     = ivlen,   &
-    &        unique = .false., &
     &        length = level+1  )
   allocate(ivcolor(level+1))
   do ibis=1,level+1

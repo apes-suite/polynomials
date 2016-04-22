@@ -26,10 +26,14 @@ def configure(conf):
          conf.env.INCLUDES_FFTW3 = conf.options.fftw_path+'/include'
     else:
        # Try to use pkg-config to find the FFTW library.
+       conf.setenv("cenv")
        conf.check_cfg(package='fftw3', uselib_store='FFTW3',
                       args=['--cflags', '--libs'], mandatory=False)
        if conf.env.LIB_FFTW3:
-          conf.env.FCFLAGS_FFTW3 = conf.env.CFLAGS_FFTW3
+          conf.all_envs[''].FCFLAGS_FFTW3 = conf.env.CFLAGS_FFTW3
+          conf.all_envs[''].LIB_FFTW3 = conf.env.LIB_FFTW3
+          conf.all_envs[''].LIBPATH_FFTW3 = conf.env.LIBPATH_FFTW3
+          conf.all_envs[''].INCLUDES_FFTW3 = conf.env.INCLUDES_FFTW3
        else:
           # Try to link the fftw without any further options.
           conf.check(lib='fftw3', uselib_store='FFTW3', mandatory=False)
@@ -42,10 +46,14 @@ def configure(conf):
          elif fftw_libpath:
            fftw_omplibpath = fftw_libpath
 
+         conf.setenv('cenv')
          if fftw_omplibpath:
            conf.check(lib='fftw3_omp', use='FFTW3', libpath=fftw_omplibpath, uselib_store='FFTW3_OMP', mandatory=True)
          else:
            conf.check(lib='fftw3_omp', use='FFTW3', uselib_store='FFTW3_OMP', mandatory=True)
+         
+         conf.all_envs[''].LIB_FFTW3_OMP = conf.env.LIB_FFTW3_OMP
+         conf.setenv('')
 
        # Check for the fftw3.f03 header:
        try:
@@ -187,11 +195,24 @@ def build(bld):
            features = 'fc fcprogram',
            source = ['peons/approximate_1D_jump.f90'],
            use = ['FFTW3', 'NAG', 'tem_objs', 'ply_objs', 'fftw_mod_obj',
-                  'fxtp_wrap_obj', 'fxtp_obj', 'fxtp_wrapper', 'aotus'],
+                  bld.env.mpi_mem_c_obj, 'fxtp_wrap_obj', 'fxtp_obj',
+                  'fxtp_wrapper', 'aotus'],
            target = 'approximate_1D_jump')
 
-       test_dep = ['FFTW3', 'NAG', 'tem_objs', 'ply_objs', 'fftw_mod_obj',
-                   'fxtp_wrap_obj', 'fxtp_obj', 'fxtp_wrapper', 'aotus']
+       test_dep = ['FFTW3', 'NAG', 'tem_objs', bld.env.mpi_mem_c_obj,
+                   'ply_objs', 'fftw_mod_obj', 'fxtp_wrap_obj', 'fxtp_obj',
+                   'fxtp_wrapper', 'aotus']
+
+       utest_sources = bld.path.ant_glob('utests/*_module.f90')
+
+       bld(
+         features = 'fc',
+         source   = utest_sources,
+         use      = ['tem_objs', 'aotus', 'ply_objs'],
+         target   = 'ply_utest_objs')
+
+       test_dep.append('ply_utest_objs')
+
        utests(bld = bld, use = test_dep)
 
        if bld.env.LIB_FFTW3:

@@ -245,8 +245,6 @@ module ply_fpt_header_module
     type(ply_fpt_header_type), intent(in) :: me
     type(aot_out_type), intent(inout)     :: conf
     !--------------------------------------------------------------------------!
-    logical :: fftMultiThread
-    !--------------------------------------------------------------------------!
 
     ! fill up the fpt_header
     call aot_out_val( put_conf = conf,        &

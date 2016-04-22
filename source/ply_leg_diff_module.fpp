@@ -7,7 +7,6 @@
 
 module ply_leg_diff_module
   use env_module,                only: rk, labelLen
-  use ply_dof_module,           only: posOfModgCoeffQTens, posOfModgCoeffPTens
 
   implicit none
 
@@ -359,7 +358,7 @@ module ply_leg_diff_module
     !> The physical length of the element to build the derivatives for.
     real(kind=rk),intent(in) :: elemLength
     !---------------------------------------------------------------------------
-    integer :: iVar, iDegX
+    integer :: iDegX
     integer :: dofPos, dofPosPrev, dofPos2Prev
     !---------------------------------------------------------------------------
 

@@ -11,7 +11,6 @@ module ply_legFpt_3D_module
   use ply_polyBaseExc_module, only: ply_trafo_params_type, &
                                   & ply_fpt_init, &
                                   & ply_fpt_exec_striped, &
-                                  & ply_fpt_exec, & 
                                   & ply_legToCheb_param, ply_chebToLeg_param, &
                                   & assignment(=)
   use fftw_wrap
@@ -196,8 +195,7 @@ contains
    integer :: iFuncX, iFuncY, iFuncZ, funcIndex
    integer :: iFunc, iDof
 
-   integer :: n, n_squared, n_cubed
-   integer :: nIndeps
+   integer :: n_squared, n_cubed
    ! The normfactor has to be positive for odd sum of exponents and negative
    ! for even sums of exponents.
    ! (original definition: normfactor = (-1)**(i-1) * (-1)**(j-1) * (-1)**(k-1)
@@ -206,453 +204,27 @@ contains
    !  and the real multiplication can be avoided by putting this into a lookup
    !  table.)
    real(kind=rk), parameter :: normFactor(0:1) = [ -0.125_rk, 0.125_rk ]
-   integer :: iStrip
-   integer :: strip_ub
-   integer :: striplen
-   integer :: stride
-   integer :: alph_lb, alph_ub, iAlph, jAlph
-   integer :: iDim
-   integer :: itest
-   integer :: linesPerStrip
-   integer :: jPerStrip
-   integer :: linesInAlph
-   integer :: iIndex
-!   real(kind=rk), dimension (fpt%legToChebParams%striplen) :: alph
-!   real(kind=rk), dimension (fpt%legToChebParams%striplen) :: gam
-   real(kind=rk), dimension(:), allocatable :: alph
-   real(kind=rk), dimension(:), allocatable :: gam
-   integer, dimension(:), allocatable :: alphIndices
    !---------------------------------------------------------------------------
 
-   striplen = fpt%legToChebParams%striplen
-   n = fpt%legToChebParams%n
    n_squared = fpt%legToChebParams%n**2
    n_cubed = n_squared * fpt%legToChebParams%n
-   
-   ! number of strips to execute the fpt on in one call
-   ! (usually n_squared, but a smaller value might be assigned at the end of 
-   ! the array)
-   nIndeps = n_squared !'
 
-!   allocate(alph(min(striplen, fpt%legToChebParams%n)))
-!   allocate(gam(min(striplen, fpt%legToChebParams%n)))
-   allocate(alph(min(striplen,n_squared)*n))
-   allocate(gam(min(striplen,n_squared)*n))
-   allocate(alphIndices(n_squared))
    ! Dimension-by-dimension transform Legendre expansion to Chebyshev expansion
    ! ... transformation in X direction (Leg->Cheb)
-!'   call ply_fpt_exec_striped( nIndeps = n_squared,          &
-!'     &                        alph    = legCoeffs,          &
-!'     &                        gam     = pntVal,             &
-!'     &                        params  = fpt%legToChebParams )
-!'   ! ... transformation in Y direction (Leg->Cheb)
-!'   call ply_fpt_exec_striped( nIndeps = n_squared,          &
-!'     &                        alph    = pntVal,             &
-!'     &                        gam     = legCoeffs,          &
-!'     &                        params  = fpt%legToChebParams )
-!'   ! ... transformation in Z direction (Leg->Cheb)
-!'   call ply_fpt_exec_striped( nIndeps = n_squared,          &
-!'     &                        alph    = legCoeffs,          &
-!'     &                        gam     = pntVal,             &
-!'     &                        params  = fpt%legToChebParams )
-
-! stride for reading
-  !\ testloop
-  write(*,*)'striplen', striplen
-  write(*,*)'initial values'
-  do iTest = 1,n_cubed
-    write(*,*)'iTest=', iTest, 'pntVal=', pntVal(itest),'legCoeff=', legCoeffs(itest)
-  end do
-
-  ! z-direction
-!   stride = n_squared    
-     ! original layout (n = 3):
-     !  1  2  3   10 11 12   19 20 21
-     !  4  5  6   13 14 15   22 23 24
-     !  7  8  9   16 17 18   25 26 27
-     ! 
-     ! example for striplen = 2:
-     ! iStrip           1                   3
-     ! iAlph            1         2         3         4
-     ! index legCoeffs  1 10 19   2 11 20   3 12 21   4 13 22  
-     ! index alph/gam   1  2  3   4  5  6   1  2  3   4  5  6
-     ! index PntVal     1  2  3   4  5  6   7  8  9  10 11 12
-     !
-     ! layout after z-trafo: (n = 3)
-     !  1 10 19    4 13 22    7 16 25 
-     !  2 11 20    5 14 23    8 17 26
-     !  3 12 21    6 15 24    9 18 27
-
-   ! zStripLoop: Loop over all strips in z-direction
-   zStripLoop: do iStrip = 1, n_squared, striplen
-!'     write(*,*)'iStrip', iStrip
-     ! iAlph is the index of the first element in a line for the transformation in 
-     ! z-direction. 
-     do iAlph = iStrip, min(iStrip+striplen-1, n_squared)  !z_Trafo
-       
-       ! alph_ub is the index of the last element in a line for the transformation 
-       ! in z-direction. 
-!       write(*,*)'n_cubed', n_cubed
-       alph_ub = iAlph + n_cubed - n_squared  !z-trafo
-
-       ! legCoeffs -> copy data for 1D-transformation into alph (strided reading)
-!       write(*,*)'iAlph', iAlph
-!       write(*,*)'alph Index', iAlph-striplen*(iStrip-1),iAlph+n-striplen*(iStrip-1)-1
-!       write(*,*)'legCoeffs Index',iAlph,alph_ub,n_squared
-!       alph((iAlph-1)*n+1-striplen*(iStrip-1):(iAlph-1)*n+n-striplen*(iStrip-1)) = &
-!'       write(*,*)'(iAlph-iStrip)*n+1, (iAlph-iStrip+1)*n', (iAlph-iStrip)*n+1, (iAlph-iStrip+1)*n
-!'       write(*,*) 'iAlph, alph_ub, n_squared', iAlph, alph_ub, n_squared
-       alph((iAlph-iStrip)*n+1:(iAlph-iStrip+1)*n) = &
-           & legCoeffs(iAlph:alph_ub:n_squared) !ztrafo
-
-        !\ testloop
-!        write(*,*)'after ialph', iAlph
-!        do iTest = 1,n_cubed
-!          write(*,*)'iTest=', iTest, 'alph=', alph(itest),'legCoeff=', legCoeffs(itest)
-!        end do
-
-     end do
-
-  !\ testloop before
-  write(*,*)'values before fpt'
-  do iTest = 1,n_cubed
-    write(*,*)'iTest=', iTest, 'alph=', alph(itest),'gam=', gam(itest)
-  end do
-
-       ! At the end of the array the number of computed strips might be smaller
-       nIndeps = min(striplen, n_squared-iStrip+1)
-
-       ! ply_fpt_exec on temp (no memory transpose)
-       call ply_fpt_exec( alph = alph,                  &
-        &                 gam = gam,                    &
-        &                 nIndeps = nIndeps,            &
-        &                 params = fpt%legToChebParams  )
-!'         gam = alph !\
-  !\ testloop after
-  write(*,*)'values after fpt'
-  do iTest = 1,n_cubed
-    write(*,*)'iTest=', iTest, 'alph=', alph(itest),'gam=', gam(itest)
-  end do
-
-!         pntVal((iStrip-1)*striplen*n+1:min(iStrip*striplen*n, n_cubed))  = gam(:)
-         pntVal((iStrip-1)*n+1:min((iStrip+striplen-1)*n, n_cubed))  = gam(:)
-
-       ! todo: fft on temp
-       ! temp -> pntVal (stride-1 writing)
-!      write(*,*) 'iAlph', iAlph
-!      write(*,*) 'alph_ub', alph_ub
-!      write(*,*) 'size of alph', size(alph)
-!      write(*,*) 'size of pntval dim1', size(pntVal, 1)
-!      write(*,*) 'shape of pntval', shape(pntVal)
-!      write(*,*) 'size of gam', size(gam)
-!      write(*,*) 'stride', stride
-!      write(*,*) 'iStrip', iStrip
-!      write(*,*) 'linesPerStrip', linesPerStrip
-!      write(*,*) 'min(iStrip+linesPerStrip, n_squared)', &
-!                  min(iStrip+linesPerStrip, n_squared)
-!      write(*,*) 'pntVal(iAlph:alph_ub:stride)', & 
-!                  pntVal(iAlph:alph_ub:stride)
-!      write(*,*) 'alph', alph(:)
-!      write(*,*) 'gam', gam(:)
-
-     ! Write the temporary output into pntval
-!'     do iAlph = iStrip, min(iStrip+linesPerStrip, n_squared)
-!        write(*,*) 'ialph', iAlph
-!       write(*,*) 'min((iStrip-1)+linesPerStrip*n+1, n_cubed-n_squared)', & 
-!        &  min((iStrip-1)*linesPerStrip*n+1, n_cubed-n_squared) 
-!       write(*,*) 'iStrip*linesPerStrip*n', iStrip*linesPerStrip*n
-
-!       do iTEST = 1,size(pntVal)
-!         write(*,*) 'pntVal', iTEST, pntval(iTEST)
-!       end do
-
- !      write(*,*) 'pntVal(min((iStrip-1)+linesPerStrip*n+1, n_cubed-n_squared) :  &
- !        &      min(iStrip*linesPerStrip*n, n_cubed)', &
- !       & pntVal((iStrip-1)*linesPerStrip*n+1 : min(iStrip*linesPerStrip*n, n_cubed))
-!        pntVal(iAlph:alph_ub:stride) = gam((iAlph-1)*stride+1:iAlph*stride)
-!'     end do
-
-   end do zStripLoop
-
-  !\ testloop
-  write(*,*)'after z-trafo'
-  do iTest = 1,n_cubed
-    write(*,*)'iTest=', iTest, 'pntVal=', pntVal(itest),'legCoeff=', legCoeffs(itest)
-  end do
-
-  ! y-direction
-
-     ! alphIndices: Array which contains the values for iAlpha.
-     j_yLoop: do jAlph = 1, n
-       i_yLoop: do iAlph = jAlph, jAlph+n_squared-n, n
-          alphIndices((jAlph-1)*n + (iAlph-jAlph)/n +1) = iAlph
-       end do i_yLoop
-     end do j_yLoop
-
-     !  .  .  .    .  .  .    .  .  .
-     ! original layout (n = 3):
-     !  1  2  3   10 11 12   19 20 21
-     !  4  5  6   13 14 15   22 23 24
-     !  7  8  9   16 17 18   25 26 27
-     !
-     ! layout after z-trafo: (n = 3)
-     !  1 10 19    4 13 22    7 16 25 
-     !  2 11 20    5 14 23    8 17 26
-     !  3 12 21    6 15 24    9 18 27
-
-     ! todo For y-trafo:
-     !  val  =  1  4  7    2  5  8    3  6  9   10 13 16    
-     !  iStrip= 1                     3                  for striplen = 2
-     !  jAlph = 1                                2         {1, 2, 3}
-     !  iIndex= 1          2          3          4   
-     !  iAlph = 1          4          7          2        
-     !  index = 1 10 19    4 13 22    7 16 25    2 11 16  (pntVal)
-     !  index = 1  2  3    4  5  6    1  2  3    4  5  6  (alph, gam)
-     !  index = 1  2  3    4  5  6    7  8  9   10 11 12  (legCoeffs)
-     !  
-     ! layout after y-trafo:
-     !  1  4  7   10 13 16   19 22 25
-     !  2  5  8   11 14 17   20 23 26
-     !  3  6  9   12 15 18   21 24 27
-     !
-     ! original layout after x trafo: 
-     !  1  2  3   10 11 12   19 20 21
-     !  4  5  6   13 14 15   22 23 24
-     !  7  8  9   16 17 18   25 26 27
-     
-     ! y-direction
-!     alph_lb = 1
-
-
-   yStripLoop: do iStrip = 1,n_squared,striplen
-      do iIndex = iStrip,min(iStrip+striplen, n_squared)
-        iAlph = alphIndices(iIndex)
-        alph((iIndex-iStrip)*n+1 : min((iIndex-iStrip)*n+n, n_cubed)) = &
-           &  pntVal(iAlph:iAlph+n_cubed-n_squared:n_squared)
-      end do
-
-       ! At the end of the array the number of computed strips might be smaller
-       nIndeps = min(striplen, n_squared-iStrip+1)
-
-         ! ply_fpt_exec on temp (no memory transpose)
-         call ply_fpt_exec( alph = alph,                  &
-           &                gam = gam,                    &
-           &                nIndeps = nIndeps,            &
-        &                 params = fpt%legToChebParams    )
- 
-         ! todo: fft on temp
-         ! temp -> pntVal (stride-1 writing)
-
-        legCoeffs((iStrip-1)*n+1 : min((iStrip-1+striplen)*n, n_cubed)) &
-          &        = gam(:)
-
-   end do yStripLoop ! iStrip
-
-!"2  y-direction for leg_fpt_2D
-!"2     jLoop: do jAlph = (iStrip-1)*jPerStrip, iStrip*jPerStrip
-!"2       iLoop: do iAlph = (jAlph-1)*n_squared+1, (jAlph-1)*n_squared+n
-!"2         alph(iAlph) = pntVal(iAlph:iAlph+n_cubed-n_squared:n_squared)
-!"2       end do iLoop
-!"2     end do jLoop
-
-     !"1 There are two loops for the transformation in y-direction:
-     !"1 e.g. for n = 3
-     !"1   |  1,  4,  7;  2,  5,  8;  3,  6,  9;|  j = 1
-     !"1   | 10, 13, 16; 11, 14, 17; 12, 15, 18;|  j = 2 
-     !"1   | 19, 22, 25; 20, 23, 26; 21, 24, 27 |  j = 3
-     !"1
-     !"1 i = 1, 2, 3, 10, 11, 12, 19, 20, 21
-     !"1   The outerLoop(jLoop) has 3 iterations        
-     
-!"1     jLoop: do jAlph = (iStrip-1)*jPerStrip+1, iStrip*jPerStrip
-!"1       iLoop: do iAlph = (jAlph-1)*n_squared+1, (jAlph-1)*n_squared+n
-!"1         alph((iLine-1)*n+1:iLine*n) = pntVal(iAlph:iAlph+(n_squared-n):n)
-!"1         iLine = iLine+1
-!"1       end do iLoop
-!"1     end do jLoop
-!     jLoop: do jAlph = 1, n_cubed - n + iAlph, n_squared ! y-trafo  
-!       iLoop: do iAlph = jAlph, jAlph + n - 1            ! y-trafo  
-!  !      alph_ub = iAlph + stride*(n-1)
-!         alph_ub = iAlph + n_squared - n 
-!  
-!         ! legCoeffs -> copy data for 1D-transformation into alph (strided reading)
-!         alph(iStrip:iStrip+n-1) = legCoeffs(iAlph:alph_ub:stride) 
-!  
-!         ! Exit Loop if array is full
-!         linesInAlph = linesInAlph+1
-!         if (linesInAlph.ge.linesPerStrip) exit jLoop
-!       end do iLoop
-!     end do jLoop
-    
-
-!'         legCoeffs(iAlph:alph_ub:stride) = gam(:)
-!'
-!'  
-!'         ! exit strip-loop if when y-trafo is completed
-!'     do iStrip = 1,ceiling(real(n_cubed)/linesPerSt<F2>rip)    
-!'         if (iStrip.ge.ceiling(real(n_cubed)/linesPerStrip)) exit
-
-  ! x-direction
-     ! layout after y-trafo:
-     !  1  4  7   10 13 16   19 22 25
-     !  2  5  8   11 14 17   20 23 26
-     !  3  6  9   12 15 18   21 24 27
-     !
-     ! x-trafo:
-     ! iStrip= 1                   3                     5
-     ! jAlph = 1                             10         
-     ! iAlph = 1         2         3         10         11
-     ! iIndex= 1         2         3          4          5 
-     ! index = 1  4  7   2  5  8   3  6  9   10 13 16   11 14 17 (pntVal)
-     ! index = 1  2  3   4  5  6   1  2  3    4  5  6    1  2  3 (alph/gam)
-     ! index = 1  2  3   4  5  6   7  8  9   10 11 12   13 14 15 (legCoeffs)
-
-     ! original layout after x trafo: 
-     !  1  2  3   10 11 12   19 20 21
-     !  4  5  6   13 14 15   22 23 24
-     !  7  8  9   16 17 18   25 26 27
-
-  !\ testloop
-  write(*,*)'after y-trafo'
-  do iTest = 1,n_cubed
-    write(*,*)'iTest=', iTest, 'pntVal=', pntVal(itest),'legCoeff=', legCoeffs(itest)
-  end do
-   ! x-trafo
-   !  (also y-direction for leg_fpt_2D)
-
-   ! alphIndices: Array which contains the values for iAlpha.
-   j_xLoop: do jAlph = 1, n_cubed-n_squared+1, n_squared
-!     write(*,*)'jAlph', jAlph
-     i_xLoop: do iAlph = jAlph, jAlph+n-1
-!       write(*,*)'iAlph', iAlph
-        iIndex = (jAlph-1)/n + iAlph-jAlph+1
-!        write(*,*)'iIndex', iIndex
-        alphIndices(iIndex) = iAlph
-!'   write(*,*)'iIndex', iIndex, 'alphIndices', alphIndices
-     end do i_xLoop
-   end do j_xLoop
-
-
-   xStripLoop: do iStrip = 1,n_squared,striplen
-      do iIndex = iStrip, min(iStrip+striplen, n_squared)
-        iAlph = alphIndices(iIndex)
-        alph((iIndex-iStrip)*n+1 : min((iIndex-iStrip)*n+n, n_cubed)) = &
-           &  legCoeffs(iAlph:iAlph+n_squared-n:n)
-      end do
-
-       ! At the end of the array the number of computed strips might be smaller
-       nIndeps = min(striplen, n_squared-iStrip+1)
-
-!   xStripLoop: do iStrip = 1, n_squared, striplen
-!     alph(iStrip*) = legCoeffs(alphIndices(iIndex))  !
-       ! ply_fpt_exec on temp (no memory transpose)
-       call ply_fpt_exec( alph = alph,                  &
-         &                gam = gam,                    &
-         &                nIndeps = nIndeps,            &
-         &                 params = fpt%legToChebParams )
-
-     ! todo: fft on temp
-     ! temp -> pntVal (stride-1 writing)
-     pntVal(iStrip : min(iStrip+striplen*n, n_cubed)) = gam(:)
-   end do xStripLoop
-
-  !\ testloop
-  write(*,*)'after x-trafo'
-  do iTest = 1,n_cubed
-    write(*,*)'iTest=', iTest, 'pntVal=', pntVal(itest),'legCoeff=', legCoeffs(itest)
-  end do
-
-!!     alph_lb = (iStrip-1)*jPerStrip*n_squared+1
-!     j_xLoop: do jAlph = (iStrip-1)*jPerStrip+1, iStrip*jPerStrip
-!!         write(*,*)'jAlph', jAlph
-!       i_xLoop: do iAlph = (jAlph-1)*n_squared+1, (jAlph-1)*n_squared+n
-!!         write(*,*)'iAlph', iAlph
-!!         write(*,*)'alph_lb+1:alph_lb+n', alph_lb+1, alph_lb+n
-!!         write(*,*)'iAlph: iAlph+n_squared-n: n', iAlph, iAlph+n_squared-n, n
-!         alph(alph_lb:alph_lb+n-1) = legCoeffs(iAlph: iAlph+n_squared-n: n)
-!         alph_lb = alph_lb+n
-!       end do i_xLoop
-!     end do j_xLoop
-
-!"2   x-trafo
-!"2   do iStrip = 1,ceiling(real(n_cubed)/(linesPerStrip*n))    
-
-!'     do iAlph = (iStrip-1)*n+1, min(iStrip*striplen, n_cubed) !x-trafo 
-  !    alph_ub = iAlph + stride*(n-1)
-!       alph_ub = iAlph + n - 1 ! x-trafo
-  
-       ! legCoeffs -> copy data for 1D-transformation into alph (stride=1 reading)
-!"2     do iAlph = (iStrip-1)*linesPerStrip*n+1, n_cubed-n+1
-!"2           alph((iStrip-1)*linesPerStrip*n+1:min(iStrip*linesPerStrip*n, n_cubed)) = &
-!"2           & legCoeffs((iStrip-1)*linesPerStrip*n+1:n_cubed:n)
-!"2     end do
-!"1       ! legCoeffs -> copy data for 1D-transformation into alph (stride=1 reading)
-!"1       alph(iAlph:iAlph+n) = legCoeffs(iAlph:iAlph+n) 
-     
-!       ! ply_fpt_exec on temp (no memory transpose)
-!       call ply_fpt_exec( alph = alph,                  &
-!         &                gam = gam,                    &
-!         &                params = fpt%legToChebParams  )
-! 
-!     ! todo: fft on temp
-!     ! temp -> pntVal (stride-1 writing)
-!     pntVal((iStrip-1)*striplen+1:min(iStrip*striplen, n_cubed)) = gam(:)
-!   end do xStripLoop
-
-!    write(*,*) 'n', fpt%legToChebParams%n
-!    write(*,*) 'striplen', striplen
-!    write(*,*) 'alph_lb', alph_lb
-!    write(*,*) 'alph_ub', alph_ub
-!    write(*,*) 'istrip', istrip
-!    write(*,*) 'strip_ub', strip_ub
-!    write(*,*) 'stride', stride
-!    write(*,*) 'size of alph', size(alph)
-!    write(*,*) 'size of legcoeffs', size(legCoeffs)
-!    write(*,*) 'size of legcoeff slices', size(legCoeffs(alph_lb:alph_ub:stride))
-
-
-    !'gam -> legCoeffs (stride-1 writing)
-    ! (just for the test, double memory transpose)
-    ! pntVal(iStrip:strip_ub) = gam
-
-!' ! y-direction
-!' stride = fpt%legToChebParams%n
-!' 
-!' do iStrip = 0,nIndeps-1,striplen 
-!'   ! Calculate the upper bound of the current strip
-!'   strip_ub = min(iStrip + striplen, nIndeps)
-!' 
-!'   ! pntVal -> copy data for Y-transformation into temp (strided reading)
-!'   temp = pntVal(iStrip:fpt%legToChebParams%n:n_cubed)
-!' 
-!'   ! ply_fpt_exec on temp (no memory transpose)
-!'   call ply_fpt_exec( nIndeps = nIndeps,            & 
-!'                      alph = temp,                  &
-!'                      gam = legCoeffs,              &
-!'                      params = fpt%legToChebParams, &
-!'                      strip_lb = iStrip,            &
-!'                      strip_ub = strip_ub           )
-!'   ! todo: fft on temp
-!'   ! temp -> legCoeffs (stride-1 writing)
-!'   legCoeffs(iStrip:strip_ub) = temp
-!' end do
-!' 
-!' ! x-direction
-!' do iStrip = 0,nIndeps-1,striplen 
-!'   ! legCoeffs -> copy data for X-transformation into temp (strided reading)
-!'   strip_ub = min(iStrip + striplen, nIndeps)
-!'   temp = legCoeffs(iStrip:strip_ub)
-!'   ! ply_fpt_exec on temp (no memory transpose)
-!'   call ply_fpt_exec( nIndeps = nIndeps,            & 
-!'                      alph = temp,                  &
-!'                      gam = pntVal,                 &
-!'                      params = fpt%legToChebParams, &
-!'                      strip_lb = iStrip,            &
-!'                      strip_ub = strip_ub           )
-!'   ! todo: fft on temp
-!'   ! temp -> pntVal (stride-1 writing)
-!'   pntVal(iStrip:strip_ub) = temp
-!' end do
+   call ply_fpt_exec_striped( nIndeps = n_squared,          &
+     &                        alph    = legCoeffs,          &
+     &                        gam     = pntVal,             &
+     &                        params  = fpt%legToChebParams )
+   ! ... transformation in Y direction (Leg->Cheb)
+   call ply_fpt_exec_striped( nIndeps = n_squared,          &
+     &                        alph    = pntVal,             &
+     &                        gam     = legCoeffs,          &
+     &                        params  = fpt%legToChebParams )
+   ! ... transformation in Z direction (Leg->Cheb)
+   call ply_fpt_exec_striped( nIndeps = n_squared,          &
+     &                        alph    = legCoeffs,          &
+     &                        gam     = pntVal,             &
+     &                        params  = fpt%legToChebParams )
 
    if (.not. lobattoPoints) then
 
@@ -783,7 +355,7 @@ contains
 
      ! Transform Chebyshev expansion to point values at Chebyshev nodes by DCT I
      !$OMP SINGLE
-!\     call fftw_execute_r2r( fpt%planChebToPnt, legCoeffs, pntVal )
+     call fftw_execute_r2r( fpt%planChebToPnt, legCoeffs, pntVal )
      !$OMP END SINGLE
  
    end if

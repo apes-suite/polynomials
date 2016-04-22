@@ -505,7 +505,6 @@ contains
     real(kind=rk), intent(inout) :: nodal_data(:,:)
     !--------------------------------------------------------------------------!
     integer :: iVar
-    integer :: nNodes, nModes
     !--------------------------------------------------------------------------!
 
     select case(trim(me%kind))
@@ -604,7 +603,6 @@ contains
     real(kind=rk), intent(inout) :: modal_data(:,:)
     !--------------------------------------------------------------------------!
     integer :: iVar
-    integer :: nNodes, nModes
     !--------------------------------------------------------------------------!
 
     select case(trim(me%kind))

@@ -1,16 +1,16 @@
+?? include "ply_dof_module.inc"
 !> Unit test to check functionallity of fast polynomial transformations.
 !! \author{Jens Zudrop}
-program ply_ifpt_3D_singVar_lobattoNodes_test
+program ply_fpt_3D_lobattoNodes_test
   use env_module,               only: rk, fin_env
   use tem_param_module,         only: PI
   use tem_logging_module,       only: logUnit
-  use tem_aux_module,           only: tem_abort
-  use ply_legFpt_module,        only: ply_legFpt_type
-  use ply_legFpt_3D_module,     only: ply_init_legFpt_3D, &
-                                    & ply_pntToLeg_3D
-  use ply_modg_basis_module,    only: evalLegendreTensPoly
-  use ply_dof_module,           only: posOfModgCoeffQTens, Q_space
   use tem_general_module,       only: tem_general_type, tem_start
+  use ply_legFpt_module,        only: ply_legFpt_type
+  use ply_legFpt_3D_module,     only: ply_init_legFpt_3D,  &
+    &                                 ply_legToPnt_3D
+  use ply_modg_basis_module,    only: evalLegendreTensPoly
+  use ply_dof_module,           only: Q_space
 
   implicit none
 
@@ -22,6 +22,7 @@ program ply_ifpt_3D_singVar_lobattoNodes_test
   call tem_start(codeName = 'Ateles unit test', &
     &            version  = 'utest',            &
     &            general  = general             )
+
   res = 0.0_rk
   do iPower = 1, 4
     call ply_check_legToPnt_3D(iPower, newRes)
@@ -32,7 +33,8 @@ program ply_ifpt_3D_singVar_lobattoNodes_test
 
   if(res.lt.1e-08) then
     write(logUnit(1),*) 'PASSED'
-  end if 
+  end if
+
   call fin_env()
 
 contains
@@ -41,46 +43,48 @@ contains
     integer, intent(in) :: power
     real(kind=rk) :: res
     integer :: maxPolyDegree, iPoint, iPointX, iPointY, iPointZ, iDof
-    integer :: pointIndex, funcIndex, iPolyX, iPolyY, iPolyZ
-    real(kind=rk), allocatable :: legCoeffs(:), legCoeffsRef(:)
-    real(kind=rk), allocatable :: pntVal(:)
+    integer :: pointIndex, funcIndex, iPolyX, iPolyY, iPolyZ, iVar, nVars
+    real(kind=rk), allocatable :: legCoeffs(:,:)
+    real(kind=rk), allocatable :: pntVal(:,:), refVal(:,:)
     real(kind=rk), allocatable :: chebPnt(:,:), chebPnt1D(:)
     real(kind=rk), allocatable :: legValChebPnt(:,:)
     real(kind=rk) :: rfac
     type(ply_legFpt_type) :: fpt
     integer, allocatable :: rand_seed(:)
     integer :: nSeeds
-  
+
     ! Init the random number generator
     call random_seed(size=nSeeds)
     allocate(rand_seed(nSeeds))
     rand_seed = 0
     rand_seed(1) = 8345
     call random_seed(put=rand_seed)
-  
+
     ! Define the maximal polynomial degree we want to calculate the
     ! bases exchange for.
     maxPolyDegree =  2**power-1  ! maxPolyDegree+1 has to be a power of 2
-    write(logUnit(10),*) '------------------------------------' &
-      & // ' Number of Legendre coefficients (per dim): ', maxPolyDegree+1
-    write(logUnit(10),*) '------------------------------------' &
-      & // ' Number of Legendre coefficients (total): ', (maxPolyDegree+1)**3
-  
+    nVars = 3
+    write(logUnit(10),*) '------------------------------------' // &
+      & ' Number of Legendre coefficients (per dim): ', maxPolyDegree+1
+    write(logUnit(10),*) '------------------------------------' // &
+      & ' Number of Legendre coefficients (total): ',(maxPolyDegree+1)**3
+
     ! Create the Legendre expansion coefficients
-    allocate(legCoeffs((maxPolyDegree+1)**3)) 
-    allocate(legCoeffsRef((maxPolyDegree+1)**3)) 
-    do iDof = 1, (maxPolyDegree+1)**3
-      call random_number(rfac)
-      legCoeffsRef(iDof) = real(1, rk) * rfac
+    allocate(legCoeffs((maxPolyDegree+1)**3, nVars))
+    do iVar = 1, nVars
+      do iDof = 1, (maxPolyDegree+1)**3
+        call random_number(rfac)
+        legCoeffs(iDof, iVar) = real(iVar, rk) * rfac
+      end do
     end do
-  
-    ! Create the Chebyshev nodes on the interval [-1,+1]
+
+    ! Create the Chebyshev-Lobatto nodes on the interval [-1,+1]
     write(logUnit(10),*) 'Creating Chebyshev nodes for ref result ...'
     allocate(chebPnt1D(maxPolyDegree+1))
     do iPoint = 1, maxPolyDegree+1
       chebPnt1D(iPoint) = cos((iPoint-1.0_rk)*PI/maxPolyDegree);
     end do
-    ! Now, create the 3D Chebyshev nodes in [-1,+1]^3
+    ! Now, create the 3D Chebyshev-Lobatto nodes in [-1,+1]^3
     allocate(chebPnt( (maxPolyDegree+1)**3,3 ))
     do iPointX = 1, maxPolyDegree+1
       do iPointY = 1, maxPolyDegree+1
@@ -93,55 +97,62 @@ contains
         end do
       end do
     end do
-  
+
     ! define the reference results for the point values (Chebyshev nodes)
     !allocate( legValChebPnt((maxPolyDegree+1)**3,(maxPolyDegree+1)**3) )
     !legValChebPnt(:,:) = legendre_1D(chebPnt, maxPolyDegree)
     call evalLegendreTensPoly( coords = chebPnt , nCoords = (maxPolyDegree+1)**3, &
                              & maxPolyDegree = maxPolyDegree, &
-                             & basisType = Q_Space, & 
+                             & basisType = Q_space, &
                              & polyVal = legValChebPnt )
-    allocate(pntVal( (maxPolyDegree+1)**3 )) 
-    pntVal(:) = 0.0_rk
+    allocate( refVal((maxPolyDegree+1)**3, nVars) )
+    refVal(:,:) = 0.0_rk
     write(logUnit(10),*) 'Calculating reference results ...'
     do iPolyX = 1, maxPolyDegree+1
       do iPolyY = 1, maxPolyDegree+1
         do iPolyZ = 1, maxPolyDegree+1
-          funcIndex = posOfModgCoeffQTens(iPolyX, iPolyY, iPolyZ, maxPolyDegree)
-          pntVal(:) = pntVal(:) + &
-                 & legValChebPnt(funcIndex,:) * legCoeffsRef(funcIndex)
+?? copy :: posOfModgCoeffQTens(iPolyX, iPolyY, iPolyZ, maxPolyDegree, funcIndex)
+          do iVar = 1, nVars
+            refVal(:,iVar) = refVal(:,iVar) + &
+                   & legValChebPnt(funcIndex,:) * legCoeffs(funcIndex, iVar)
+          end do
         end do
       end do
     end do
     write(logUnit(10),*) 'Finished'
-  
-    ! Init the FPT 
+
+    ! Init the FPT
     call ply_init_legFpt_3D( maxPolyDegree = maxPolyDegree, &
-      &                      nVars = 1, fpt = fpt, lobattoPoints = .true.)
-  
+      &                      nVars         = nVars,         &
+      &                      fpt           = fpt,           &
+      &                      lobattoPoints = .true.         )
+
     ! now transform to the Chebyshev nodes
+    allocate(pntVal( (maxPolyDegree+1)**3, nVars ))
     write(logUnit(10),*) 'Calculating FPT ...'
     !$OMP PARALLEL &
     !$OMP DEFAULT(shared)
-    call ply_pntToLeg_3D( fpt = fpt, pntVal = pntVal, legCoeffs = legCoeffs, & 
+    call ply_legToPnt_3D( fpt = fpt, legCoeffs = legCoeffs, pntVal = pntVal, nVars = nVars, &
       &                   lobattoPoints = .true. )
     !$OMP END PARALLEL
     write(logUnit(10),*) 'Finished'
-  
+
     !!do iPoint = 1, (maxPolyDegree+1)**3
     !!  write(*,*) 'Point: ', iPoint, &
-    !!           & ' FPT: ', pntVal(iPoint,3), & 
+    !!           & ' FPT: ', pntVal(iPoint,3), &
     !!           & ' Ref.: ', refVal(iPoint,3), &
     !!           & ' error: ', pntVal(iPoint,3)-refVal(iPoint,3)
     !!end do
 
     ! Write out the point with the largest absolute error
-    write(*,*) 'for variable ', 1, &
-             & ' Cheb-Point ',maxloc(abs(legCoeffs(:) - legCoeffsRef(:))),  &
-             & ' has largest error of: ' ,maxval(abs(legCoeffs(:) - legCoeffsRef(:)))
+    do iVar = 1, nVars
+      write(*,*) 'for variable ', iVar, &
+             & ' Cheb-Point ',maxloc(abs(pntVal(:, iVar) - refVal(:, iVar))),  &
+             & ' has largest error of: ' ,maxval(abs(pntVal(:,iVar) - refVal(:,iVar)))
+    end do
 
-    res = maxval(abs(legCoeffs(:) - legCoeffsRef(:)))
+    res = maxval(abs(pntVal(:,:) - refVal(:,:)))
 
   end subroutine
 
-end program ply_ifpt_3D_singVar_lobattoNodes_test
+end program ply_fpt_3D_lobattoNodes_test

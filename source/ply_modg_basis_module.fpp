@@ -1,3 +1,4 @@
+?? include "ply_dof_module.inc"
 !> Routines and datatypes related to the modal basis functions of the
 !! modal discontinuous Galerkin scheme.
 !! \author{Jens Zudrop}
@@ -5,8 +6,7 @@ module ply_modg_basis_module
   ! Treelm modules
   use env_module,                  only: rk
   ! Ateles modules
-  use ply_dof_module,               only: posOfModgCoeffQTens, &
-    &                                     nextModgCoeffPTens, getDofsPTens, &
+  use ply_dof_module,               only: nextModgCoeffPTens, getDofsPTens, &
     &                                     Q_space, P_space
   use ply_space_integration_module, only: ply_gaussLegPoints
 
@@ -123,7 +123,7 @@ module ply_modg_basis_module
     &       scalProdDualLeg, scalProdDualLegDiff, ply_modg_refine_type,    &
     &       faceValLeftBndAns, faceValRightBndAns, faceValLeftBndTest,     &
     &       faceValRightBndTest, ply_modg_basis_type, legendre_1D,         &
-    &       faceValLeftBndTestGrad, faceValRightBndTestGrad,               & 
+    &       faceValLeftBndTestGrad, faceValRightBndTestGrad,               &
     &       faceValLeftBndgradTest, faceValRightBndgradTest,               &
     &       faceValLeftBndDiffAns, faceValRightBndDiffAns,                 &
     &       init_modg_covolumeCoeffs, integrateLeg
@@ -170,7 +170,7 @@ contains
       &         x     = GaussPoints,             &
       &         w     = w,                       &
       &         nIntP = nPoints                  )
-   
+
     ! shift the gauss points to
     ! ... the left integral domain, i.e. [-1;0]
     GaussPoints_left =((0.0_rk+1.0_rk)/(2.0_rk)) *GaussPoints + ((0.0_rk-1.0_rk)/(2.0_rk))
@@ -199,23 +199,23 @@ contains
     !loop over anzatz functions
     do jFunc = 1, nFunc
       do iFunc = 1, nFunc
- 
+
         ! ansatz-ansatz with left shift integral (on [-1;0])
         tempLeft = legendre_left(iFunc, :) * &
                legendre_left_shifted(jFunc, :) * w(:)
         sumLeft = sum(tempLeft)
         integral%anz_anzShift(iFunc, jFunc, 1) = sumLeft / scalProdLeg(iFunc)
- 
- 
+
+
         ! ansatz-ansatz with right shift integral (on [0;+1])
         tempRight = legendre_right(iFunc, :) * &
                legendre_right_shifted(jFunc, :) * w(:)
         sumRight = sum(tempRight)
         integral%anz_anzShift(iFunc, jFunc, 2) = sumRight / scalProdLeg(iFunc)
- 
- 
+
+
       end do
- 
+
     end do
 
   end subroutine init_modg_covolumeCoeffs
@@ -443,7 +443,7 @@ contains
           do iAnsY = 1, maxPolyDegree+1
             do iAnsZ = 1, maxPolyDegree+1
               ! get the position of this ansatz function combination.
-              ansPos = posOfModgCoeffQTens(iAnsX, iAnsY, iAnsZ, maxPolyDegree)
+?? copy :: posOfModgCoeffQTens(iAnsX, iAnsY, iAnsZ, maxPolyDegree, ansPos)
               polyVal(ansPos, :) = polyValX(iAnsX,:) * polyValY(iAnsY,:) &
                 &                                    * polyValZ(iAnsZ,:)
             end do
@@ -478,7 +478,7 @@ contains
 
   end function faceValRightBndAns
 
-  !> Returns the value of the non-normalized differentiated Legendre polynomial 
+  !> Returns the value of the non-normalized differentiated Legendre polynomial
   !! at the right boundary of the reference element, i.e. at +1.
   pure function faceValRightBndDiffAns(ansFunc) result(val)
     !---------------------------------------------------------------------------
@@ -509,7 +509,7 @@ contains
 
   end function faceValLeftBndAns
 
-  !> Returns the value of the non-normalized differentiated Legendre polynomial 
+  !> Returns the value of the non-normalized differentiated Legendre polynomial
   !! at the leftboundary of the reference element, i.e. at -1.
   pure function faceValLeftBndDiffAns(ansFunc) result(val)
     !---------------------------------------------------------------------------
@@ -620,7 +620,7 @@ contains
 
     if(testFunc==1) then
       val = 0.0_rk
-    else 
+    else
       val = (-1.0_rk)**(testFunc)
     end if
 
@@ -639,7 +639,7 @@ contains
 
     if(testFunc==1) then
       val = 0.0_rk
-    else 
+    else
       val = 1.0_rk
     end if
 

@@ -9,7 +9,6 @@ module ply_legFpt_module
   use ply_polyBaseExc_module, only: ply_trafo_params_type, &
                                   & ply_fpt_init, &
                                   & ply_fpt_exec_striped, &
-                                  & ply_fpt_exec, &
                                   & ply_legToCheb_param, ply_chebToLeg_param,&
                                   & assignment(=)
   use ply_nodes_module,        only: ply_faceNodes_type
@@ -181,17 +180,11 @@ contains
    !---------------------------------------------------------------------------
 
    ! Transform Legendre expansion to Chebyshev expansion
-!   call ply_fpt_exec_striped( nIndeps = 1,                  &
-!     &                        alph    = legCoeffs,          &
-!     &                        gam     = pntVal,             &
-!     &                        params  = fpt%legToChebParams )
-
-       ! ply_fpt_exec on temp (no memory transpose)
-       call ply_fpt_exec( alph = legCoeffs,             &
-        &                 gam = pntVal,                 &
-        &                 nIndeps = 1,                  &
-        &                 params = fpt%legToChebParams  )
-  
+   call ply_fpt_exec_striped( nIndeps = 1,                  &
+     &                        alph    = legCoeffs,          &
+     &                        gam     = pntVal,             &
+     &                        params  = fpt%legToChebParams )
+   
    !$OMP SINGLE
    legCoeffs(1) = pntVal(1)
    !$OMP END SINGLE

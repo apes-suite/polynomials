@@ -2,9 +2,7 @@
 program ply_project_fpt_lobattoPoints_test
   use env_module,                only: rk, fin_env
   use tem_logging_module,        only: logUnit
-  use ply_dof_module,            only: posOfModgCoeffPTens,  &
-    &                                  nextModgCoeffPTens, &
-    &                                  Q_space
+  use ply_dof_module,            only: Q_space
   use ply_dynArray_project_module, only: ply_prj_init_define, &
                                     &    ply_prj_init_type
   use ply_poly_project_module,   only:  ply_poly_project_fillbody, &
