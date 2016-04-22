@@ -24,8 +24,7 @@ program ply_fpt_3D_test
     &            general  = general             )
 
   res = 0.0_rk
-!do iPower = 0, 4
-  do iPower = 2,2
+  do iPower = 0, 4
     call ply_check_legToPnt_3D(iPower, newRes)
     if(newRes.gt.res) then
       res = newRes
