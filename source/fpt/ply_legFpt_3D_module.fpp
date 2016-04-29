@@ -210,7 +210,7 @@ contains
    integer :: strip_ub
    integer :: striplen
    integer :: stride
-   integer :: alph_lb, alph_ub, iAlph, jAlph
+   integer :: alph_lb, alph_ub, iAlph
    integer :: iDim
    integer :: itest
    integer :: linesPerStrip
@@ -221,7 +221,6 @@ contains
 !   real(kind=rk), dimension (fpt%legToChebParams%striplen) :: gam
    real(kind=rk), dimension(:), allocatable :: alph
    real(kind=rk), dimension(:), allocatable :: gam
-   integer, dimension(:), allocatable :: alphIndices
    !---------------------------------------------------------------------------
 
    striplen = fpt%legToChebParams%striplen
@@ -234,11 +233,8 @@ contains
    ! the array)
    nIndeps = n_squared !'
 
-!   allocate(alph(min(striplen, fpt%legToChebParams%n)))
-!   allocate(gam(min(striplen, fpt%legToChebParams%n)))
    allocate(alph(min(striplen,n_squared)*n))
    allocate(gam(min(striplen,n_squared)*n))
-   allocate(alphIndices(n_squared))
    ! Dimension-by-dimension transform Legendre expansion to Chebyshev expansion
    ! ... transformation in X direction (Leg->Cheb)
 !'   call ply_fpt_exec_striped( nIndeps = n_squared,          &
@@ -318,7 +314,7 @@ contains
    yStripLoop: do iStrip = 1,n_squared,striplen
      do iAlph = iStrip, min(iStrip+striplen-1, n_squared)  !z_Trafo
        alph((iAlph-iStrip)*n+1:(iAlph-iStrip+1)*n) = &
-           & legCoeffs(iAlph::n_squared) !ztrafo
+           & pntVal(iAlph::n_squared) !ztrafo
      end do
 
      ! At the end of the array the number of computed strips might be smaller

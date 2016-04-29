@@ -872,7 +872,6 @@ contains
 
     iDiag_next = iDiag
 ?? ENDIF
-  write(*,*)'two times unrolled loop and base loop'
 ?? IF (unroll >= 2) THEN
     do iDiag=iDiag_next, nDiagonals-1, 2
       diag_off = (iDiag-1)*2 + mod(remainder,2)
@@ -883,7 +882,6 @@ contains
     iDiag_next = iDiag
 ?? ENDIF
 
-  write(*,*)'base loop'
     do iDiag=iDiag_next, nDiagonals
       diag_off = (iDiag-1)*2 + mod(remainder,2)
 ?? copy :: BaseLoop(1, s - diag_off, m_next)
@@ -909,7 +907,7 @@ contains
     !!
     !! The direction which is to be transformed has to run fastest in
     !! the array.
-    real(kind=rk), intent(in), dimension(strip_lb:strip_ub) :: alph(:)
+    real(kind=rk), intent(in) :: alph(:)
 
     !> Modal coefficients of the Chebyshev expansion.
     !! Size has to be: (1:indeps*params%n,nVars)
@@ -953,7 +951,6 @@ contains
     !$OMP WORKSHARE
     gam = 0.0_rk
     !$OMP END WORKSHARE
-
     !$OMP DO
     ! Loop over all strips
 !'    do iStrip = 0,nIndeps-1,striplen
@@ -966,18 +963,18 @@ contains
       do indep = 1, nIndeps 
         iFun = (indep-1)*params%n
         ! Calculate bs for all columns
-        blockSizeLoop: do l =0,h
+        blockSizeLoop: do l = 0,h
           rowsize = s * 2**l
           nRows = (params%nBlocks - 1) / (2**l) - 1
           ub_row = 3 - mod(nRows,2)
           row_rem = mod(n-remainder, rowsize) + remainder + iFun
-
           blockColLoop: do j = 2, nRows+1, 1+mod(nRows,2)
             do r = 0, k-1
               params%b(l)%col(j)%coeff(r,0) = 0.0_rk
               params%b(l)%col(j)%coeff(r,1) = 0.0_rk
               do m = 0, rowsize-1
                 odd = mod(row_rem + m + (j-1)*rowsize,2)
+!' write
                 params%b(l)%col(j)%coeff(r,odd) &
                   &  = params%b(l)%col(j)%coeff(r,odd) &
                   &    + params%u(l,r)%dat(m) &
@@ -985,14 +982,13 @@ contains
               end do
             end do
           end do blockColLoop
-
           ! Multiply with the blocks that are separated from the diagonal
           do i = 0, nRows - 1
             block_off = i*rowsize
             do j = i+2, i+ub_row - mod(i,2)
               do m = 0, rowsize - 1
                 odd = mod(m+block_off,2)
-                iVal = indep + (m+block_off)*nIndeps
+                iVal = iFun + m + block_off + 1
                 do r = 0, k-1
                   gam(iVal) = gam(iVal)      &
                     &       + params%sub(l)%subRow(i)%subCol(j)%rowDat(m)&
@@ -1017,8 +1013,6 @@ contains
       nBlockDiagonals = (params%s+remainder + mod(params%s+remainder,2)) / 2 &
         &                - nDiagonals
 
-      write(*,*)'multiply with the entries near the diagonal'
-
       ! Multiply with the entries near the diagonal
       call ply_calculate_coeff_strip(nIndeps          = nIndeps,               &
         &                            n                = params%n,              &
@@ -1033,8 +1027,6 @@ contains
         &                            strip_ub         = strip_ub,              &
         &                            subblockingWidth = params%subblockingWidth)
 
-      write(*,*)'multiplied with the entries near the diagonal'
-  
       ! Multiply with entries in the adapters
       do iBlock=1,params%nBlocks-1
 
