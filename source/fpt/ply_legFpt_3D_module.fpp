@@ -568,13 +568,29 @@ contains
    logical, intent(in) :: lobattoPoints
    !---------------------------------------------------------------------------
    integer :: iFunc, iDof, iFuncX, iFuncY, iFuncZ, funcIndex
+   integer :: striplen
+   integer :: iStrip
+   integer :: iAlph
+   integer :: n
    integer :: n_squared
    integer :: n_cubed
+   integer :: nIndeps
    real(kind=rk) :: normFactor(0:1)
+   real(kind=rk), dimension(:), allocatable :: alph
+   real(kind=rk), dimension(:), allocatable :: gam
    !---------------------------------------------------------------------------
+   striplen = fpt%legToChebParams%striplen
+   n = fpt%legToChebParams%n
+   n_squared = fpt%legToChebParams%n**2
+   n_cubed = n_squared * fpt%legToChebParams%n
+   
+   ! number of strips to execute the fpt on in one call
+   ! (usually n_squared, but a smaller value might be assigned at the end of 
+   ! the array)
+   nIndeps = n_squared !'
 
-   n_squared = fpt%chebToLegParams%n**2
-   n_cubed = n_squared * fpt%chebToLegParams%n
+   allocate(alph(min(striplen,n_squared)*n))
+   allocate(gam(min(striplen,n_squared)*n))
 
    if ( .not. lobattoPoints ) then
      ! Transform the point values to Chebyshev polynomials by DCT II
@@ -701,22 +717,96 @@ contains
 
    end if
 
-   ! Dimension-by-dimension transform Chebyshev polynomials to Legendre polynomial
-   ! ... transformation in X direction (Cheb->Leg)
-   call ply_fpt_exec_striped(nIndeps = n_squared,          &
-     &                       alph    = pntVal,             &
-     &                       gam     = legCoeffs,          &
-     &                       params  = fpt%chebToLegParams )
-   ! ... transformation in Y direction (Cheb->Leg)
-   call ply_fpt_exec_striped(nIndeps = n_squared,          &
-     &                       alph    = legCoeffs,          &
-     &                       gam     = pntVal,             &
-     &                       params  = fpt%chebToLegParams )
-   ! ... transformation in Z direction (Cheb->Leg)
-   call ply_fpt_exec_striped(nIndeps = n_squared,          &
-     &                       alph    = pntVal,             &
-     &                       gam     = legCoeffs,          &
-     &                       params  = fpt%chebToLegParams )
+   ! zStripLoop: Loop over all strips in z-direction
+   zStripLoop: do iStrip = 1, n_squared, striplen
+     ! iAlph is the index of the first element in a line for the transformation in 
+     ! z-direction. 
+     do iAlph = iStrip, min(iStrip+striplen-1, n_squared)  !z_Trafo
+       alph((iAlph-iStrip)*n+1:(iAlph-iStrip+1)*n) = &
+           & pntVal(iAlph::n_squared) !ztrafo
+     end do
+
+     ! At the end of the array the number of computed strips might be smaller
+     nIndeps = min(striplen, n_squared-iStrip+1)
+
+     ! ply_fpt_exec on temp (no memory transpose)
+     call ply_fpt_exec( alph = alph,                  &
+      &                 gam = gam,                    &
+      &                 nIndeps = nIndeps,            &
+      &                 params = fpt%chebToLegParams  )
+ 
+     legCoeffs((iStrip-1)*n+1 : (iStrip+nIndeps-1)*n)  = gam(1:nIndeps*n)
+
+     ! todo: fft on temp
+     ! temp -> pntVal (stride-1 writing)
+
+   end do zStripLoop
+
+  ! y-direction
+
+   yStripLoop: do iStrip = 1,n_squared,striplen
+     do iAlph = iStrip, min(iStrip+striplen-1, n_squared)  !z_Trafo
+       alph((iAlph-iStrip)*n+1:(iAlph-iStrip+1)*n) = &
+           & legCoeffs(iAlph::n_squared) !ztrafo
+     end do
+
+     ! At the end of the array the number of computed strips might be smaller
+     nIndeps = min(striplen, n_squared-iStrip+1)
+
+     ! ply_fpt_exec on temp (no memory transpose)
+     call ply_fpt_exec( alph = alph,                  &
+       &                gam = gam,                    &
+       &                nIndeps = nIndeps,            &
+       &                params = fpt%chebToLegParams  )
+ 
+       ! todo: fft on temp
+       ! temp -> pntVal (stride-1 writing)
+     pntVal((iStrip-1)*n+1 : (iStrip+nIndeps-1)*n)  = gam(1:nIndeps*n)
+
+
+   end do yStripLoop ! iStrip
+
+  ! x-direction
+   xStripLoop: do iStrip = 1,n_squared,striplen
+     do iAlph = iStrip, min(iStrip+striplen-1, n_squared)  !z_Trafo
+       alph((iAlph-iStrip)*n+1:(iAlph-iStrip+1)*n) = &
+           & pntVal(iAlph::n_squared) !ztrafo
+     end do
+
+     ! At the end of the array the number of computed strips might be smaller
+     nIndeps = min(striplen, n_squared-iStrip+1)
+
+     ! ply_fpt_exec on temp (no memory transpose)
+     call ply_fpt_exec( alph = alph,                  &
+       &                gam = gam,                    &
+       &                nIndeps = nIndeps,            &
+       &                params = fpt%chebToLegParams  )
+
+     ! todo: fft on temp
+     ! temp -> pntVal (stride-1 writing)
+
+     legCoeffs((iStrip-1)*n+1 : (iStrip+nIndeps-1)*n)  = gam(1:nIndeps*n)
+
+   end do xStripLoop
+
+
+
+!   ! Dimension-by-dimension transform Chebyshev polynomials to Legendre polynomial
+!   ! ... transformation in X direction (Cheb->Leg)
+!   call ply_fpt_exec_striped(nIndeps = n_squared,          &
+!     &                       alph    = pntVal,             &
+!     &                       gam     = legCoeffs,          &
+!     &                       params  = fpt%chebToLegParams )
+!   ! ... transformation in Y direction (Cheb->Leg)
+!   call ply_fpt_exec_striped(nIndeps = n_squared,          &
+!     &                       alph    = legCoeffs,          &
+!     &                       gam     = pntVal,             &
+!     &                       params  = fpt%chebToLegParams )
+!   ! ... transformation in Z direction (Cheb->Leg)
+!   call ply_fpt_exec_striped(nIndeps = n_squared,          &
+!     &                       alph    = pntVal,             &
+!     &                       gam     = legCoeffs,          &
+!     &                       params  = fpt%chebToLegParams )
 
   end subroutine ply_pntToLeg_3D_singVar
 
