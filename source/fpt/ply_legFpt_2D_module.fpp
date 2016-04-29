@@ -11,6 +11,7 @@ module ply_legFpt_2D_module
   use ply_polyBaseExc_module, only: ply_trafo_params_type, &
                                   & ply_fpt_init, &
                                   & ply_fpt_exec_striped, &
+                                  & ply_fpt_exec, &
                                   & ply_legToCheb_param, ply_chebToLeg_param, &
                                   & assignment(=)
   use ply_nodes_module,       only: ply_faceNodes_type
@@ -164,21 +165,86 @@ contains
    logical, intent(in) :: lobattoPoints
    !---------------------------------------------------------------------------
    integer :: iFunc, iFuncX, iFuncY, funcIndex
+   integer :: striplen, iStrip, n, iAlph, nIndeps
+   real(kind=rk), dimension(:), allocatable :: alph
+   real(kind=rk), dimension(:), allocatable :: gam
    real(kind=rk) :: normFactor
    !---------------------------------------------------------------------------
 
-   ! Dimension-by-dimension transform Legendre expansion to Chebyshev expansion
-   ! ... transformation in X direction (Leg->Cheb)
-   call ply_fpt_exec_striped( nIndeps = fpt%legToChebParams%n, &
-     &                        alph    = legCoeffs,             &
-     &                        gam     = pntVal,                &
-     &                        params  = fpt%legToChebParams    )
+   striplen = fpt%legToChebParams%striplen
+   n = fpt%legToChebParams%n
 
-   ! ... transformation in Y direction (Leg->Cheb)
-   call ply_fpt_exec_striped( nIndeps = fpt%legToChebParams%n, &
-     &                        alph    = pntVal,                &
-     &                        gam     = legCoeffs,             &
-     &                        params  = fpt%legToChebParams    )
+   allocate(alph(min(striplen, n)*n))
+   allocate(gam(min(striplen, n)*n))
+
+   ! original layout (n = 3):
+   !  1  2  3
+   !  4  5  6
+   !  7  8  9
+
+   ! layout after y-trafo:
+   !  1  4  7
+   !  2  5  8
+   !  3  6  9
+   yStripLoop: do iStrip = 1, n, striplen
+     ! iAlph is the index of the first element in a line for the transformation in 
+     ! y-direction. 
+     do iAlph = iStrip, min(iStrip+striplen-1, n)  !y-Trafo
+       alph((iAlph-iStrip)*n+1:(iAlph-iStrip+1)*n) = &
+           & legCoeffs(iAlph::n) !ytrafo
+     end do
+
+     ! At the end of the array the number of computed strips might be smaller
+     nIndeps = min(striplen, n-iStrip+1)
+ 
+     ! ply_fpt_exec on temp (no memory transpose)
+     call ply_fpt_exec( alph = alph,                  &
+       &                gam = gam,                    &
+       &                nIndeps = nIndeps,            &
+       &                params = fpt%legToChebParams  )
+     
+     ! Write gam to pntVal array
+     pntVal((iStrip-1)*n+1 : (iStrip+nIndeps-1)*n)  = gam(1:nIndeps*n)
+
+   end do yStripLoop
+
+
+  ! x-direction
+   xStripLoop: do iStrip = 1, n, striplen
+     do iAlph = iStrip, min(iStrip+striplen-1, n)  !z_Trafo
+       alph((iAlph-iStrip)*n+1:(iAlph-iStrip+1)*n) = &
+           & PntVal(iAlph::n) !ztrafo
+     end do
+
+     ! At the end of the array the number of computed strips might be smaller
+     nIndeps = min(striplen, n-iStrip+1)
+
+     ! ply_fpt_exec on temp (no memory transpose)
+     call ply_fpt_exec( alph = alph,                  &
+       &                gam = gam,                    &
+       &                nIndeps = nIndeps,            &
+       &                params = fpt%legToChebParams  )
+
+     ! todo: fft on temp
+     ! temp -> pntVal (stride-1 writing)
+
+     ! pntVal((iStrip-1)*n+1:min((iStrip+striplen-1)*n, n_cubed))  = gam(:)
+     legCoeffs((iStrip-1)*n+1 : (iStrip+nIndeps-1)*n)  = gam(1:nIndeps*n)
+
+   end do xStripLoop
+
+!   ! Dimension-by-dimension transform Legendre expansion to Chebyshev expansion
+!   ! ... transformation in X direction (Leg->Cheb)
+!   call ply_fpt_exec_striped( nIndeps = fpt%legToChebParams%n, &
+!     &                        alph    = legCoeffs,             &
+!     &                        gam     = pntVal,                &
+!     &                        params  = fpt%legToChebParams    )
+!
+!   ! ... transformation in Y direction (Leg->Cheb)
+!   call ply_fpt_exec_striped( nIndeps = fpt%legToChebParams%n, &
+!     &                        alph    = pntVal,                &
+!     &                        gam     = legCoeffs,             &
+!     &                        params  = fpt%legToChebParams    )
 
    if (.not. lobattoPoints) then
 

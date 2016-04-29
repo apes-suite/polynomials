@@ -1,13 +1,14 @@
 ?? text :: EightTimesUnrolledLoop(m_lowerbound, m_upperbound, m_next)
+write(*,*)'8 times unrolled loop'
       do m_blocking = ?m_lowerbound?, ?m_upperbound?, subblockingWidth
         do m = m_blocking,                                       &
           & min(m_blocking + subblockingWidth - 1, ?m_upperbound?)
-          row_off = (m + block_offset - 1) * nIndeps
-          col_off = m + block_offset + remainder + diag_off
+          row_off = m + block_offset
+          col_off = row_off + remainder + diag_off
 
           do indep = strip_lb + 1, strip_ub
             iFun = (indep - 1) * n
-            iVal = indep + row_off
+            iVal = iFun + row_off
             gam(iVal) = gam(iVal)                                  &
               & + matrix(m, iDiag)     * alph(iFun + col_off)      &
               & + matrix(m, iDiag + 1) * alph(iFun + col_off +  2) &
@@ -24,15 +25,16 @@
 ?? end text
 
 ?? text :: SevenTimesUnrolledLoop(m_lowerbound, m_upperbound, m_next)
+write(*,*)'7 times unrolled loop'
       do m_blocking = ?m_lowerbound?, ?m_upperbound?, subblockingWidth
         do m = m_blocking,                                       &
           & min(m_blocking + subblockingWidth - 1, ?m_upperbound?)
-          row_off = (m + block_offset - 1) * nIndeps
-          col_off = m + block_offset + remainder + diag_off
+          row_off = m + block_offset
+          col_off = row_off + remainder + diag_off
 
           do indep = strip_lb + 1, strip_ub
             iFun = (indep - 1) * n
-            iVal = indep + row_off
+            iVal = iFun + row_off
             gam(iVal) = gam(iVal)                                  &
               & + matrix(m, iDiag)     * alph(iFun + col_off)      &
               & + matrix(m, iDiag + 1) * alph(iFun + col_off +  2) &
@@ -48,15 +50,16 @@
 ?? end text
 
 ?? text :: SixTimesUnrolledLoop(m_lowerbound, m_upperbound, m_next)
+write(*,*)'6 times unrolled loop'
       do m_blocking = ?m_lowerbound?, ?m_upperbound?, subblockingWidth
         do m = m_blocking,                                       &
           & min(m_blocking + subblockingWidth - 1, ?m_upperbound?)
-          row_off = (m + block_offset - 1) * nIndeps
-          col_off = m + block_offset + remainder + diag_off
+          row_off = m + block_offset
+          col_off = row_off + remainder + diag_off
 
           do indep = strip_lb + 1, strip_ub
             iFun = (indep - 1) * n
-            iVal = indep + row_off
+            iVal = iFun + row_off
             gam(iVal) = gam(iVal)                                  &
               & + matrix(m, iDiag)     * alph(iFun + col_off)      &
               & + matrix(m, iDiag + 1) * alph(iFun + col_off +  2) &
@@ -71,15 +74,16 @@
 ?? end text
 
 ?? text :: FiveTimesUnrolledLoop(m_lowerbound, m_upperbound, m_next)
+write(*,*)'5 times unrolled loop'
       do m_blocking = ?m_lowerbound?, ?m_upperbound?, subblockingWidth
         do m = m_blocking,                                       &
           & min(m_blocking + subblockingWidth - 1, ?m_upperbound?)
-          row_off = (m + block_offset - 1) * nIndeps
-          col_off = m + block_offset + remainder + diag_off
+          row_off = m + block_offset
+          col_off = row_off + remainder + diag_off
 
           do indep = strip_lb + 1, strip_ub
             iFun = (indep - 1) * n
-            iVal = indep + row_off
+            iVal = iFun + row_off
             gam(iVal) = gam(iVal)                                 &
               & + matrix(m, iDiag)     * alph(iFun + col_off)     &
               & + matrix(m, iDiag + 1) * alph(iFun + col_off + 2) &
@@ -93,15 +97,16 @@
 ?? end text
 
 ?? text :: FourTimesUnrolledLoop(m_lowerbound, m_upperbound, m_next)
+write(*,*)'4 times unrolled loop'
       do m_blocking = ?m_lowerbound?, ?m_upperbound?, subblockingWidth
         do m = m_blocking,                                       &
           & min(m_blocking + subblockingWidth - 1, ?m_upperbound?)
-          row_off = (m + block_offset - 1) * nIndeps
-          col_off = m + block_offset + remainder + diag_off
+          row_off = m + block_offset
+          col_off = row_off + remainder + diag_off
 
           do indep = strip_lb + 1, strip_ub
             iFun = (indep - 1) * n
-            iVal = indep + row_off
+            iVal = iFun + row_off
             gam(iVal) = gam(iVal)                                 &
               & + matrix(m, iDiag)     * alph(iFun + col_off)     &
               & + matrix(m, iDiag + 1) * alph(iFun + col_off + 2) &
@@ -114,15 +119,16 @@
 ?? end text
 
 ?? text :: ThreeTimesUnrolledLoop(m_lowerbound, m_upperbound, m_next)
+write(*,*)'3 times unrolled loop'
       do m_blocking = ?m_lowerbound?, ?m_upperbound?, subblockingWidth
         do m = m_blocking,                                       &
           & min(m_blocking + subblockingWidth - 1, ?m_upperbound?)
-          row_off = (m + block_offset - 1) * nIndeps
-          col_off = m + block_offset + remainder + diag_off
+          row_off = m + block_offset
+          col_off = row_off + remainder + diag_off
 
           do indep = strip_lb + 1, strip_ub
             iFun = (indep - 1) * n
-            iVal = indep + row_off
+            iVal = iFun + row_off
             gam(iVal) = gam(iVal)                                 &
               & + matrix(m, iDiag)     * alph(iFun + col_off)     &
               & + matrix(m, iDiag + 1) * alph(iFun + col_off + 2) &
@@ -134,6 +140,7 @@
 ?? end text
 
 ?? text :: TwoTimesUnrolledLoop(m_lowerbound, m_upperbound, m_next)
+write(*,*)'2 times unrolled loop'
       do m_blocking = ?m_lowerbound?, ?m_upperbound?, subblockingWidth
         do m = m_blocking,                                       &
           & min(m_blocking + subblockingWidth - 1, ?m_upperbound?)
@@ -153,6 +160,7 @@
 ?? end text
 
 ?? text :: BaseLoop(m_lowerbound, m_upperbound)
+write(*,*)'base loop'
       do m_blocking = ?m_lowerbound?, ?m_upperbound?, subblockingWidth
         do m = m_blocking,                                       &
           & min(m_blocking + subblockingWidth - 1, ?m_upperbound?)
