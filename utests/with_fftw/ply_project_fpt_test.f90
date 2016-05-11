@@ -82,7 +82,7 @@ contains
     header%fpt_header%subblockingWidth = ply_fpt_default_subblockingWidth
     header%fpt_header%approx_terms = 18
     header%fpt_header%striplen = 256
-    header%fpt_header%nodes_header%lobattopoints = .true.
+    header%fpt_header%nodes_header%lobattopoints = .false.
 
     ! define poly projection init type
     call ply_prj_init_define(me=  prj_init,            & 
