@@ -488,7 +488,7 @@ contains
 
      ! Transform Chebyshev expansion to point values at Chebyshev nodes by DCT I
      !$OMP SINGLE
-!\     call fftw_execute_r2r( fpt%planChebToPnt, legCoeffs, pntVal )
+     call fftw_execute_r2r( fpt%planChebToPnt, legCoeffs, pntVal )
      !$OMP END SINGLE
  
    end if
