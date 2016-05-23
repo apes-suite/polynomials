@@ -276,11 +276,11 @@ contains
 
    end if
 
-   ! Transform Chebyshev polynomials to Legendre polynomial
-   call ply_fpt_exec_striped( nIndeps = 1,                  &
-     &                        alph    = pntVal,             &
-     &                        gam     = legCoeffs,          &
-     &                        params  = fpt%chebToLegParams )
+   ! ply_fpt_exec on temp (no memory transpose)
+   call ply_fpt_exec( alph = pntVal,                &
+    &                 gam = legCoeffs,              &
+    &                 nIndeps = 1,                  &
+    &                 params = fpt%chebToLegParams  )
 
   end subroutine ply_pntToLeg
 
