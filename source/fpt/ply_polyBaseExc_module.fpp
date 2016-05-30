@@ -941,12 +941,12 @@ contains
     k = params%k
     s = params%s
     h = params%h
+
     striplen = params%striplen
     numberOfBlocks = n/s
     !' nIndeps = striplen ! min(size(alph),striplen)
 
     remainder = n - s*(params%nBlocks-1)
-
     ! Set the output to zero
     !$OMP WORKSHARE
     gam = 0.0_rk
@@ -961,7 +961,7 @@ contains
 
 !'      do indep = iStrip+1, strip_ub
       do indep = 1, nIndeps 
-        iFun = (indep-1)*params%n
+        iFun = (indep-1)*params%n            ! todo check this assignment
         ! Calculate bs for all columns
         blockSizeLoop: do l = 0,h
           rowsize = s * 2**l
@@ -974,23 +974,23 @@ contains
               params%b(l)%col(j)%coeff(r,1) = 0.0_rk
               do m = 0, rowsize-1
                 odd = mod(row_rem + m + (j-1)*rowsize,2)
-!' write
                 params%b(l)%col(j)%coeff(r,odd) &
                   &  = params%b(l)%col(j)%coeff(r,odd) &
                   &    + params%u(l,r)%dat(m) &
-                  &      * alph(row_rem + m + (j-1)*rowsize + 1)
+                  &      * alph(row_rem + m + (j-1)*rowsize + 1) !todo check
               end do
             end do
           end do blockColLoop
+
           ! Multiply with the blocks that are separated from the diagonal
           do i = 0, nRows - 1
             block_off = i*rowsize
             do j = i+2, i+ub_row - mod(i,2)
               do m = 0, rowsize - 1
                 odd = mod(m+block_off,2)
-                iVal = iFun + m + block_off + 1
+                iVal = (indep-1)*n + m + block_off+1       ! todo check this assignment
                 do r = 0, k-1
-                  gam(iVal) = gam(iVal)      &
+                  gam(iVal) = gam(iVal)      & 
                     &       + params%sub(l)%subRow(i)%subCol(j)%rowDat(m)&
                     &               %coeff(r) &
                     &         * params%b(l)%col(j)%coeff(r,odd)
@@ -1004,7 +1004,7 @@ contains
         if (params%trafo == ply_legToCheb_param) then
           ! Divide the first row in gam by 2, if we transform from legendre
           ! to chebyshev
-          gam(indep) = 0.5_rk*gam(indep)
+          gam((indep-1)*n+1) = 0.5_rk*gam((indep-1)*n+1)
         end if
       end do ! indep
 
