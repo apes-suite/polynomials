@@ -1,3 +1,4 @@
+?? include "ply_dof_module.inc"
 !> This module provides the means to sample polynomial data to break it down
 !! into voxels for visualization.
 !!
@@ -31,7 +32,7 @@ module ply_sampling_module
     &                          tem_varSys_getParams_dummy, &
     &                          tem_varSys_setParams_dummy
 
-  use ply_dof_module, only: q_space, p_space, getDofsQtens, getDofsPtens, &
+  use ply_dof_module, only: q_space, p_space, &
     &                       nextModgCoeffQTens, nextModgCoeffPTens
   use ply_modg_basis_module, only: legendre_1D
 
@@ -314,11 +315,11 @@ contains
         varpos = tracking%varmap%varPos%val(iVar)
         select case(var_space(varpos))
         case (q_space)
-          vardofs(iVar) = getDofsQTens(var_degree(varpos))
+?? copy :: getDofsQTens(var_degree(varpos), vardofs(iVar))
           maxdofs = max( maxdofs, varsys%method%val(varpos)%nComponents &
             &                     * vardofs(iVar)                       )
         case (p_space)
-          vardofs(iVar) = getDofsPTens(var_degree(varpos))
+?? copy :: getDofsPTens(var_degree(varpos), vardofs(iVar))
           maxdofs = max( maxdofs, varsys%method%val(varpos)%nComponents &
             &                     * vardofs(iVar)                       )
         end select

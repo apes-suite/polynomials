@@ -9,12 +9,12 @@ module ply_dof_module
 
   !! The routine posOfModgCoeffQTens is not available anymore. Use the macro
   !! from ply_dof_module.inc instead.
-  public :: nextModgCoeffQTens, getDofsQTens
-  public :: nextModgCoeffPTens, getDofsPTens
-  public :: posOfModgCoeffPTens2D, nextModgCoeffPTens2D, getDofsPTens2D
-  public :: posOfModgCoeffQTens2D, nextModgCoeffQTens2D, getDofsQTens2D
-  public :: posOfModgCoeffPTens1D, nextModgCoeffPTens1D, getDofsPTens1D
-  public :: posOfModgCoeffQTens1D, nextModgCoeffQTens1D, getDofsQTens1D
+  public :: nextModgCoeffQTens
+  public :: nextModgCoeffPTens
+  public :: nextModgCoeffPTens2D
+  public :: nextModgCoeffQTens2D
+  public :: nextModgCoeffPTens1D
+  public :: nextModgCoeffQTens1D
 
   abstract interface
     subroutine ply_dof_nextCoeff(ansFuncX, ansFuncY, ansFuncZ, maxDegree)
@@ -76,20 +76,6 @@ contains
   end subroutine nextModgCoeffQTens
 
 
-  !> Return the number of degrees of freedom for Q polynomial space
-  pure function getDofsQTens(maxPolyDegree) result(dofs)
-    !---------------------------------------------------------------------------
-    !> The maximal polynomial degree per spatial direction
-    integer, intent(in) :: maxPolyDegree
-    !> The number of degrees of freedom for a Q tensor product polynomial
-    integer :: dofs
-    !---------------------------------------------------------------------------
-
-    dofs = (maxPolyDegree+1)**3
-
-  end function getDofsQTens
-
-
   !> The x, y and z ansatz degrees are turned into the degrees of the next
   !! ansatz function in the layered P list
   pure subroutine nextModgCoeffPTens(ansFuncX, ansFuncY, ansFuncZ, maxdegree)
@@ -130,45 +116,6 @@ contains
   end subroutine nextModgCoeffPTens
 
 
-  !> Return the number of degrees of freedom for broken polynomial space
-  pure function getDofsPTens(maxPolyDegree) result(dofs)
-    !---------------------------------------------------------------------------
-    !> The maximal polynomial degree per spatial direction (for P Tensor product
-    !! polynomials this assumed to be the same for each spatial direction).
-    integer, intent(in) :: maxPolyDegree
-    !> The number of degrees of freedom for a P tensor product polynomial
-    integer :: dofs
-    !---------------------------------------------------------------------------
-
-    dofs = ((maxPolyDegree+1)*(maxPolyDegree+2)*(maxPolyDegree+3))/6
-
-  end function getDofsPTens
-
-
-  !> Return the position of a given ansatz function combination in the
-  !! linearized list of modal coefficients for Q-Tensor product polynomials.
-  pure function posOfModgCoeffQTens2D(ansFuncX, ansFuncY, ansFuncZ, &
-    &                                 maxDegree) result(pos)
-    !---------------------------------------------------------------------------
-    !> Ansatz function index in x direction. First ansatz function has index 1.
-    integer, intent(in) :: ansFuncX
-    !> Ansatz function index in y direction. First ansatz function has index 1.
-    integer, intent(in) :: ansFuncY
-    !> Ansatz function index in z direction. First ansatz function has index 1.
-    integer, intent(in) :: ansFuncZ
-    !> The maximal polynomial degree per spatial direction
-    integer, intent(in) :: maxDegree
-    !> The position of the modal coefficient in the list of modal coefficients.
-    integer :: pos
-    !---------------------------------------------------------------------------
-    integer :: polyOrd
-
-    polyOrd = maxDegree+1
-    pos = ansFuncX + (ansFuncY-1)*polyOrd
-
-  end function posOfModgCoeffQTens2D
-
-
   !> The x, y and z ansatz degrees are turned into the degrees of the next
   !! ansatz function in the linearized Q tensor
   pure subroutine nextModgCoeffQTens2D(ansFuncX, ansFuncY, ansFuncZ, maxdegree)
@@ -194,47 +141,6 @@ contains
       ansFuncY = ansFuncY+1
     end if
   end subroutine nextModgCoeffQTens2D
-
-
-  !> Return the number of degrees of freedom for Q polynomial space
-  pure function getDofsQTens2D(maxPolyDegree) result(dofs)
-    !---------------------------------------------------------------------------
-    !> The maximal polynomial degree per spatial direction
-    integer, intent(in) :: maxPolyDegree
-    !> The number of degrees of freedom for a Q tensor product polynomial
-    integer :: dofs
-    !---------------------------------------------------------------------------
-
-    dofs = (maxPolyDegree+1)**2
-
-  end function getDofsQTens2D
-
-
-  !> Return the position of a given ansatz function combination in the
-  !! linearized list of modal coefficients for P-Tensor product polynomials.
-  pure function posOfModgCoeffPTens2D(ansFuncX, ansFuncY, ansFuncZ, maxdegree) &
-    & result(pos)
-    !---------------------------------------------------------------------------
-    !> Ansatz function index in x direction. First ansatz function has index 1.
-    integer, intent(in) :: ansFuncX
-    !> Ansatz function index in y direction. First ansatz function has index 1.
-    integer, intent(in) :: ansFuncY
-    !> Ansatz function index in Z direction. First ansatz function has index 1.
-    integer, intent(in) :: ansFuncZ
-    !> The maximal polynomial degree per spatial direction
-    integer, intent(in) :: maxdegree
-    !---------------------------------------------------------------------------
-    integer :: pos, degSum, layerStart, polyOrd
-    !---------------------------------------------------------------------------
-
-    polyOrd = maxdegree+1
-
-    ! integer divisions are no mistake here.
-    degSum = (ansFuncX-1) + (ansFuncY-1)
-    layerStart = ((degSum) * (degSum+1)) / 2 + 1
-    pos = layerStart + (ansFuncY-1)
-
-  end function posOfModgCoeffPTens2D
 
 
   !> The x, y and z ansatz degrees are turned into the degrees of the next
@@ -269,42 +175,6 @@ contains
   end subroutine nextModgCoeffPTens2D
 
 
-  !> Return the number of degrees of freedom for broken polynomial space
-  pure function getDofsPTens2D(maxPolyDegree) result(dofs)
-    !---------------------------------------------------------------------------
-    !> The maximal polynomial degree per spatial direction (for P Tensor product
-    !! polynomials this assumed to be the same for each spatial direction).
-    integer, intent(in) :: maxPolyDegree
-    !> The number of degrees of freedom for a P tensor product polynomial
-    integer :: dofs
-    !---------------------------------------------------------------------------
-
-    dofs = (maxPolyDegree+1)*(maxPolyDegree+2)/2
-
-  end function getDofsPTens2D
-
-  !> Return the position of a given ansatz function combination in the
-  !! linearized list of modal coefficients for Q-Tensor product polynomials.
-  pure function posOfModgCoeffQTens1D(ansFuncX, ansFuncY, ansFuncZ, &
-    &                                 maxDegree) result(pos)
-    !---------------------------------------------------------------------------
-    !> Ansatz function index in x direction. First ansatz function has index 1.
-    integer, intent(in) :: ansFuncX
-    !> Ansatz function index in y direction. First ansatz function has index 1.
-    integer, intent(in) :: ansFuncY
-    !> Ansatz function index in z direction. First ansatz function has index 1.
-    integer, intent(in) :: ansFuncZ
-    !> The maximal polynomial degree per spatial direction
-    integer, intent(in) :: maxDegree
-    !> The position of the modal coefficient in the list of modal coefficients.
-    integer :: pos
-    !---------------------------------------------------------------------------
-
-    pos = ansFuncX
-
-  end function posOfModgCoeffQTens1D
-
-
   !> The x, y and z ansatz degrees are turned into the degrees of the next
   !! ansatz function in the linearized Q tensor
   pure subroutine nextModgCoeffQTens1D(ansFuncX, ansFuncY, ansFuncZ, maxdegree)
@@ -320,42 +190,6 @@ contains
     ansFuncX = ansFuncX +1
 
   end subroutine nextModgCoeffQTens1D
-
-
-  !> Return the number of degrees of freedom for Q polynomial space
-  pure function getDofsQTens1D(maxPolyDegree) result(dofs)
-    !---------------------------------------------------------------------------
-    !> The maximal polynomial degree per spatial direction
-    integer, intent(in) :: maxPolyDegree
-    !> The number of degrees of freedom for a Q tensor product polynomial
-    integer :: dofs
-    !---------------------------------------------------------------------------
-
-    dofs = (maxPolyDegree+1)
-
-  end function getDofsQTens1D
-
-
-  !> Return the position of a given ansatz function combination in the
-  !! linearized list of modal coefficients for P-Tensor product polynomials.
-  pure function posOfModgCoeffPTens1D(ansFuncX, ansFuncY, ansFuncZ, maxdegree) &
-    & result(pos)
-    !---------------------------------------------------------------------------
-    !> Ansatz function index in x direction. First ansatz function has index 1.
-    integer, intent(in) :: ansFuncX
-    !> Ansatz function index in y direction. First ansatz function has index 1.
-    integer, intent(in) :: ansFuncY
-    !> Ansatz function index in Z direction. First ansatz function has index 1.
-    integer, intent(in) :: ansFuncZ
-    !> The maximal polynomial degree per spatial direction
-    integer, intent(in) :: maxdegree
-    !> The position
-    integer :: pos
-    !---------------------------------------------------------------------------
-
-    pos = ansFuncX
-
-  end function posOfModgCoeffPTens1D
 
 
   !> The x, y and z ansatz degrees are turned into the degrees of the next
@@ -374,19 +208,5 @@ contains
 
   end subroutine nextModgCoeffPTens1D
 
-
-  !> Return the number of degrees of freedom for broken polynomial space
-  pure function getDofsPTens1D(maxPolyDegree) result(dofs)
-    !---------------------------------------------------------------------------
-    !> The maximal polynomial degree per spatial direction (for P Tensor product
-    !! polynomials this assumed to be the same for each spatial direction).
-    integer, intent(in) :: maxPolyDegree
-    !> The number of degrees of freedom for a P tensor product polynomial
-    integer :: dofs
-    !---------------------------------------------------------------------------
-
-    dofs = (maxPolyDegree+1)
-
-  end function getDofsPTens1D
 
 end module ply_dof_module
