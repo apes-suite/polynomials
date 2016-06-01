@@ -464,55 +464,55 @@ contains
 
       deallocate(pointval)
 
-    case('adaptive')
-      write(logunit(1),*) 'Adaptive subsampling is not implemented yet!'
-      write(logunit(1),*) 'Stopping...'
-      call tem_abort()
-     
-      iLevel = 1
-      write(*,*) 'sampling level ', iLevel 
-      call ply_adaptive_sample_data( orig_mesh   = orig_mesh,        &
-        &                            orig_bcs    = orig_bcs,         &
-        &                            eps_osci    = eps_osci,         &
-        &                            subTree     = tracking%subtree, & 
-        &                            tracking    = tracking,         &
-        &                            refined_sub = refined_sub       ) 
-      cur = 0
-      call tem_refine_global_subtree ( orig_mesh = orig_mesh,     &
-        &                              orig_bcs  = orig_bcs,      &
-        &                              subtree   = refined_sub,   &
-        &                              new_mesh  = tmp_mesh(cur), &
-        &                              new_bcs   = tmp_bcs(cur),  &
-        &                              restrict_to_sub = .false.  )
-      call tem_Create_subTreee_of( inTree  = tmp_mesh(cur),           &
-        &                          bc_prop = tmp_bcs(cur),            &
-        &                          subTree = tmp_subtree,             &
-        &                          inShape = tracking%header%geometry )
-      do iLevel=2,me%max_nLevels !Loop to maximum level of refinement
-        write(logunit(6),*) 'sampling level ', iLevel
-        prev = mod(iLevel-2, 2)
-        cur = mod(iLevel-1, 2)
-        call ply_adaptive_sample_data( orig_mesh = tmp_mesh(prev), &
-          &                            orig_bcs  = tmp_bcs(prev),  &
-          &                            eps_osci  = eps_osci,       &
-          &                            subTree   = tmp_subtree,    &
-          &                            tracking  = tracking,       &
-          &                            refined_sub = refined_sub   )
-        call tem_refine_global_subtree( orig_mesh = tmp_mesj(prev), &
-          &                             orig_bcs  = tmp_bcs(prev),  &
-          &                             subtree   = refined_sub,    &
-          &                             new_mesh  = tmp_mesh(cur),  &
-          &                             new_bcs   = tmp_bcs(cur),   &
-          &                             restrict_to_sub = .false.   )
-        call tem_create_subTree_of( inTree  = tmp_mesh(cur),           &
-          &                         bc_prop = tmp_bcs(cur),            &
-          &                         subtree = tmp_subtree,             &
-          &                         inShape = tracking%header%geometry )
-      end do  
-
-      call tem_create_tree_from_sub( intree  = tmp_mesh(cur), &
-        &                            subtree = tmp_subtree,   &
-        &                            newtree = new_mesh       )
+!DF!    case('adaptive')
+!DF!      write(logunit(1),*) 'Adaptive subsampling is not implemented yet!'
+!DF!      write(logunit(1),*) 'Stopping...'
+!DF!      call tem_abort()
+!DF!     
+!DF!      iLevel = 1
+!DF!      write(*,*) 'sampling level ', iLevel 
+!DF!      call ply_adaptive_sample_data( orig_mesh   = orig_mesh,        &
+!DF!        &                            orig_bcs    = orig_bcs,         &
+!DF!        &                            eps_osci    = eps_osci,         &
+!DF!        &                            subTree     = tracking%subtree, & 
+!DF!        &                            tracking    = tracking,         &
+!DF!        &                            refined_sub = refined_sub       ) 
+!DF!      cur = 0
+!DF!      call tem_refine_global_subtree ( orig_mesh = orig_mesh,     &
+!DF!        &                              orig_bcs  = orig_bcs,      &
+!DF!        &                              subtree   = refined_sub,   &
+!DF!        &                              new_mesh  = tmp_mesh(cur), &
+!DF!        &                              new_bcs   = tmp_bcs(cur),  &
+!DF!        &                              restrict_to_sub = .false.  )
+!DF!      call tem_Create_subTreee_of( inTree  = tmp_mesh(cur),           &
+!DF!        &                          bc_prop = tmp_bcs(cur),            &
+!DF!        &                          subTree = tmp_subtree,             &
+!DF!        &                          inShape = tracking%header%geometry )
+!DF!      do iLevel=2,me%max_nLevels !Loop to maximum level of refinement
+!DF!        write(logunit(6),*) 'sampling level ', iLevel
+!DF!        prev = mod(iLevel-2, 2)
+!DF!        cur = mod(iLevel-1, 2)
+!DF!        call ply_adaptive_sample_data( orig_mesh = tmp_mesh(prev), &
+!DF!          &                            orig_bcs  = tmp_bcs(prev),  &
+!DF!          &                            eps_osci  = eps_osci,       &
+!DF!          &                            subTree   = tmp_subtree,    &
+!DF!          &                            tracking  = tracking,       &
+!DF!          &                            refined_sub = refined_sub   )
+!DF!        call tem_refine_global_subtree( orig_mesh = tmp_mesj(prev), &
+!DF!          &                             orig_bcs  = tmp_bcs(prev),  &
+!DF!          &                             subtree   = refined_sub,    &
+!DF!          &                             new_mesh  = tmp_mesh(cur),  &
+!DF!          &                             new_bcs   = tmp_bcs(cur),   &
+!DF!          &                             restrict_to_sub = .false.   )
+!DF!        call tem_create_subTree_of( inTree  = tmp_mesh(cur),           &
+!DF!          &                         bc_prop = tmp_bcs(cur),            &
+!DF!          &                         subtree = tmp_subtree,             &
+!DF!          &                         inShape = tracking%header%geometry )
+!DF!      end do  
+!DF!
+!DF!      call tem_create_tree_from_sub( intree  = tmp_mesh(cur), &
+!DF!        &                            subtree = tmp_subtree,   &
+!DF!        &                            newtree = new_mesh       )
 
     case default
       write(logunit(1),*) 'Not implemented sampling method!'
@@ -526,80 +526,81 @@ contains
   !----------------------------------------------------------------------------!
  
  
-  !----------------------------------------------------------------------------!
-  !> Adaptive subsampling of polynomial data
-  !!
-  subroutine ply_adaptive_sample_data( orig_mesh, orig_bcs, eps_osci, &
-    &                                  subTree, tracking, refined_sub )
-    !> The mesh that will be refined to be refined.
-    type(treelmesh_type), intent(in) :: orig_mesh
+!DF!  !----------------------------------------------------------------------------!
+!DF!  !> Adaptive subsampling of polynomial data
+!DF!  !!
+!DF!  subroutine ply_adaptive_sample_data( orig_mesh, orig_bcs, eps_osci, &
+!DF!    &                                  subTree, tracking, refined_sub )
+!DF!    !> The mesh that will be refined to be refined.
+!DF!    type(treelmesh_type), intent(in) :: orig_mesh
+!DF!
+!DF!    !> Boundary conditions for the  mesh.
+!DF!    type(tem_BC_prop_type), intent(in) :: orig_bcs
+!DF!
+!DF!    !> Maximum allowed oscillation of the solution
+!DF!    real, intent(in) :: eps_osci 
+!DF!  
+!DF!    !> A given subtree that needs to be refined.
+!DF!    type(tem_subtree_type), intent(in) :: subTree
+!DF!
+!DF!    !>
+!DF!    type(tem_tracking_type), intent(in) :: tracking
+!DF!  
+!DF!    !> Subtree that marks those elements that need to be refined
+!DF!    type(tem_subtree_type), intent(out) :: refined_sub
+!DF!    !----------------------------------------------------------------------!
+!DF!    integer, dimension(:,:,:) :: state  !Need a proper definiton of state
+!DF!    logical, allocatable :: refine(:)
+!DF!    integer :: iElem
+!DF!    integer :: iVar
+!DF!    integer :: nElems
+!DF!    integer :: nVars
+!DF!    integer :: nDofs
+!DF!    integer :: nScalars
+!DF!    
+!DF!    !----------------------------------------------------------------------!
+!DF!    
+!DF!    !> Adaptive subsampling means the voxelization of the polynomial data
+!DF!    !! based on the properties of the solution (the polynomial to subsample).
+!DF!    !! It results in a fine resolution of flow features where many changes in
+!DF!    !! the solution are observed while sticking to coarse large elements
+!DF!    !! elsewhere.
+!DF!    
+!DF!    !> Procedure to do ....
+!DF!    !! Check for oscillation of the solution
+!DF!    !! Create an array which marks those elements that need to be refined
+!DF!    !! with true statement
+!DF!    nElems = subTree%nElems
+!DF!    nDofs =  
+!DF!    nScalars = tracking%varmap%nScalars
+!DF!    nVars = tracking%varmap%varPos%nVals
+!DF!    
+!DF!    state(1:nDofs, 1:nScalars, 1:nElems) !Needs to be filled with data
+!DF!    
+!DF!    allocate(refine(nElems))
+!DF!   
+!DF!    do iElem=1,nElems
+!DF!      do iVar=1,nVars
+!DF!        WV(iVar) = sqrt(sum(state(2:nDofs,ivar,iElem)**2)) !WV()???
+!DF!      end do
+!DF!      refine(iElem) = (maxval(WV) > eps_osci)
+!DF!      
+!DF!      if (refine(iElem)) then
+!DF!        ! Copy element iElem from Subtree to refined_sub so it will be refined
+!DF!        refined_sub%treeid(iElem) = Subtree%treeid(iElem)
+!DF!      else
+!DF!        ! Don't copy element iElem from Subtree 
+!DF!      end if
+!DF!
+!DF!      !if (refine(iElem)) then
+!DF!      !  new_state(:,:,childs(iElem)) = project(state(iElem)) !project()???
+!DF!      !else
+!DF!      !  new_state(1,:,child(iElem)) = state(1,:,iElem) ! Integral mean value
+!DF!      !end if
+!DF!    end do
+!DF!    
+!DF!  end subroutine ply_adaptive_sample_data
 
-    !> Boundary conditions for the  mesh.
-    type(tem_BC_prop_type), intent(in) :: orig_bcs
-
-    !> Maximum allowed oscillation of the solution
-    real, intent(in) :: eps_osci 
-  
-    !> A given subtree that needs to be refined.
-    type(tem_subtree_type), intent(in) :: subTree
-
-    !>
-    type(tem_tracking_type), intent(in) :: tracking
-  
-    !> Subtree that marks those elements that need to be refined
-    type(tem_subtree_type), intent(out) :: refined_sub
-    !----------------------------------------------------------------------!
-    integer, dimension(:,:,:) :: state  !Need a proper definiton of state
-    logical, allocatable :: refine(:)
-    integer :: iElem
-    integer :: iVar
-    integer :: nElems
-    integer :: nVars
-    integer :: nDofs
-    integer :: nScalars
-    
-    !----------------------------------------------------------------------!
-    
-    !> Adaptive subsampling means the voxelization of the polynomial data
-    !! based on the properties of the solution (the polynomial to subsample).
-    !! It results in a fine resolution of flow features where many changes in
-    !! the solution are observed while sticking to coarse large elements
-    !! elsewhere.
-    
-    !> Procedure to do ....
-    !! Check for oscillation of the solution
-    !! Create an array which marks those elements that need to be refined
-    !! with true statement
-    nElems = subTree%nElems
-    nDofs =  
-    nScalars = tracking%varmap%nScalars
-    nVars = tracking%varmap%varPos%nVals
-    
-    state(1:nDofs, 1:nScalars, 1:nElems) !Needs to be filled with data
-    
-    allocate(refine(nElems))
-   
-    do iElem=1,nElems
-      do iVar=1,nVars
-        WV(iVar) = sqrt(sum(state(2:nDofs,ivar,iElem)**2)) !WV()???
-      end do
-      refine(iElem) = (maxval(WV) > eps_osci)
-      
-      if (refine(iElem)) then
-        ! Copy element iElem from Subtree to refined_sub so it will be refined
-        refined_sub%treeid(iElem) = Subtree%treeid(iElem)
-      else
-        ! Don't copy element iElem from Subtree 
-      end if
-
-      !if (refine(iElem)) then
-      !  new_state(:,:,childs(iElem)) = project(state(iElem)) !project()???
-      !else
-      !  new_state(1,:,child(iElem)) = state(1,:,iElem) ! Integral mean value
-      !end if
-    end do
-    
-  end subroutine ply_adaptive_sample_data
   !----------------------------------------------------------------------------!
   !> Get sampled data.
   !!
