@@ -44,13 +44,19 @@ contains
   !! for Legendre expansion.
   !! VK: change maxPolyDegree to number of quadpoints to include the dealising factor
   subroutine ply_init_legFpt_2D( maxPolyDegree, nVars, fpt, blocksize, &
-    &                            lobattoPoints, subblockingWidth )
+    &                            striplen, lobattoPoints, subblockingWidth )
     !---------------------------------------------------------------------------
     integer, intent(in) :: maxPolyDegree
     integer, intent(in) :: nVars
     type(ply_legFpt_type), intent(inout) :: fpt
     !> The blocksize of the underlying fast Legendre to Chebyshev transformation.
     integer, intent(in), optional :: blocksize
+
+    !> Length to use in vectorization, this is the number of independent
+    !! matrix multiplications that are to be done simultaneously.
+    !!
+    !! Defaults to 512, but the optimal setting is platform specific.
+    integer, optional, intent(in) :: striplen
     !> Use Chebyshev-Lobtatto Points (true) or simple Chebyshev points (false)
     logical, intent(in), optional :: lobattoPoints
     !> The width of the subblocks used during the unrolled base exchange to
@@ -75,11 +81,13 @@ contains
       &                params           = fpt%legToChebParams, &
       &                trafo            = ply_legToCheb_param, &
       &                blocksize        = blocksize,           &
+      &                striplen         = striplen,            &
       &                subblockingWidth = subblockingWidth     )
     call ply_fpt_init( n                = maxPolyDegree + 1,   &
       &                params           = fpt%chebToLegParams, &
       &                trafo            = ply_chebToLeg_param, &
       &                blocksize        = blocksize,           &
+      &                striplen         = striplen,            &
       &                subblockingWidth = subblockingWidth     )
 
     ! Create the buffers for the intermediate arrays
@@ -211,7 +219,7 @@ contains
 
   ! x-direction
    xStripLoop: do iStrip = 1, n, striplen
-     do iAlph = iStrip, min(iStrip+striplen-1, n)  !z_Trafo
+     do iAlph = iStrip, min(iStrip+striplen-1, n)  
        alph((iAlph-iStrip)*n+1:(iAlph-iStrip+1)*n) = &
            & PntVal(iAlph::n) !ztrafo
      end do
