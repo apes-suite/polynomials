@@ -1,3 +1,4 @@
+?? include "ply_dof_module.inc"
 !> This module provides the means to sample polynomial data to break it down
 !! into voxels for visualization.
 !!
@@ -31,7 +32,7 @@ module ply_sampling_module
     &                          tem_varSys_getParams_dummy, &
     &                          tem_varSys_setParams_dummy
 
-  use ply_dof_module, only: q_space, p_space, getDofsQtens, getDofsPtens, &
+  use ply_dof_module, only: q_space, p_space, &
     &                       nextModgCoeffQTens, nextModgCoeffPTens
   use ply_modg_basis_module, only: legendre_1D
 
@@ -171,8 +172,8 @@ contains
   !> Sampling polynomial data from a given array and mesh to a new mesh with
   !! a new data array, where just a single degree of freedom per element is
   !! used.
-  subroutine ply_sample_data( me, orig_mesh, orig_bcs, varsys, var_degree, &
-    &                         var_space, tracking, time, new_mesh, resvars )
+  subroutine ply_sample_data( me, orig_mesh, orig_bcs, varsys, var_degree,  &
+    &                         var_space, tracking, time, new_mesh, resvars  )
     !> A ply_sampling_type to describe the sampling method.
     type(ply_sampling_type), intent(in) :: me
 
@@ -258,9 +259,12 @@ contains
     select case(trim(me%method))
     case('fixed')
       cur = 0
-      call tem_refine_global_subtree( orig_mesh, orig_bcs, tracking%subtree, &
-        &                             tmp_mesh(0), tmp_bcs(0),               &
-        &                             restrict_to_sub = .true.               )
+      call tem_refine_global_subtree( orig_mesh = orig_mesh,        &
+        &                             orig_bcs  = orig_bcs,         &
+        &                             subtree   = tracking%subtree, &
+        &                             new_mesh  = tmp_mesh(cur),    &
+        &                             new_bcs   =  tmp_bcs(cur),    &
+        &                             restrict_to_sub = .true.      )
       call tem_create_subTree_of( inTree  = tmp_mesh(0),             &
         &                         bc_prop = tmp_bcs(0),              &
         &                         subtree = tmp_subtree,             &
@@ -269,10 +273,12 @@ contains
         write(logunit(6),*) 'sampling level ', iLevel
         prev = mod(iLevel-2, 2)
         cur = mod(iLevel-1, 2)
-        call tem_refine_global_subtree( tmp_mesh(prev), tmp_bcs(prev), &
-          &                             tmp_subtree,                   &
-          &                             tmp_mesh(cur), tmp_bcs(cur),   &
-          &                             restrict_to_sub = .true.       )
+        call tem_refine_global_subtree( orig_mesh = tmp_mesh(prev), &
+          &                             orig_bcs  = tmp_bcs(prev),  &
+          &                             subtree   = tmp_subtree,    &
+          &                             new_mesh  = tmp_mesh(cur),  &
+          &                             new_bcs   = tmp_bcs(cur),   &
+          &                             restrict_to_sub = .true.    )
         call tem_destroy_subtree(tmp_subtree)
         nullify(tmp_bcs(prev)%property)
         nullify(tmp_bcs(prev)%header)
@@ -304,11 +310,11 @@ contains
         varpos = tracking%varmap%varPos%val(iVar)
         select case(var_space(varpos))
         case (q_space)
-          vardofs(iVar) = getDofsQTens(var_degree(varpos))
+?? copy :: getDofsQTens(var_degree(varpos), vardofs(iVar))
           maxdofs = max( maxdofs, varsys%method%val(varpos)%nComponents &
             &                     * vardofs(iVar)                       )
         case (p_space)
-          vardofs(iVar) = getDofsPTens(var_degree(varpos))
+?? copy :: getDofsPTens(var_degree(varpos), vardofs(iVar))
           maxdofs = max( maxdofs, varsys%method%val(varpos)%nComponents &
             &                     * vardofs(iVar)                       )
         end select
@@ -458,13 +464,13 @@ contains
       write(logunit(1),*) 'Not implemented sampling method!'
       write(logunit(1),*) 'Stopping...'
       call tem_abort()
-
+    
     end select
 
   end subroutine ply_sample_data
   !----------------------------------------------------------------------------!
   !----------------------------------------------------------------------------!
-
+ 
 
   !----------------------------------------------------------------------------!
   !> Get sampled data.

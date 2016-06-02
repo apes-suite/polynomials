@@ -6,7 +6,7 @@ module ply_modg_basis_module
   ! Treelm modules
   use env_module,                  only: rk
   ! Ateles modules
-  use ply_dof_module,               only: nextModgCoeffPTens, getDofsPTens, &
+  use ply_dof_module,               only: nextModgCoeffPTens, &
     &                                     Q_space, P_space
   use ply_space_integration_module, only: ply_gaussLegPoints
 
@@ -394,7 +394,7 @@ contains
     real(kind=rk), allocatable, intent(out) :: polyVal(:,:)
     !---------------------------------------------------------------------------
     real(kind=rk), allocatable :: polyValX(:,:), polyValY(:,:), polyValZ(:,:)
-    integer :: iAnsX, iAnsY, iAnsZ, iAns, ansPos
+    integer :: iAnsX, iAnsY, iAnsZ, iAns, ansPos, ansPosMax
     real(kind=rk) :: n_q
     !---------------------------------------------------------------------------
 
@@ -453,7 +453,8 @@ contains
         iAnsX = 1
         iAnsY = 1
         iAnsZ = 1
-        do ansPos = 1, getDofsPTens(maxPolyDegree)
+?? copy :: getDofsPTens(maxPolyDegree, ansPosMax)
+        do ansPos = 1, ansPosMax
           polyVal(ansPos, :) = polyValX(iAnsX,:) * polyValY(iAnsY,:) &
             &                                    * polyValZ(iAnsZ,:)
           call nextModgCoeffPTens(iAnsX, iAnsY, iAnsZ, maxPolyDegree)

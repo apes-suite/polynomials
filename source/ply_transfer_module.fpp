@@ -7,7 +7,7 @@
 module ply_transfer_module
   use env_module, only: rk
 
-  use ply_dof_module, only: P_Space, Q_space, posOfModgCoeffPTens2D, &
+  use ply_dof_module, only: P_Space, Q_space,     &
     &                       nextModgCoeffPTens2D, &
     &                       nextModgCoeffPTens
 
@@ -136,7 +136,7 @@ contains
         in_X = 1
         in_Y = 1
         do iDof=1,indofs
-          in_pos = posOfModgCoeffPTens2D(in_X, in_Y, 0, indegree)
+?? copy :: posOfModgCoeffPTens2D(in_X, in_Y, in_pos)
           out_pos = in_X + (outdegree+1)*(in_Y-1)
           outdat(out_pos) = indat(in_pos)
           ! Ensure, that next iteration is in the minord range
@@ -160,7 +160,7 @@ contains
         out_X = 1
         out_Y = 1
         do iDof=1,outdofs
-          out_pos = posOfModgCoeffPTens2D(out_X, out_Y, 0, outdegree)
+?? copy :: posOfModgCoeffPTens2D(out_X, out_Y, out_pos)
           in_pos = out_X + (indegree+1)*(out_Y-1)
           outdat(out_pos) = indat(in_pos)
           ! Ensure, that next iteration is in the target range
@@ -422,10 +422,7 @@ contains
       case(2) i1_out_d
         outdat = 0.0_rk
         do iMode=1,degree+1
-          iPos = posOfModgCoeffPTens2D( ansFuncX  = iMode, &
-            &                           ansFuncY  = 1,     &
-            &                           ansFuncZ  = 1,     &
-            &                           maxDegree = degree )
+?? copy :: posOfModgCoeffPTens2D( iMode, 1, iPos )
           outdat(iPos) = indat(iMode)
         end do
 
@@ -444,10 +441,7 @@ contains
       i2_out_d: select case(outdim)
       case(1) i2_out_d
         do iMode=1,degree+1
-          iPos = posOfModgCoeffPTens2D( ansFuncX  = iMode, &
-            &                           ansFuncY  = 1,     &
-            &                           ansFuncZ  = 1,     &
-            &                           maxDegree = degree )
+?? copy :: posOfModgCoeffPTens2D( iMode, 1, iPos )
           outdat(iMode) = indat(iPos)
         end do
 

@@ -4,8 +4,7 @@
 module ply_oversample_module
 
   use env_module,               only: rk, labelLen
-  use ply_dof_module,           only: posOfModgCoeffPTens2D, &
-    &                                 nextModgCoeffPTens,    &
+  use ply_dof_module,           only: nextModgCoeffPTens,    &
     &                                 nextModgCoeffPTens2D,  &
     &                                 Q_space, P_space
   use ply_poly_project_module,  only: ply_poly_project_type
@@ -293,8 +292,7 @@ contains
       iDegY = 1
       iDegZ = 0 ! not used in posOfModgCoeffPTens_2D, nextModgCoeffPTens
       do idof = 1, poly_proj%body_2d%min_dofs
-        dof = posOfModgCoeffPTens2D(iDegX, iDegY, iDegZ, &
-          &                         poly_proj%maxPolydegree)
+?? copy :: posOfModgCoeffPTens2D(iDegX, iDegY, dof)
         dofOverSamp = iDegX + (iDegY-1)*(oversamp_degree+1)
         modalCoeffs(dofOverSamp,1:nPVars) = state(dof,1:nPVars)
         call nextModgCoeffPTens2D(iDegX, iDegY, iDegZ, poly_proj%min_degree)
@@ -364,8 +362,7 @@ contains
       iDegY = 1
       iDegZ = 0 ! not used in posOfModgCoeffPTens_2D, nextModgCoeffPTens
       do idof = 1, poly_proj%body_2d%min_dofs
-        dof = posOfModgCoeffPTens2D(iDegX, iDegY, iDegZ, &
-          &                         poly_proj%maxPolydegree)
+?? copy :: posOfModgCoeffPTens2D(iDegX, iDegY, dof)
         dofOverSamp = iDegX + (iDegY-1)*(oversamp_degree+1)
         state(dof,1:nPVars) = modalCoeffs(dofOverSamp,1:nPVars)
         call nextModgCoeffPTens2D(iDegX, iDegY, iDegZ, poly_proj%min_degree)

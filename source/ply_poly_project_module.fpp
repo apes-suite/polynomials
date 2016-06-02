@@ -1,3 +1,4 @@
+?? include "ply_dof_module.inc"
 module ply_poly_project_module
   use env_module,                only: rk, labelLen
 
@@ -11,9 +12,8 @@ module ply_poly_project_module
   use tem_tools_module,          only: tem_horizontalSpacer
 
   use ply_modg_basis_module,     only: evalLegendreTensPoly, scalProdLeg
-  use ply_dof_module,            only: getDofsPTens,getdofsptens2d, &
-    &                                  getDofsPTens1D, Q_space, P_space
-  use ply_prj_header_module, only: ply_prj_header_type,    &
+  use ply_dof_module,            only: Q_space, P_space
+  use ply_prj_header_module,     only: ply_prj_header_type,        &
     &                                  assignment(=),              &
     &                                  operator(==), operator(>=), &
     &                                  operator(/=), operator(<),  &
@@ -351,12 +351,12 @@ contains
        me%body_2d%min_dofs = (me%min_degree+1)**2
        me%body_1d%min_dofs = me%min_degree+1
     else !p_space
-       me%body_3d%ndofs = getDofsPTens(me%maxPolyDegree)
-       me%body_2d%ndofs = getDofsPTens2d(me%maxPolyDegree)
-       me%body_1d%ndofs = getDofsPTens1d(me%maxPolyDegree)
-       me%body_3d%min_dofs = getDofsPTens(me%min_degree)
-       me%body_2d%min_dofs = getDofsPTens2d(me%min_degree)
-       me%body_1d%min_dofs = getDofsPTens1d(me%min_degree)
+?? copy :: getDofsPTens(me%maxPolyDegree, me%body_3d%ndofs)
+?? copy :: getDofsPTens2d(me%maxPolyDegree, me%body_2d%ndofs)
+?? copy :: getDofsPTens1d(me%maxPolyDegree, me%body_1d%ndofs)
+?? copy :: getDofsPTens(me%min_degree, me%body_3d%min_dofs)
+?? copy :: getDofsPTens2d(me%min_degree, me%body_2d%min_dofs)
+?? copy :: getDofsPTens1d(me%min_degree, me%body_1d%min_dofs)
     end if
 
     me%body_3d%nquadpoints = numQuadPointsPerDir**3
