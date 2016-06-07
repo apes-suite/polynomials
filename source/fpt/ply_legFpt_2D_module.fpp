@@ -91,7 +91,8 @@ contains
       &                subblockingWidth = subblockingWidth     )
 
     ! Create the buffers for the intermediate arrays
-    n = fpt%legToChebParams%n**2
+!   n = fpt%legToChebParams%n**2
+    n = fpt%legToChebParams%n
 
     ! Temprorary arrays to initialize FFTW real->real transformations
     allocate( tmpIn(n, nVars) )
@@ -111,41 +112,33 @@ contains
 
     if(.not.lob) then
       ! Init the DCT III ( Leg -> Point values )
-      fpt%planChebToPnt = fftw_plan_r2r_2d( n0 = fpt%legToChebParams%n,&
-                                          & n1 = fpt%legToChebParams%n, &
+      fpt%planChebToPnt = fftw_plan_r2r_1d( n = fpt%legToChebParams%n,&
                                           & in = tmpIn, &!legCoeffs, &
                                           & out = tmpOut, &!fpt%pntVal, &
-                                          & kind0 = FFTW_REDFT01, &
-                                          & kind1 = FFTW_REDFT01, &
+                                          & kind = FFTW_REDFT01, &
                                           & flags = FFTW_ESTIMATE )
 
       ! Init the DCT II ( Point values -> Leg )
-      fpt%planPntToCheb = fftw_plan_r2r_2d( n0 = fpt%legToChebParams%n, &
-                                          & n1 = fpt%legToChebParams%n, &
+      fpt%planPntToCheb = fftw_plan_r2r_1d( n = fpt%legToChebParams%n, &
                                           & in = tmpIn, & !fpt%pntVal,&
                                           & out = tmpOut, & !legCoeffs, &
-                                          & kind0 = FFTW_REDFT10, &
-                                          & kind1 = FFTW_REDFT10, &
+                                          & kind = FFTW_REDFT10, &
                                           & flags = FFTW_ESTIMATE )
 
       deallocate( tmpIn, tmpOut )
     else
       ! Init the DCT I  (Leg -> nodal): To be used with a normalization factor for trafo ...
-      fpt%planChebToPnt = fftw_plan_r2r_2d( n0 = fpt%legToChebParams%n,&
-                                          & n1 = fpt%legToChebParams%n, &
+      fpt%planChebToPnt = fftw_plan_r2r_1d( n = fpt%legToChebParams%n,&
                                           & in = tmpIn, &!legCoeffs, &
                                           & out = tmpOut, &!fpt%pntVal, &
-                                          & kind0 = FFTW_REDFT00, &
-                                          & kind1 = FFTW_REDFT00, &
+                                          & kind = FFTW_REDFT00, &
                                           & flags = FFTW_ESTIMATE )
 
       ! Init the DCT I  (nodal -> Leg): To be used with a normalization factor for trafo ...
-      fpt%planPntToCheb = fftw_plan_r2r_2d( n0 = fpt%legToChebParams%n, &
-                                          & n1 = fpt%legToChebParams%n, &
+      fpt%planPntToCheb = fftw_plan_r2r_1d( n = fpt%legToChebParams%n, &
                                           & in = tmpIn, & !fpt%pntVal,&
                                           & out = tmpOut, & !legCoeffs, &
-                                          & kind0 = FFTW_REDFT00, &
-                                          & kind1 = FFTW_REDFT00, &
+                                          & kind = FFTW_REDFT00, &
                                           & flags = FFTW_ESTIMATE )
 
       deallocate( tmpIn, tmpOut )
@@ -174,6 +167,7 @@ contains
    !---------------------------------------------------------------------------
    integer :: iFunc, iFuncX, iFuncY, funcIndex
    integer :: striplen, iStrip, n, iAlph, nIndeps
+   integer :: iDof
    real(kind=rk), dimension(:), allocatable :: alph
    real(kind=rk), dimension(:), allocatable :: gam
    real(kind=rk) :: normFactor
@@ -184,7 +178,6 @@ contains
 
    allocate(alph(min(striplen, n)*n))
    allocate(gam(min(striplen, n)*n))
-
    ! original layout (n = 3):
    !  1  2  3
    !  4  5  6
@@ -210,12 +203,39 @@ contains
        &                gam = gam,                    &
        &                nIndeps = nIndeps,            &
        &                params = fpt%legToChebParams  )
-     
+
+   if(.not. lobattoPoints) then
+
+     ! Normalize the coefficients of the Chebyshev polynomials due
+     ! to the unnormalized version of DCT-III in the FFTW.
+     !$OMP DO
+!     do iFunc = 2, fpt%legToChebParams%n
+     do iFunc = 2, n
+       gam(iFunc:n**2:n) = ((-1.0_rk)**(iFunc-1)) * gam(iFunc:n**2:n) / 2.0_rk
+     end do
+     !$OMP END DO
+
+   else
+
+     ! Transform Chebyshev expansion to point values at Chebyshev nodes by
+     ! DCT I and normalization factor ...
+     !$OMP WORKSHARE
+     gam(2:fpt%legToChebParams%n-1) &
+       &  = 0.5_rk * gam(2:fpt%legToChebParams%n-1)
+     !$OMP END WORKSHARE
+
+   end if
+
+     !$OMP SINGLE
+do iDof = 1,n**2,n
+     call fftw_execute_r2r( fpt%planChebToPnt, gam(iDof:iDof+n-1), alph(iDof:iDof+n-1) )
+end do
+     !$OMP END SINGLE
+
      ! Write gam to pntVal array
-     pntVal((iStrip-1)*n+1 : (iStrip+nIndeps-1)*n)  = gam(1:nIndeps*n)
+     pntVal((iStrip-1)*n+1 : (iStrip+nIndeps-1)*n)  = alph(1:nIndeps*n)
 
    end do yStripLoop
-
 
   ! x-direction
    xStripLoop: do iStrip = 1, n, striplen
@@ -233,11 +253,61 @@ contains
        &                nIndeps = nIndeps,            &
        &                params = fpt%legToChebParams  )
 
+   if(.not. lobattoPoints) then
+
+     ! Normalize the coefficients of the Chebyshev polynomials due
+     ! to the unnormalized version of DCT-III in the FFTW.
+     !$OMP DO
+!     do iFunc = 2, fpt%legToChebParams%n
+     do iFunc = 2, n
+       gam(iFunc:n**2:n) = ((-1.0_rk)**(iFunc-1)) * gam(iFunc:n**2:n) / 2.0_rk
+     end do
+     !$OMP END DO
+
+   else
+
+     ! Transform Chebyshev expansion to point values at Chebyshev nodes by
+     ! DCT I and normalization factor ...
+     !$OMP WORKSHARE
+     gam(2:fpt%legToChebParams%n-1) &
+       &  = gam(2:fpt%legToChebParams%n-1) / 2.0_rk
+     !$OMP END WORKSHARE
+
+   end if
+!   if(.not. lobattoPoints) then
+!
+!     ! Normalize the coefficients of the Chebyshev polynomials due
+!     ! to the unnormalized version of DCT-III in the FFTW.
+!     !$OMP DO
+!     do iFunc = 2, fpt%legToChebParams%n
+!       gam(iFunc) = ((-1.0_rk)**(iFunc-1)) * gam(iFunc) / 2.0_rk
+!     end do
+!     !$OMP END DO
+!
+!   else
+!
+!     ! Transform Chebyshev expansion to point values at Chebyshev nodes by
+!     ! DCT I and normalization factor ...
+!     !$OMP WORKSHARE
+!     gam(2:fpt%legToChebParams%n-1) &
+!       &  = 0.5_rk * gam(2:fpt%legToChebParams%n-1)
+!     !$OMP END WORKSHARE
+!
+!   end if
+
      ! todo: fft on temp
      ! temp -> pntVal (stride-1 writing)
+     !$OMP SINGLE
+!     call fftw_execute_r2r( fpt%planChebToPnt, gam(:), alph(:) )
+do iDof = 1,n**2,n
+     call fftw_execute_r2r( fpt%planChebToPnt,  &
+       &                    gam(iDof:iDof+n-1), &
+       &                    alph(iDof:iDof+n-1) )
+end do
+     !$OMP END SINGLE
 
      ! pntVal((iStrip-1)*n+1:min((iStrip+striplen-1)*n, n_cubed))  = gam(:)
-     legCoeffs((iStrip-1)*n+1 : (iStrip+nIndeps-1)*n)  = gam(1:nIndeps*n)
+     pntVal((iStrip-1)*n+1 : (iStrip+nIndeps-1)*n)  = alph(1:nIndeps*n)
 
    end do xStripLoop
 
@@ -254,63 +324,63 @@ contains
 !     &                        gam     = legCoeffs,             &
 !     &                        params  = fpt%legToChebParams    )
 
-   if (.not. lobattoPoints) then
-
-     ! Normalize the coefficients of the Chebyshev polynomials due
-     ! to the unnormalized version of DCT-III in the FFTW.
-     !$OMP DO
-     do iFunc = 1, fpt%legToChebParams%n**2
-       iFuncX = (iFunc-1)/fpt%legToChebParams%n+1
-       iFuncY = mod(iFunc-1,fpt%legToChebParams%n)+1
-       normFactor =   ((-1)**(iFuncX-1)) &
-                  & * ((-1)**(iFuncY-1)) * 0.25_rk
-       legCoeffs(ifunc) = normFactor * legCoeffs(ifunc)
-     end do
-     !$OMP END DO
-     !$OMP DO
-     do iFunc = 1, fpt%legToChebParams%n
-       ifuncY = 1 + (ifunc-1)*fpt%legToChebParams%n
-       legCoeffs(iFunc) = legCoeffs(iFunc)*2.0_rk
-       legCoeffs(iFuncY) = legCoeffs(iFuncY)*2.0_rk
-     end do
-     !$OMP END DO
-
-     ! Transform Chebyshev expansion to point values at Chebyshev nodes by DCT III
-     !$OMP SINGLE
-     call fftw_execute_r2r( fpt%planChebToPnt, legCoeffs(:), pntVal(:) )
-     !$OMP END SINGLE
-
-   else
-
-     ! Normalization factor for the DCT I of the transformation to point values
-     !$OMP DO
-     do iFunc = 1, (fpt%legToChebParams%n-2)**2
-       iFuncX = (iFunc-1)/(fpt%legToChebParams%n-2)+2
-       iFuncY = mod(iFunc-1,fpt%legToChebParams%n-2)+2
-?? copy :: posOfModgCoeffQTens(iFuncX, iFuncY, 1, fpt%legToChebParams%n-1, funcIndex)
-       legCoeffs(funcIndex) = legCoeffs(funcIndex) / 4.0_rk
-     end do
-     !$OMP END DO
-     !$OMP DO
-     do iFuncX = 2, fpt%legToChebParams%n-1
-?? copy :: posOfModgCoeffQTens(1, iFuncX, 1, fpt%legToChebParams%n-1, funcIndex)
-       legCoeffs(funcIndex) = legCoeffs(funcIndex)/2.0_rk
-?? copy :: posOfModgCoeffQTens(iFuncX, 1, 1, fpt%legToChebParams%n-1, funcIndex)
-       legCoeffs(funcIndex) = legCoeffs(funcIndex)/2.0_rk
-?? copy :: posOfModgCoeffQTens(fpt%legToChebParams%n, iFuncX, 1, fpt%legToChebParams%n-1, funcIndex)
-       legCoeffs(funcIndex) = legCoeffs(funcIndex)/2.0_rk
-?? copy :: posOfModgCoeffQTens(iFuncX, fpt%legToChebParams%n, 1, fpt%legToChebParams%n-1, funcIndex)
-       legCoeffs(funcIndex) = legCoeffs(funcIndex)/2.0_rk
-     end do
-     !$OMP END DO
-
-     ! Transform Chebyshev expansion to point values at
-     ! Lobatto-Chebyshev nodes by DCT I
-     !$OMP SINGLE
-     call fftw_execute_r2r( fpt%planChebToPnt, legCoeffs(:), pntVal(:) )
-     !$OMP END SINGLE
-
-   end if
+!    if (.not. lobattoPoints) then
+! 
+! !      ! Normalize the coefficients of the Chebyshev polynomials due
+! !      ! to the unnormalized version of DCT-III in the FFTW.
+! !      !$OMP DO
+      do iFunc = 1, fpt%legToChebParams%n**2
+        iFuncX = (iFunc-1)/fpt%legToChebParams%n+1
+        iFuncY = mod(iFunc-1,fpt%legToChebParams%n)+1
+        normFactor =   ((-1)**(iFuncX-1)) &
+                   & * ((-1)**(iFuncY-1)) * 0.25_rk
+!        legCoeffs(ifunc) = normFactor * legCoeffs(ifunc)
+      end do
+!      !$OMP END DO
+!      !$OMP DO
+      do iFunc = 1, fpt%legToChebParams%n
+        ifuncY = 1 + (ifunc-1)*fpt%legToChebParams%n
+write(*,*)'iFunc',iFunc
+write(*,*)'iFuncY',iFuncY
+!        legCoeffs(iFunc) = legCoeffs(iFunc)*2.0_rk
+!        legCoeffs(iFuncY) = legCoeffs(iFuncY)*2.0_rk
+      end do
+!      !$OMP END DO
+! 
+!      ! Transform Chebyshev expansion to point values at Chebyshev nodes by DCT III
+!      !$OMP SINGLE
+!      call fftw_execute_r2r( fpt%planChebToPnt, legCoeffs(:), pntVal(:) )
+!      !$OMP END SINGLE
+! 
+!    else
+! 
+!      ! Normalization factor for the DCT I of the transformation to point values
+!      !$OMP DO
+!      do iFunc = 1, (fpt%legToChebParams%n-2)**2
+!        iFuncX = (iFunc-1)/(fpt%legToChebParams%n-2)+2
+!        iFuncY = mod(iFunc-1,fpt%legToChebParams%n-2)+2
+! ?? copy :: posOfModgCoeffQTens(iFuncX, iFuncY, 1, fpt%legToChebParams%n-1, funcIndex)
+!        legCoeffs(funcIndex) = legCoeffs(funcIndex) / 4.0_rk
+!      end do
+!      !$OMP END DO
+!      !$OMP DO
+!      do iFuncX = 2, fpt%legToChebParams%n-1
+! ?? copy :: posOfModgCoeffQTens(1, iFuncX, 1, fpt%legToChebParams%n-1, funcIndex)
+!        legCoeffs(funcIndex) = legCoeffs(funcIndex)/2.0_rk
+! ?? copy :: posOfModgCoeffQTens(iFuncX, 1, 1, fpt%legToChebParams%n-1, funcIndex)
+!        legCoeffs(funcIndex) = legCoeffs(funcIndex)/2.0_rk
+! ?? copy :: posOfModgCoeffQTens(fpt%legToChebParams%n, iFuncX, 1, fpt%legToChebParams%n-1, funcIndex)
+!        legCoeffs(funcIndex) = legCoeffs(funcIndex)/2.0_rk
+! ?? copy :: posOfModgCoeffQTens(iFuncX, fpt%legToChebParams%n, 1, fpt%legToChebParams%n-1, funcIndex)
+!        legCoeffs(funcIndex) = legCoeffs(funcIndex)/2.0_rk
+!      end do
+!      !$OMP END DO
+! 
+!      ! Transform Chebyshev expansion to point values at
+!      ! Lobatto-Chebyshev nodes by DCT I
+!      !$OMP SINGLE
+!      call fftw_execute_r2r( fpt%planChebToPnt, legCoeffs(:), pntVal(:) )
+!      !$OMP END SINGLE
 
   end subroutine ply_legToPnt_2D_singVar
   !****************************************************************************
