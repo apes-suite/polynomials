@@ -60,6 +60,7 @@ module ply_sampling_module
   public :: ply_sampling_type
   public :: ply_sampling_load
   public :: ply_sample_data
+  public :: ply_sampling_free_methodData
 
 
   !> Private data type to describe variables with varying polynomial
@@ -527,5 +528,31 @@ contains
     end do
 
   end subroutine get_sampled_element
+  !----------------------------------------------------------------------------!
+  !----------------------------------------------------------------------------!
+
+
+  !----------------------------------------------------------------------------!
+  !> Free previously allocated methodData of variable.
+  !!
+  !! This routine provides a method to free allocated methodData again.
+  subroutine ply_sampling_free_methodData(fun)
+    !> Description of the method to free the data for.
+    class(tem_varSys_op_type), intent(inout) :: fun
+
+    !----------------------------------------------------------------------!
+    type(capsule_array_type), pointer :: p
+    !----------------------------------------------------------------------!
+
+    call c_f_pointer(fun%method_data, p)
+    if (associated(p)) then
+      if (allocated(p%dat)) then
+        deallocate(p%dat)
+      end if
+      nullify(p)
+      fun%method_data = c_loc(p)
+    end if
+
+  end subroutine ply_sampling_free_methodData
 
 end module ply_sampling_module
