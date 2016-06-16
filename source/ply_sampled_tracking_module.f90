@@ -24,10 +24,11 @@ module ply_sampled_tracking_module
     &                            tem_init_tracker_subtree,   &
     &                            tem_load_tracking
   use tem_varMap_module, only: tem_create_varMap
-  use tem_varSys_module, only: tem_varsys_type
+  use tem_varSys_module, only: tem_varsys_type, tem_empty_varSys
 
-  use ply_sampling_module, only: ply_sampling_type, &
-    &                            ply_sampling_load, &
+  use ply_sampling_module, only: ply_sampling_type,            &
+    &                            ply_sampling_load,            &
+    &                            ply_sampling_free_methodData, &
     &                            ply_sample_data
 
   implicit none
@@ -216,6 +217,7 @@ contains
     type(tem_varsys_type)  :: sampled_vars
     type(treelmesh_type)   :: sampled_mesh
     integer :: iTrack
+    integer :: iVar
     ! -------------------------------------------------------------------- !
 
     call tem_time_reset(time)
@@ -271,6 +273,11 @@ contains
       call hvs_output_close( out_file = me%tracking(iTrack)%output_file, &
         &                    varSys   = sampled_vars,                    &
         &                    mesh     = sampled_mesh                     )
+
+      do ivar=1,sampled_vars%method%nVals
+        call ply_sampling_free_methodData(sampled_vars%method%val(iVar))
+      end do
+      call tem_empty_varSys(sampled_vars)
 
     end do
 
