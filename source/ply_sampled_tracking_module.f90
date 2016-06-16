@@ -18,6 +18,8 @@ module ply_sampled_tracking_module
   use tem_time_module, only: tem_time_type, &
     &                        tem_time_reset
   use tem_tracking_module, only: tem_tracking_type,          &
+    &                            tem_tracker,                &
+    &                            tem_init_tracker,           &
     &                            tem_trackingControl_type,   &
     &                            tem_trackingHeader_type,    &
     &                            tem_tracking_has_triggered, &
@@ -36,11 +38,28 @@ module ply_sampled_tracking_module
   private
 
   type ply_sampled_tracking_type
+    !> Control for the tracking in total.
     type(tem_trackingControl_type) :: trackCtrl
+
+    !> Individual tracking entities.
     type(tem_tracking_type), allocatable :: tracking(:)
+
+    !> Headers for the configuration of each tracking entity.
     type(tem_trackingHeader_type), allocatable :: trackingHeader(:)
+
+    !> Subsampled mesh for each tracking.
+    !!
+    !!@todo Actually make use of these, instead of regenerating the mesh
+    !!      every time the tracking is written.
     type(treelmesh_type), allocatable :: mesh(:)
+
+    !> Variable system description after subsampling.
+    !!
+    !!@todo Actuall make use of these, instead of recreating the variable
+    !!      system each time a tracking is written.
     type(tem_varSys_type), allocatable :: varsys(:)
+
+    !> Configuration of the subsampling (applied to all trackings).
     type(ply_sampling_type) :: sampling
   end type ply_sampled_tracking_type
 
@@ -87,7 +106,7 @@ contains
   ! This is necessary to properly setup the tem_tracking data.
   ! It includes building the subtree and the varmap.
   subroutine ply_sampled_track_init( me, mesh, solver, varSys, bc, &
-    &                                prefix, stencil               )
+    &                                prefix, stencil, proc, ndofs  )
     !> Sampled tracking variable to initialize. It has to be configured by
     !! [[ply_sampled_tracking_load]] beforehand.
     type(ply_sampled_tracking_type), intent(inout) :: me
@@ -118,13 +137,19 @@ contains
     !! This is needed to describe elements adjacent to specific boundary
     !! labels.
     type(tem_stencilHeader_type), optional, intent(in) :: stencil
+
+    !> General communication environment
+    type(tem_comm_env_type), intent(in) :: proc
+
+    !> Number of degrees of freedom to use in the output.
+    integer, intent(in) :: nDofs
     ! -------------------------------------------------------------------- !
     integer :: iTrack
     integer :: iVar
     integer :: nVars
     ! -------------------------------------------------------------------- !
 
-    ! Initialize tracker subTree and remote empty trackers.
+    ! Initialize tracker subTree and remove empty trackers.
     call tem_init_tracker_subTree( me      = me%tracking,  &
       &                            tCtrl   = me%trackCtrl, &
       &                            tree    = mesh,         &
@@ -132,6 +157,19 @@ contains
       &                            bc_prop = bc,           &
       &                            stencil = stencil,      &
       &                            prefix  = prefix        )
+
+    if (me%sampling%max_nlevels == 0) then
+      ! No subsampling to be done, call the general initialization and
+      ! exit the routine.
+      call tem_init_tracker( me       = me%tracking,  &
+        &                    tCtrl    = me%trackCtrl, &
+        &                    tree     = mesh,         &
+        &                    solver   = solver,       &
+        &                    varSys   = varSys,       &
+        &                    nDofs    = nDofs,        &
+        &                    globProc =  proc         )
+      RETURN
+    end if
 
     do iTrack=1,me%trackCtrl%nTrackings
 
@@ -143,7 +181,7 @@ contains
         &                     varMap  = me%tracking(iTrack)%varMap   )
 
       nVars = me%tracking(iTrack)%varMap%varPos%nVals
-      ! Abort if none variables of the variable defined in current
+      ! Abort if none of the variables defined in current
       ! tracking object are found in varSys
       if (nVars==0) then
         write(logUnit(1),*) 'Error: Requested variables: '
@@ -176,6 +214,9 @@ contains
   !! whether it should be written at the current point in time (if simControl
   !! is provided), subsamples the data and performs the hvs_output for the
   !! subsampled data.
+  !!
+  !!@todo Instead of recreating the sampled varsys and mesh everytime the
+  !!      tracking is written, store them in the [[ply_sampled_tracking_type]].
   subroutine ply_sampled_track_output( me, mesh, bc, solver, proc, varSys, &
     &                                  var_degree, var_space, simControl )
     !> Sampled tracking instances.
@@ -223,6 +264,15 @@ contains
     call tem_time_reset(time)
     if (present(simControl)) then
       time = simControl%now
+      if (me%sampling%max_nlevels == 0) then
+        ! No subsampling to be done, call the regular tracker, and leave
+        ! the routine.
+        call tem_tracker( track      = me%tracking, &
+          &               simControl = simControl,  &
+          &               varSys     = varsys,      &
+          &               tree       = mesh         )
+        RETURN
+      end if
     end if
 
     do iTrack=1,me%trackCtrl%nTrackings
