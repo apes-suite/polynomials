@@ -104,7 +104,6 @@ contains
       &                            tCtrl   = me%trackCtrl, &
       &                            tree    = mesh,         &
       &                            solver  = solver,       &
-      &                            varSys  = varSys,       &
       &                            bc_prop = bc,           &
       &                            stencil = stencil,      &
       &                            prefix  = prefix        )
