@@ -1,3 +1,4 @@
+!> Module that implements tracking with subsampling of polynomials.
 module ply_sampled_tracking_module
   use aotus_module, only: flu_State
 
@@ -86,12 +87,35 @@ contains
   ! It includes building the subtree and the varmap.
   subroutine ply_sampled_track_init( me, mesh, solver, varSys, bc, &
     &                                prefix, stencil               )
+    !> Sampled tracking variable to initialize. It has to be configured by
+    !! [[ply_sampled_tracking_load]] beforehand.
     type(ply_sampled_tracking_type), intent(inout) :: me
+
+    !> The global mesh.
     type(treelmesh_type), intent(in) :: mesh
+
+    !> Information about the solver (used to construct file name strings).
     type(tem_solveHead_type), intent(in) :: solver
+
+    !> Global variable system with description of the data to get the
+    !! tracking variables from.
     type(tem_varSys_type), intent(in) :: varSys
+
+    !> Boundary condition properties, used to identify elements close to
+    !! the boundary.
     type(tem_bc_prop_type), intent(in) :: bc
+
+    !> A prefix to use in the construction of filenames, can be used to
+    !! set a directory to write all tracking data to.
+    !!
+    !! Defaults to a prefix given by solver%simName and varsys%SystemName
+    !! (not a directory).
     character(len=labelLen), optional, intent(in) :: prefix
+
+    !> Description of the stencil in the numerical scheme.
+    !!
+    !! This is needed to describe elements adjacent to specific boundary
+    !! labels.
     type(tem_stencilHeader_type), optional, intent(in) :: stencil
     ! -------------------------------------------------------------------- !
     integer :: iTrack
@@ -145,16 +169,46 @@ contains
 
 
   ! ------------------------------------------------------------------------ !
+  !> Output sampled tracking data.
+  !!
+  !! Iterates over all tracking instances in the given me variable, checks
+  !! whether it should be written at the current point in time (if simControl
+  !! is provided), subsamples the data and performs the hvs_output for the
+  !! subsampled data.
   subroutine ply_sampled_track_output( me, mesh, bc, solver, proc, varSys, &
     &                                  var_degree, var_space, simControl )
+    !> Sampled tracking instances.
     type(ply_sampled_tracking_type), intent(inout)  :: me
+
+    !> Global mesh, required for the sampling.
     type(treelmesh_type), intent(in)                :: mesh
+
+    !> Boundary properties, needed to inherit boundary information to refined
+    !! meshes and allow the extraction of boundary shape geometries.
     type(tem_bc_prop_type), intent(in)              :: bc
+
+    !> Information about the solver, needed for the output file name.
     type(tem_solveHead_type), intent(in)            :: solver
+
+    !> General communication environment
     type(tem_comm_env_type), intent(in)             :: proc
+
+    !> Original variable system
     type(tem_varSys_type), intent(in)               :: varSys
+
+    !> Maximal polynomial degree for each variable
+    !!
+    !! Needs to match the size of the variable system.
     integer, intent(in)                             :: var_degree(:)
+
+    !> Maximal polynomial space for each variable
+    !!
+    !! Needs to match the size of the variable system.
     integer, intent(in)                             :: var_space(:)
+
+    !> Simulation control to determine, whether trackings should be written
+    !!
+    !! If not provided, all trackings will be written unconditionally.
     type(tem_simControl_type), intent(in), optional :: simControl
     ! -------------------------------------------------------------------- !
     character(len=pathLen) :: basename
