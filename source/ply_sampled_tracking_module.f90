@@ -7,7 +7,7 @@ module ply_sampled_tracking_module
 
   use env_module, only: pathLen, labelLen
 
-  use treelmesh_module, only: treelmesh_type
+  use treelmesh_module, only: treelmesh_type, unload_treelmesh
   use tem_aux_module, only: tem_abort
   use tem_bc_prop_module, only: tem_bc_prop_type
   use tem_comm_env_module, only: tem_comm_env_type
@@ -278,6 +278,7 @@ contains
         call ply_sampling_free_methodData(sampled_vars%method%val(iVar))
       end do
       call tem_empty_varSys(sampled_vars)
+      call unload_treelmesh(sampled_mesh)
 
     end do
 
