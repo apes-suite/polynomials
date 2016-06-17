@@ -12,6 +12,7 @@ module ply_sampled_tracking_module
   use tem_bc_prop_module, only: tem_bc_prop_type
   use tem_comm_env_module, only: tem_comm_env_type
   use tem_logging_module, only: logunit
+  use tem_reduction_module, only: tem_reduction_init
   use tem_simControl_module, only: tem_simControl_type
   use tem_solveHead_module, only: tem_solveHead_type
   use tem_stencil_module, only: tem_stencilHeader_type
@@ -106,7 +107,7 @@ contains
   ! This is necessary to properly setup the tem_tracking data.
   ! It includes building the subtree and the varmap.
   subroutine ply_sampled_track_init( me, mesh, solver, varSys, bc, &
-    &                                prefix, stencil, proc, ndofs  )
+    &                                stencil, proc, ndofs          )
     !> Sampled tracking variable to initialize. It has to be configured by
     !! [[ply_sampled_tracking_load]] beforehand.
     type(ply_sampled_tracking_type), intent(inout) :: me
@@ -125,13 +126,6 @@ contains
     !! the boundary.
     type(tem_bc_prop_type), intent(in) :: bc
 
-    !> A prefix to use in the construction of filenames, can be used to
-    !! set a directory to write all tracking data to.
-    !!
-    !! Defaults to a prefix given by solver%simName and varsys%SystemName
-    !! (not a directory).
-    character(len=labelLen), optional, intent(in) :: prefix
-
     !> Description of the stencil in the numerical scheme.
     !!
     !! This is needed to describe elements adjacent to specific boundary
@@ -147,6 +141,7 @@ contains
     integer :: iTrack
     integer :: iVar
     integer :: nVars
+    character(len=pathLen) :: basename
     ! -------------------------------------------------------------------- !
 
     ! Initialize tracker subTree and remove empty trackers.
@@ -155,8 +150,7 @@ contains
       &                            tree    = mesh,         &
       &                            solver  = solver,       &
       &                            bc_prop = bc,           &
-      &                            stencil = stencil,      &
-      &                            prefix  = prefix        )
+      &                            stencil = stencil              )
 
     if (me%sampling%max_nlevels == 0) then
       ! No subsampling to be done, call the general initialization and
@@ -193,6 +187,60 @@ contains
         write(logUnit(1),*) 'Check tracking object: '// &
           &                  trim(me%tracking(iTrack)%header%label)
         call tem_abort()
+      end if
+
+      ! Init spatial reduction
+      me%tracking(iTrack)%output_file%ascii%isReduce &
+        &  = me%tracking(iTrack)%header%reduction_config%active
+      if ( me%tracking(iTrack)%header%reduction_config%active ) then
+        call tem_reduction_init( me               = me%tracking(iTrack)    &
+          &                                           %output_file%ascii   &
+          &                                                       %reduce, &
+          &                      reduction_config = me%tracking(iTrack)    &
+          &                                           %header              &
+          &                                           %reduction_config,   &
+          &                      varSys           = varSys,                &
+          &                      varPos           = me%tracking(iTrack)    &
+          &                                           %varMap%varPos       &
+          &                                                  %val(:nVars)  )
+      end if
+
+      if (me%tracking(iTrack)%output_file%useGetPoint) then
+        ! For point trackings do the initialization here, as no subsampling is
+        ! required for them.
+        basename = trim(me%tracking(iTrack)%header%prefix) &
+          &        // trim(me%tracking(iTrack)%header%label)
+
+        if (me%tracking(iTrack)%subtree%useGlobalMesh) then
+          call hvs_output_init(                         &
+            &    out_file    = me%tracking(iTrack)      &
+            &                    %output_file,          &
+            &    out_config  = me%tracking(iTrack)      &
+            &                    %header%output_config, &
+            &    tree        = mesh,                    &
+            &    varSys      = varsys,                  &
+            &    geometry    = me%tracking(iTrack)      &
+            &                    %header%geometry,      &
+            &    basename    = trim(basename),          &
+            &    globProc    = proc,                    &
+            &    solver      = solver                   )
+        else
+          call hvs_output_init(                         &
+            &    out_file    = me%tracking(iTrack)      &
+            &                    %output_file,          &
+            &    out_config  = me%tracking(iTrack)      &
+            &                    %header%output_config, &
+            &    tree        = mesh,                    &
+            &    subtree     = me%tracking(iTrack)      &
+            &                    %subtree,              &
+            &    varSys      = varsys,                  &
+            &    geometry    = me%tracking(iTrack)      &
+            &                    %header%geometry,      &
+            &    basename    = trim(basename),          &
+            &    globProc    = proc,                    &
+            &    solver      = solver                   )
+        end if
+
       end if
 
     end do
@@ -285,29 +333,34 @@ contains
           &            simControl = simControl         ) ) CYCLE
       end if
 
-      call ply_sample_data( me         = me%sampling,         &
-        &                   orig_mesh  = mesh,                &
-        &                   orig_bcs   = bc,                  &
-        &                   varsys     = varsys,              &
-        &                   var_degree = var_degree,          &
-        &                   var_space  = var_space,           &
-        &                   tracking   = me%tracking(iTrack), &
-        &                   time       = time,                &
-        &                   new_mesh   = sampled_mesh,        &
-        &                   resvars    = sampled_vars         )
+      if (.not. me%tracking(iTrack)%output_file%useGetPoint) then
+        ! Only perform subsampling if not using get_point anyway.
+        call ply_sample_data( me         = me%sampling,         &
+          &                   orig_mesh  = mesh,                &
+          &                   orig_bcs   = bc,                  &
+          &                   varsys     = varsys,              &
+          &                   var_degree = var_degree,          &
+          &                   var_space  = var_space,           &
+          &                   tracking   = me%tracking(iTrack), &
+          &                   time       = time,                &
+          &                   new_mesh   = sampled_mesh,        &
+          &                   resvars    = sampled_vars         )
 
-      ! initialize output
-      basename = trim(me%tracking(iTrack)%header%prefix) &
-        &        // trim(me%tracking(iTrack)%header%label)
-      call hvs_output_init(                                                   &
-        &             out_file    = me%tracking(iTrack)%output_file,          &
-        &             out_config  = me%tracking(iTrack)%header%output_config, &
-        &             tree        = sampled_mesh,                             &
-        &             varSys      = sampled_vars,                             &
-        &             geometry    = me%tracking(iTrack)%header%geometry,      &
-        &             basename    = trim(basename),                           &
-        &             globProc    = proc,                                     &
-        &             solver      = solver                                    )
+        ! initialize output
+        basename = trim(me%tracking(iTrack)%header%prefix) &
+          &        // trim(me%tracking(iTrack)%header%label)
+        call hvs_output_init(                                              &
+          &             out_file    = me%tracking(iTrack)                  &
+          &                             %output_file,                      &
+          &             out_config  = me%tracking(iTrack)                  &
+          &                             %header%output_config,             &
+          &             tree        = sampled_mesh,                        &
+          &             varSys      = sampled_vars,                        &
+          &             geometry    = me%tracking(iTrack)%header%geometry, &
+          &             basename    = trim(basename),                      &
+          &             globProc    = proc,                                &
+          &             solver      = solver                               )
+      end if
 
       call hvs_output_open( out_file   = me%tracking(iTrack)%output_file,    &
         &                   use_iter   = me%tracking(iTrack)%header          &
