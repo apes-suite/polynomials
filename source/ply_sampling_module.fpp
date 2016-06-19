@@ -189,6 +189,9 @@ contains
     !> Maximal polynomial degree for each variable.
     !!
     !! Needs to be matching the variable definition in the variable system.
+    !! @todo Needs to be changed to be an information per element per variable!
+    !!       Possibly by defining a variable in the varsys, providing the
+    !!       degree.
     integer, intent(in) :: var_degree(:)
 
     !> Polynomial space for each variable.
@@ -354,7 +357,7 @@ contains
 
       varpos = tracking%varmap%varPos%val(1)
       allocate(pointval(var_degree(varpos)+1, n1D_childs))
-      pointval = legendre_1D(points = points, degree = var_degree(1))
+      pointval = legendre_1D(points = points, degree = var_degree(varpos))
       lastdegree = var_degree(varpos)
 
       do ivar=1,tracking%varmap%varPos%nVals

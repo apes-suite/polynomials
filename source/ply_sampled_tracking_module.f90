@@ -66,6 +66,8 @@ module ply_sampled_tracking_module
 
   public :: ply_sampled_tracking_type
   public :: ply_sampled_tracking_load
+  public :: ply_sampled_track_init
+  public :: ply_sampled_track_output
 
 
 contains
