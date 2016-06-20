@@ -268,7 +268,8 @@ contains
   !!@todo Instead of recreating the sampled varsys and mesh everytime the
   !!      tracking is written, store them in the [[ply_sampled_tracking_type]].
   subroutine ply_sampled_track_output( me, mesh, bc, solver, proc, varSys, &
-    &                                  var_degree, var_space, simControl )
+    &                                  var_degree, var_space, simControl,  &
+    &                                  time                                )
     !> Sampled tracking instances.
     type(ply_sampled_tracking_type), intent(inout)  :: me
 
@@ -302,18 +303,24 @@ contains
     !!
     !! If not provided, all trackings will be written unconditionally.
     type(tem_simControl_type), intent(in), optional :: simControl
+
+    !> Provide a time for the current data set to write in tracking.
+    !!
+    !! This only is respected if no simControl is provided. If simControl
+    !! is present the time information from it will be used instead.
+    type(tem_time_type), intent(in), optional       :: time
     ! -------------------------------------------------------------------- !
     character(len=pathLen) :: basename
-    type(tem_time_type)    :: time
+    type(tem_time_type)    :: loctime
     type(tem_varsys_type)  :: sampled_vars
     type(treelmesh_type)   :: sampled_mesh
     integer :: iTrack
     integer :: iVar
     ! -------------------------------------------------------------------- !
 
-    call tem_time_reset(time)
+    call tem_time_reset(loctime)
     if (present(simControl)) then
-      time = simControl%now
+      loctime = simControl%now
       if (me%sampling%max_nlevels == 0) then
         ! No subsampling to be done, call the regular tracker, and leave
         ! the routine.
@@ -376,7 +383,8 @@ contains
           &                   use_iter   = me%tracking(iTrack)%header          &
           &                                  %output_config%vtk%iter_filename, &
           &                   mesh       = sampled_mesh,                       &
-          &                   varsys     = sampled_vars                        )
+          &                   varsys     = sampled_vars,                       &
+          &                   time       = time                                )
       end if
 
       ! Fill output files with data.
