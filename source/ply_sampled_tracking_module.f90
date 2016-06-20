@@ -368,7 +368,8 @@ contains
         &                   use_iter   = me%tracking(iTrack)%header          &
         &                                  %output_config%vtk%iter_filename, &
         &                   mesh       = sampled_mesh,                       &
-        &                   varsys     = sampled_vars                        )
+        &                   varsys     = sampled_vars,                       &
+        &                   time       = simControl%now                      )
 
       ! Fill output files with data.
       call hvs_output_write( out_file = me%tracking(iTrack)%output_file, &
