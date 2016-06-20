@@ -364,12 +364,20 @@ contains
           &             solver      = solver                               )
       end if
 
-      call hvs_output_open( out_file   = me%tracking(iTrack)%output_file,    &
-        &                   use_iter   = me%tracking(iTrack)%header          &
-        &                                  %output_config%vtk%iter_filename, &
-        &                   mesh       = sampled_mesh,                       &
-        &                   varsys     = sampled_vars,                       &
-        &                   time       = simControl%now                      )
+      if (present(simControl)) then
+        call hvs_output_open( out_file   = me%tracking(iTrack)%output_file,    &
+          &                   use_iter   = me%tracking(iTrack)%header          &
+          &                                  %output_config%vtk%iter_filename, &
+          &                   mesh       = sampled_mesh,                       &
+          &                   varsys     = sampled_vars,                       &
+          &                   time       = simControl%now                      )
+      else
+        call hvs_output_open( out_file   = me%tracking(iTrack)%output_file,    &
+          &                   use_iter   = me%tracking(iTrack)%header          &
+          &                                  %output_config%vtk%iter_filename, &
+          &                   mesh       = sampled_mesh,                       &
+          &                   varsys     = sampled_vars                        )
+      end if
 
       ! Fill output files with data.
       call hvs_output_write( out_file = me%tracking(iTrack)%output_file, &
