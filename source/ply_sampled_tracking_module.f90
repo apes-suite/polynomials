@@ -62,6 +62,9 @@ module ply_sampled_tracking_module
 
     !> Configuration of the subsampling (applied to all trackings).
     type(ply_sampling_type) :: sampling
+
+    !> Dimensionality of the data to sample.
+    integer :: ndims
   end type ply_sampled_tracking_type
 
   public :: ply_sampled_tracking_type
@@ -109,7 +112,7 @@ contains
   ! This is necessary to properly setup the tem_tracking data.
   ! It includes building the subtree and the varmap.
   subroutine ply_sampled_track_init( me, mesh, solver, varSys, bc, &
-    &                                stencil, proc, ndofs          )
+    &                                stencil, proc, ndofs, ndims   )
     !> Sampled tracking variable to initialize. It has to be configured by
     !! [[ply_sampled_tracking_load]] beforehand.
     type(ply_sampled_tracking_type), intent(inout) :: me
@@ -139,6 +142,9 @@ contains
 
     !> Number of degrees of freedom to use in the output.
     integer, intent(in) :: nDofs
+
+    !> Number of dimensions in the polynomial representations.
+    integer, intent(in) :: nDims
     ! -------------------------------------------------------------------- !
     integer :: iTrack
     integer :: iVar
@@ -153,6 +159,8 @@ contains
       &                            solver  = solver,       &
       &                            bc_prop = bc,           &
       &                            stencil = stencil              )
+
+    me%nDims = nDims
 
     if (me%sampling%max_nlevels == 0) then
       ! No subsampling to be done, call the general initialization and
@@ -350,6 +358,7 @@ contains
           &                   varsys     = varsys,              &
           &                   var_degree = var_degree,          &
           &                   var_space  = var_space,           &
+          &                   ndims      = me%ndims,            &
           &                   tracking   = me%tracking(iTrack), &
           &                   time       = time,                &
           &                   new_mesh   = sampled_mesh,        &
