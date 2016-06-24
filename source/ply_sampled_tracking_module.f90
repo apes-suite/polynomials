@@ -327,17 +327,37 @@ contains
     ! -------------------------------------------------------------------- !
 
     call tem_time_reset(loctime)
-    if (present(simControl)) then
-      loctime = simControl%now
-      if (me%sampling%max_nlevels == 0) then
+
+    if (present(simControl)) loctime = simControl%now
+
+    if (me%sampling%max_nlevels == 0) then
+      if (present(simControl)) then
         ! No subsampling to be done, call the regular tracker, and leave
         ! the routine.
         call tem_tracker( track      = me%tracking, &
           &               simControl = simControl,  &
           &               varSys     = varsys,      &
           &               tree       = mesh         )
-        RETURN
+      else
+        do iTrack=1,me%trackCtrl%nTrackings
+          call hvs_output_open( out_file   = me%tracking(iTrack)%output_file, &
+            &                   use_iter   = me%tracking(iTrack)%header       &
+            &                                  %output_config%vtk             &
+            &                                  %iter_filename,                &
+            &                   mesh       = mesh,                            &
+            &                   varsys     = varsys,                          &
+            &                   time       = time                             )
+
+          call hvs_output_write( out_file = me%tracking(iTrack)%output_file, &
+            &                    varsys   = varsys,                          &
+            &                    mesh     = mesh                             )
+
+          call hvs_output_close( out_file = me%tracking(iTrack)%output_file, &
+            &                    varSys   = varsys,                          &
+            &                    mesh     = mesh                             )
+        end do
       end if
+      RETURN
     end if
 
     do iTrack=1,me%trackCtrl%nTrackings
