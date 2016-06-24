@@ -272,6 +272,7 @@ contains
       call tem_refine_global_subtree( orig_mesh = orig_mesh,        &
         &                             orig_bcs  = orig_bcs,         &
         &                             subtree   = tracking%subtree, &
+        &                             ndims     = ndims,            &
         &                             new_mesh  = tmp_mesh(cur),    &
         &                             new_bcs   =  tmp_bcs(cur),    &
         &                             restrict_to_sub = .true.      )
@@ -286,6 +287,7 @@ contains
         call tem_refine_global_subtree( orig_mesh = tmp_mesh(prev), &
           &                             orig_bcs  = tmp_bcs(prev),  &
           &                             subtree   = tmp_subtree,    &
+          &                             ndims     = ndims,          &
           &                             new_mesh  = tmp_mesh(cur),  &
           &                             new_bcs   = tmp_bcs(cur),   &
           &                             restrict_to_sub = .true.    )
