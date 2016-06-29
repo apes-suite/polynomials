@@ -398,38 +398,66 @@ contains
           &             basename    = trim(basename),                      &
           &             globProc    = proc,                                &
           &             solver      = solver                               )
-      end if
 
-      if (present(simControl)) then
-        call hvs_output_open( out_file   = me%tracking(iTrack)%output_file,    &
-          &                   use_iter   = me%tracking(iTrack)%header          &
-          &                                  %output_config%vtk%iter_filename, &
-          &                   mesh       = sampled_mesh,                       &
-          &                   varsys     = sampled_vars,                       &
-          &                   time       = simControl%now                      )
+        if (present(simControl)) then
+          call hvs_output_open( out_file = me%tracking(iTrack)%output_file,    &
+            &                   use_iter = me%tracking(iTrack)%header          &
+            &                                %output_config%vtk%iter_filename, &
+            &                   mesh     = sampled_mesh,                       &
+            &                   varsys   = sampled_vars,                       &
+            &                   time     = simControl%now                      )
+        else
+          call hvs_output_open( out_file = me%tracking(iTrack)%output_file,    &
+            &                   use_iter = me%tracking(iTrack)%header          &
+            &                                %output_config%vtk%iter_filename, &
+            &                   mesh     = sampled_mesh,                       &
+            &                   varsys   = sampled_vars,                       &
+            &                   time     = time                                )
+        end if
+
+        ! Fill output files with data.
+        call hvs_output_write( out_file = me%tracking(iTrack)%output_file, &
+          &                    varsys   = sampled_vars,                    &
+          &                    mesh     = sampled_mesh                     )
+
+        call hvs_output_close( out_file = me%tracking(iTrack)%output_file, &
+          &                    varSys   = sampled_vars,                    &
+          &                    mesh     = sampled_mesh                     )
+
+        do ivar=1,sampled_vars%method%nVals
+          call ply_sampling_free_methodData(sampled_vars%method%val(iVar))
+        end do
+        call tem_empty_varSys(sampled_vars)
+        call unload_treelmesh(sampled_mesh)
+
       else
-        call hvs_output_open( out_file   = me%tracking(iTrack)%output_file,    &
-          &                   use_iter   = me%tracking(iTrack)%header          &
-          &                                  %output_config%vtk%iter_filename, &
-          &                   mesh       = sampled_mesh,                       &
-          &                   varsys     = sampled_vars,                       &
-          &                   time       = time                                )
+
+        if (present(simControl)) then
+          call hvs_output_open( out_file = me%tracking(iTrack)%output_file,    &
+            &                   use_iter = me%tracking(iTrack)%header          &
+            &                                %output_config%vtk%iter_filename, &
+            &                   mesh     = mesh,                               &
+            &                   varsys   = varSys,                             &
+            &                   time     = simControl%now                      )
+        else
+          call hvs_output_open( out_file = me%tracking(iTrack)%output_file,    &
+            &                   use_iter = me%tracking(iTrack)%header          &
+            &                                %output_config%vtk%iter_filename, &
+            &                   mesh     = mesh,                               &
+            &                   varsys   = varSys,                             &
+            &                   time     = time                                )
+        end if
+
+        ! Fill output files with data.
+        call hvs_output_write( out_file = me%tracking(iTrack)%output_file, &
+          &                    varsys   = varSys,                          &
+          &                    mesh     = mesh                             )
+
+        call hvs_output_close( out_file = me%tracking(iTrack)%output_file, &
+          &                    varSys   = varSys,                          &
+          &                    mesh     = mesh                             )
+
       end if
-
-      ! Fill output files with data.
-      call hvs_output_write( out_file = me%tracking(iTrack)%output_file, &
-        &                    varsys   = sampled_vars,                    &
-        &                    mesh     = sampled_mesh                     )
-
-      call hvs_output_close( out_file = me%tracking(iTrack)%output_file, &
-        &                    varSys   = sampled_vars,                    &
-        &                    mesh     = sampled_mesh                     )
-
-      do ivar=1,sampled_vars%method%nVals
-        call ply_sampling_free_methodData(sampled_vars%method%val(iVar))
-      end do
-      call tem_empty_varSys(sampled_vars)
-      call unload_treelmesh(sampled_mesh)
 
     end do
 
