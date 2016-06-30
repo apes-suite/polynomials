@@ -245,6 +245,9 @@ contains
     integer :: maxdofs
     integer :: n1D_childs
     integer :: lastdegree
+    integer :: ii
+    integer :: fak(2)
+    integer :: bitlevel
     real(kind=rk) :: legval
     real(kind=rk) :: point_spacing, point_start
     procedure(tem_varSys_proc_element), pointer :: get_element => NULL()
@@ -410,9 +413,30 @@ contains
           allocate(res%dat(nComponents*nChilds*nOrigElems))
 
           do iChild=1,nChilds
-            pointCoord = tem_CoordofID( int(iChild, kind=long_k), &
-              &                         offset = 1_long_k       ) &
-              &        + 1
+            select case(ndims)
+            case (3)
+              pointCoord = tem_CoordofID( int(iChild, kind=long_k), &
+                &                         offset = 1_long_k       ) &
+                &        + 1
+            case (2)
+              ! 2D Bit-sieving coordofid
+              bitlevel = 1
+              pointCoord = 1
+              fak(1) = 1
+              fak(2) = 2
+              do
+                if (iChild / fak(1) == 0) EXIT
+                do ii=1,2
+                  pointCoord(ii) = pointCoord(ii) + bitlevel &
+                    &                             * mod(iChild / fak(ii), 2)
+                end do
+                bitlevel = bitlevel*2
+                fak = fak*4
+              end do
+            case (1)
+              pointCoord = 1
+              pointCoord(1) = iChild
+            end select
 
             iDof = 1
             ansX = 1
