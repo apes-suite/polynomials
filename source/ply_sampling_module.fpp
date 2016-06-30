@@ -231,7 +231,7 @@ contains
     integer :: nComponents
     integer :: nChilds
     integer :: cur, prev
-    integer :: ansX, ansY, ansZ
+    integer :: ans(3)
     integer :: i
     integer :: iLevel
     integer :: iChild
@@ -425,10 +425,10 @@ contains
               fak(1) = 1
               fak(2) = 2
               do
-                if (iChild / fak(1) == 0) EXIT
+                if ((iChild-1) / fak(1) == 0) EXIT
                 do ii=1,2
                   pointCoord(ii) = pointCoord(ii) + bitlevel &
-                    &                             * mod(iChild / fak(ii), 2)
+                    &                             * mod((iChild-1) / fak(ii), 2)
                 end do
                 bitlevel = bitlevel*2
                 fak = fak*4
@@ -439,18 +439,19 @@ contains
             end select
 
             iDof = 1
-            ansX = 1
-            ansY = 1
-            ansZ = 1
-            legval = pointval(ansX, pointCoord(1)) &
-              &    * pointval(ansY, pointCoord(2)) &
-              &    * pointval(ansZ, pointCoord(3))
+            ans(1) = 1
+            ans(2) = 1
+            ans(3) = 1
+            legval = pointval(ans(1), pointCoord(1))
+            do ii=2,ndims
+              legval = legval * pointval(ans(ii), pointCoord(ii))
+            end do
 
-            do iComp=1,nComponents
-              do iElem=1,nOrigElems
-                parentpos = (iElem-1)*vardofs(iVar)*nComponents
-                childpos = (iElem - 1)*nChilds*nComponents &
-                  &      + (iChild - 1)*nComponents
+            do iElem=1,nOrigElems
+              parentpos = (iElem-1)*vardofs(iVar)*nComponents
+              childpos = (iElem - 1)*nChilds*nComponents &
+                &      + (iChild - 1)*nComponents
+              do iComp=1,nComponents
                 res%dat(childpos+iComp) = legval*vardat(parentpos+iComp)
               end do
             end do
@@ -459,49 +460,50 @@ contains
               if (var_space(iVar) == q_space) then
                 select case(ndims)
                 case (3)
-                  call nextModgCoeffQTens( ansFuncX  = ansX,              &
-                    &                      ansFuncY  = ansY,              &
-                    &                      ansFuncZ  = ansZ,              &
+                  call nextModgCoeffQTens( ansFuncX  = ans(1),            &
+                    &                      ansFuncY  = ans(2),            &
+                    &                      ansFuncZ  = ans(3),            &
                     &                      maxdegree = var_degree(varpos) )
                 case (2)
-                  call nextModgCoeffQTens2D( ansFuncX  = ansX,              &
-                    &                        ansFuncY  = ansY,              &
-                    &                        ansFuncZ  = ansZ,              &
+                  call nextModgCoeffQTens2D( ansFuncX  = ans(1),            &
+                    &                        ansFuncY  = ans(2),            &
+                    &                        ansFuncZ  = ans(3),            &
                     &                        maxdegree = var_degree(varpos) )
                 case (1)
-                  call nextModgCoeffQTens1D( ansFuncX  = ansX,              &
-                    &                        ansFuncY  = ansY,              &
-                    &                        ansFuncZ  = ansZ,              &
+                  call nextModgCoeffQTens1D( ansFuncX  = ans(1),            &
+                    &                        ansFuncY  = ans(2),            &
+                    &                        ansFuncZ  = ans(3),            &
                     &                        maxdegree = var_degree(varpos) )
                 end select
               else
                 select case(ndims)
                 case (3)
-                  call nextModgCoeffPTens( ansFuncX  = ansX,              &
-                    &                      ansFuncY  = ansY,              &
-                    &                      ansFuncZ  = ansZ,              &
+                  call nextModgCoeffPTens( ansFuncX  = ans(1),            &
+                    &                      ansFuncY  = ans(2),            &
+                    &                      ansFuncZ  = ans(3),            &
                     &                      maxdegree = var_degree(varpos) )
                 case (2)
-                  call nextModgCoeffPTens2D( ansFuncX  = ansX,              &
-                    &                        ansFuncY  = ansY,              &
-                    &                        ansFuncZ  = ansZ,              &
+                  call nextModgCoeffPTens2D( ansFuncX  = ans(1),            &
+                    &                        ansFuncY  = ans(2),            &
+                    &                        ansFuncZ  = ans(3),            &
                     &                        maxdegree = var_degree(varpos) )
                 case (1)
-                  call nextModgCoeffPTens1D( ansFuncX  = ansX,              &
-                    &                        ansFuncY  = ansY,              &
-                    &                        ansFuncZ  = ansZ,              &
+                  call nextModgCoeffPTens1D( ansFuncX  = ans(1),            &
+                    &                        ansFuncY  = ans(2),            &
+                    &                        ansFuncZ  = ans(3),            &
                     &                        maxdegree = var_degree(varpos) )
                 end select
               end if
-              legval = pointval(ansX, pointCoord(1)) &
-                &    * pointval(ansY, pointCoord(2)) &
-                &    * pointval(ansZ, pointCoord(3))
-              do iComp=1,nComponents
-                do iElem=1,nOrigElems
-                  parentpos = (iElem-1)*vardofs(iVar)*nComponents &
-                    &       + (iDof-1)*nComponents
-                  childpos = (iElem - 1)*nChilds*nComponents &
-                    &      + (iChild - 1)*nComponents
+              legval = pointval(ans(1), pointCoord(1))
+              do ii=2,ndims
+                legval = legval * pointval(ans(ii), pointCoord(ii))
+              end do
+              do iElem=1,nOrigElems
+                parentpos = (iElem-1)*vardofs(iVar)*nComponents &
+                  &       + (iDof-1)*nComponents
+                childpos = (iElem - 1)*nChilds*nComponents &
+                  &      + (iChild - 1)*nComponents
+                do iComp=1,nComponents
                   res%dat(childpos+iComp) = res%dat(childpos+iComp) &
                     &                     + legval*vardat(parentpos+iComp)
                 end do
