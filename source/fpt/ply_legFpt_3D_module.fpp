@@ -313,7 +313,7 @@ write(*,*)'after z exec gam', gam
 
      if (.not. lobattoPoints) then
 !       alph(1:n**3:n) = gam(1:n**3:n)
-       do iDof = 1, n**3, n
+       do iDof = 1, nIndeps*n, n
          gam(iDof+1:iDof+n-1) = gam(iDof+1:iDof+n-1) / 2.0_rk
        end do
      end if
@@ -358,7 +358,7 @@ write(*,*)'after y exec gam', gam
      if (.not. lobattoPoints) then
 !       alph(1:n**3:n) = gam(1:n**3:n)
 !      do iDof = 1, n**2
-       do iDof = 1, n**3, n
+       do iDof = 1, nIndeps*n, n
          gam(iDof+1:iDof+n-1) = gam(iDof+1:iDof+n-1) / 2.0_rk
        end do
      end if
@@ -410,7 +410,7 @@ write(*,*)'after x fpt-exec gam', gam
 
 write(*,*)'after x normalization gam', gam
 
-     do iDof = 1,n**3, n
+     do iDof = 1,nIndeps*n, n
        call fftw_execute_r2r( fpt%planChebToPnt, gam(iDof:iDof+n-1), alph(iDof:iDof+n-1))
      end do 
 
