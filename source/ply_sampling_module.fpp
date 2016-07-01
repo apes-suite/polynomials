@@ -32,8 +32,10 @@ module ply_sampling_module
     &                          tem_varSys_getParams_dummy, &
     &                          tem_varSys_setParams_dummy
 
-  use ply_dof_module, only: q_space, p_space, &
-    &                       nextModgCoeffQTens, nextModgCoeffPTens
+  use ply_dof_module, only: q_space, p_space,                           &
+    &                       nextModgCoeffQTens, nextModgCoeffPTens,     &
+    &                       nextModgCoeffQTens2D, nextModgCoeffPTens2D, &
+    &                       nextModgCoeffQTens1D, nextModgCoeffPTens1D
   use ply_modg_basis_module, only: legendre_1D
 
   implicit none
@@ -60,6 +62,7 @@ module ply_sampling_module
   public :: ply_sampling_type
   public :: ply_sampling_load
   public :: ply_sample_data
+  public :: ply_sampling_free_methodData
 
 
   !> Private data type to describe variables with varying polynomial
@@ -172,8 +175,9 @@ contains
   !> Sampling polynomial data from a given array and mesh to a new mesh with
   !! a new data array, where just a single degree of freedom per element is
   !! used.
-  subroutine ply_sample_data( me, orig_mesh, orig_bcs, varsys, var_degree,  &
-    &                         var_space, tracking, time, new_mesh, resvars  )
+  subroutine ply_sample_data( me, orig_mesh, orig_bcs, varsys, var_degree, &
+    &                         var_space, ndims, tracking, time, new_mesh,  &
+    &                         resvars                                      )
     !> A ply_sampling_type to describe the sampling method.
     type(ply_sampling_type), intent(in) :: me
 
@@ -188,12 +192,18 @@ contains
     !> Maximal polynomial degree for each variable.
     !!
     !! Needs to be matching the variable definition in the variable system.
+    !! @todo Needs to be changed to be an information per element per variable!
+    !!       Possibly by defining a variable in the varsys, providing the
+    !!       degree.
     integer, intent(in) :: var_degree(:)
 
     !> Polynomial space for each variable.
     !!
     !! Needs to be matching the variable definition in the variable system.
     integer, intent(in) :: var_space(:)
+
+    !> Number of dimensions in the polynomial representation.
+    integer, intent(in) :: ndims
 
     type(tem_tracking_type), intent(in) :: tracking
 
@@ -221,7 +231,7 @@ contains
     integer :: nComponents
     integer :: nChilds
     integer :: cur, prev
-    integer :: ansX, ansY, ansZ
+    integer :: ans(3)
     integer :: i
     integer :: iLevel
     integer :: iChild
@@ -235,6 +245,9 @@ contains
     integer :: maxdofs
     integer :: n1D_childs
     integer :: lastdegree
+    integer :: ii
+    integer :: fak(2)
+    integer :: bitlevel
     real(kind=rk) :: legval
     real(kind=rk) :: point_spacing, point_start
     procedure(tem_varSys_proc_element), pointer :: get_element => NULL()
@@ -262,6 +275,7 @@ contains
       call tem_refine_global_subtree( orig_mesh = orig_mesh,        &
         &                             orig_bcs  = orig_bcs,         &
         &                             subtree   = tracking%subtree, &
+        &                             ndims     = ndims,            &
         &                             new_mesh  = tmp_mesh(cur),    &
         &                             new_bcs   =  tmp_bcs(cur),    &
         &                             restrict_to_sub = .true.      )
@@ -276,6 +290,7 @@ contains
         call tem_refine_global_subtree( orig_mesh = tmp_mesh(prev), &
           &                             orig_bcs  = tmp_bcs(prev),  &
           &                             subtree   = tmp_subtree,    &
+          &                             ndims     = ndims,          &
           &                             new_mesh  = tmp_mesh(cur),  &
           &                             new_bcs   = tmp_bcs(cur),   &
           &                             restrict_to_sub = .true.    )
@@ -310,11 +325,25 @@ contains
         varpos = tracking%varmap%varPos%val(iVar)
         select case(var_space(varpos))
         case (q_space)
+          select case(ndims)
+          case(3)
 ?? copy :: getDofsQTens(var_degree(varpos), vardofs(iVar))
+          case(2)
+?? copy :: getDofsQTens2D(var_degree(varpos), vardofs(iVar))
+          case(1)
+?? copy :: getDofsQTens1D(var_degree(varpos), vardofs(iVar))
+          end select
           maxdofs = max( maxdofs, varsys%method%val(varpos)%nComponents &
             &                     * vardofs(iVar)                       )
         case (p_space)
+          select case(ndims)
+          case(3)
 ?? copy :: getDofsPTens(var_degree(varpos), vardofs(iVar))
+          case(2)
+?? copy :: getDofsPTens2D(var_degree(varpos), vardofs(iVar))
+          case(1)
+?? copy :: getDofsPTens1D(var_degree(varpos), vardofs(iVar))
+          end select
           maxdofs = max( maxdofs, varsys%method%val(varpos)%nComponents &
             &                     * vardofs(iVar)                       )
         end select
@@ -353,7 +382,7 @@ contains
 
       varpos = tracking%varmap%varPos%val(1)
       allocate(pointval(var_degree(varpos)+1, n1D_childs))
-      pointval = legendre_1D(points = points, degree = var_degree(1))
+      pointval = legendre_1D(points = points, degree = var_degree(varpos))
       lastdegree = var_degree(varpos)
 
       do ivar=1,tracking%varmap%varPos%nVals
@@ -379,53 +408,102 @@ contains
 
         if (tracking%subtree%useGlobalMesh) then
 
-          nChilds = 8**me%max_nLevels
+          nChilds = (2**ndims)**me%max_nLevels
           allocate(res)
           allocate(res%dat(nComponents*nChilds*nOrigElems))
 
           do iChild=1,nChilds
-            pointCoord = tem_CoordofID( int(iChild, kind=long_k), &
-              &                         offset = 1_long_k       ) &
-              &        + 1
+            select case(ndims)
+            case (3)
+              pointCoord = tem_CoordofID( int(iChild, kind=long_k), &
+                &                         offset = 1_long_k       ) &
+                &        + 1
+            case (2)
+              ! 2D Bit-sieving coordofid
+              bitlevel = 1
+              pointCoord = 1
+              fak(1) = 1
+              fak(2) = 2
+              do
+                if ((iChild-1) / fak(1) == 0) EXIT
+                do ii=1,2
+                  pointCoord(ii) = pointCoord(ii) + bitlevel &
+                    &                             * mod((iChild-1) / fak(ii), 2)
+                end do
+                bitlevel = bitlevel*2
+                fak = fak*4
+              end do
+            case (1)
+              pointCoord = 1
+              pointCoord(1) = iChild
+            end select
 
             iDof = 1
-            ansX = 1
-            ansY = 1
-            ansZ = 1
-            legval = pointval(ansX, pointCoord(1)) &
-              &    * pointval(ansY, pointCoord(2)) &
-              &    * pointval(ansZ, pointCoord(3))
+            ans(1) = 1
+            ans(2) = 1
+            ans(3) = 1
+            legval = pointval(ans(1), pointCoord(1))
+            do ii=2,ndims
+              legval = legval * pointval(ans(ii), pointCoord(ii))
+            end do
 
-            do iComp=1,nComponents
-              do iElem=1,nOrigElems
-                parentpos = (iElem-1)*vardofs(iVar)*nComponents
-                childpos = (iElem - 1)*nChilds*nComponents &
-                  &      + (iChild - 1)*nComponents
+            do iElem=1,nOrigElems
+              parentpos = (iElem-1)*vardofs(iVar)*nComponents
+              childpos = (iElem - 1)*nChilds*nComponents &
+                &      + (iChild - 1)*nComponents
+              do iComp=1,nComponents
                 res%dat(childpos+iComp) = legval*vardat(parentpos+iComp)
               end do
             end do
 
             do iDof=2,vardofs(iVar)
               if (var_space(iVar) == q_space) then
-                call nextModgCoeffQTens( ansFuncX  = ansX,              &
-                  &                      ansFuncY  = ansY,              &
-                  &                      ansFuncZ  = ansZ,              &
-                  &                      maxdegree = var_degree(varpos) )
+                select case(ndims)
+                case (3)
+                  call nextModgCoeffQTens( ansFuncX  = ans(1),            &
+                    &                      ansFuncY  = ans(2),            &
+                    &                      ansFuncZ  = ans(3),            &
+                    &                      maxdegree = var_degree(varpos) )
+                case (2)
+                  call nextModgCoeffQTens2D( ansFuncX  = ans(1),            &
+                    &                        ansFuncY  = ans(2),            &
+                    &                        ansFuncZ  = ans(3),            &
+                    &                        maxdegree = var_degree(varpos) )
+                case (1)
+                  call nextModgCoeffQTens1D( ansFuncX  = ans(1),            &
+                    &                        ansFuncY  = ans(2),            &
+                    &                        ansFuncZ  = ans(3),            &
+                    &                        maxdegree = var_degree(varpos) )
+                end select
               else
-                call nextModgCoeffPTens( ansFuncX  = ansX,              &
-                  &                      ansFuncY  = ansY,              &
-                  &                      ansFuncZ  = ansZ,              &
-                  &                      maxdegree = var_degree(varpos) )
+                select case(ndims)
+                case (3)
+                  call nextModgCoeffPTens( ansFuncX  = ans(1),            &
+                    &                      ansFuncY  = ans(2),            &
+                    &                      ansFuncZ  = ans(3),            &
+                    &                      maxdegree = var_degree(varpos) )
+                case (2)
+                  call nextModgCoeffPTens2D( ansFuncX  = ans(1),            &
+                    &                        ansFuncY  = ans(2),            &
+                    &                        ansFuncZ  = ans(3),            &
+                    &                        maxdegree = var_degree(varpos) )
+                case (1)
+                  call nextModgCoeffPTens1D( ansFuncX  = ans(1),            &
+                    &                        ansFuncY  = ans(2),            &
+                    &                        ansFuncZ  = ans(3),            &
+                    &                        maxdegree = var_degree(varpos) )
+                end select
               end if
-              legval = pointval(ansX, pointCoord(1)) &
-                &    * pointval(ansY, pointCoord(2)) &
-                &    * pointval(ansZ, pointCoord(3))
-              do iComp=1,nComponents
-                do iElem=1,nOrigElems
-                  parentpos = (iElem-1)*vardofs(iVar)*nComponents &
-                    &       + (iDof-1)*nComponents
-                  childpos = (iElem - 1)*nChilds*nComponents &
-                    &      + (iChild - 1)*nComponents
+              legval = pointval(ans(1), pointCoord(1))
+              do ii=2,ndims
+                legval = legval * pointval(ans(ii), pointCoord(ii))
+              end do
+              do iElem=1,nOrigElems
+                parentpos = (iElem-1)*vardofs(iVar)*nComponents &
+                  &       + (iDof-1)*nComponents
+                childpos = (iElem - 1)*nChilds*nComponents &
+                  &      + (iChild - 1)*nComponents
+                do iComp=1,nComponents
                   res%dat(childpos+iComp) = res%dat(childpos+iComp) &
                     &                     + legval*vardat(parentpos+iComp)
                 end do
@@ -527,5 +605,31 @@ contains
     end do
 
   end subroutine get_sampled_element
+  !----------------------------------------------------------------------------!
+  !----------------------------------------------------------------------------!
+
+
+  !----------------------------------------------------------------------------!
+  !> Free previously allocated methodData of variable.
+  !!
+  !! This routine provides a method to free allocated methodData again.
+  subroutine ply_sampling_free_methodData(fun)
+    !> Description of the method to free the data for.
+    class(tem_varSys_op_type), intent(inout) :: fun
+
+    !----------------------------------------------------------------------!
+    type(capsule_array_type), pointer :: p
+    !----------------------------------------------------------------------!
+
+    call c_f_pointer(fun%method_data, p)
+    if (associated(p)) then
+      if (allocated(p%dat)) then
+        deallocate(p%dat)
+      end if
+      nullify(p)
+      fun%method_data = c_loc(p)
+    end if
+
+  end subroutine ply_sampling_free_methodData
 
 end module ply_sampling_module
