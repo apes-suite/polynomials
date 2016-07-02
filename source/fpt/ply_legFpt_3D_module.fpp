@@ -106,8 +106,8 @@ contains
     n_cubed = fpt%legToChebParams%n**3
 
     ! Temporary arrays to initialize FFTW real->real transformations
-    allocate( tmpIn(n_cubed, nVars) )
-    allocate( tmpOut(n_cubed, nVars) )
+    allocate( tmpIn(fpt%legToChebParams%n, nVars) )
+    allocate( tmpOut(fpt%legToChebParams%n, nVars) )
  
     ! If we have OpenMP parallelism, we have to init FFTW with the
     ! corrseponding function call
@@ -314,7 +314,8 @@ write(*,*)'after z exec gam', gam
      if (.not. lobattoPoints) then
 !       alph(1:n**3:n) = gam(1:n**3:n)
        do iDof = 1, nIndeps*n, n
-         gam(iDof+1:iDof+n-1) = gam(iDof+1:iDof+n-1) / 2.0_rk
+         gam(iDof+1:iDof+n-1:2) = -0.5 * gam(iDof+1:iDof+n-1:2)
+         gam(iDof+2:iDof+n-1:2) = 0.5 * gam(iDof+2:iDof+n-1:2)
        end do
      end if
 
@@ -359,7 +360,8 @@ write(*,*)'after y exec gam', gam
 !       alph(1:n**3:n) = gam(1:n**3:n)
 !      do iDof = 1, n**2
        do iDof = 1, nIndeps*n, n
-         gam(iDof+1:iDof+n-1) = gam(iDof+1:iDof+n-1) / 2.0_rk
+         gam(iDof+1:iDof+n-1:2) = -0.5 * gam(iDof+1:iDof+n-1:2)
+         gam(iDof+2:iDof+n-1:2) = 0.5 * gam(iDof+2:iDof+n-1:2)
        end do
      end if
  
@@ -404,7 +406,8 @@ write(*,*)'after x fpt-exec gam', gam
 !       alph(1:n**3:n) = gam(1:n**3:n)
 !      do iDof = 1, n**2
        do iDof = 1, n**3, n
-         gam(iDof+1:iDof+n-1) = gam(iDof+1:iDof+n-1) / 2.0_rk
+         gam(iDof+1:iDof+n-1:2) = -0.5 * gam(iDof+1:iDof+n-1:2)
+         gam(iDof+2:iDof+n-1:2) = 0.5 * gam(iDof+2:iDof+n-1:2)
        end do
      end if
 
