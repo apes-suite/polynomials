@@ -317,6 +317,16 @@ write(*,*)'after z exec gam', gam
          gam(iDof+1:iDof+n-1:2) = -0.5 * gam(iDof+1:iDof+n-1:2)
          gam(iDof+2:iDof+n-1:2) = 0.5 * gam(iDof+2:iDof+n-1:2)
        end do
+
+     else
+
+      do iFunc = 2, n-1
+        gam(iFunc::n) = 0.5_rk *  gam(iFunc::n) 
+      end do
+      gam(1::n) = gam(1::n)
+      gam(n::n) = gam(n::n)
+!      gam = alph / (2.0_rk*(n-1))
+
      end if
 
 write(*,*)'after z normalisation gam', gam
@@ -363,6 +373,15 @@ write(*,*)'after y exec gam', gam
          gam(iDof+1:iDof+n-1:2) = -0.5 * gam(iDof+1:iDof+n-1:2)
          gam(iDof+2:iDof+n-1:2) = 0.5 * gam(iDof+2:iDof+n-1:2)
        end do
+
+     else
+
+       do iFunc = 2, n-1
+         gam(iFunc::n) = 0.5_rk *  gam(iFunc::n)
+       end do
+       gam(1::n) = gam(1::n)
+       gam(n::n) = gam(n::n)
+
      end if
  
 write(*,*)'after y normalisation gam', gam
@@ -409,6 +428,14 @@ write(*,*)'after x fpt-exec gam', gam
          gam(iDof+1:iDof+n-1:2) = -0.5 * gam(iDof+1:iDof+n-1:2)
          gam(iDof+2:iDof+n-1:2) = 0.5 * gam(iDof+2:iDof+n-1:2)
        end do
+
+     else
+
+       do iFunc = 2, n-1
+         gam(iFunc::n) = 0.5_rk * gam(iFunc::n) 
+       end do
+       gam(1::n) = gam(1::n)
+       gam(n::n) = gam(n::n)
      end if
 
 write(*,*)'after x normalization gam', gam
