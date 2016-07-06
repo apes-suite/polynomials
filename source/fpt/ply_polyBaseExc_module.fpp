@@ -1067,29 +1067,25 @@ write(*,*)'normalisation'
         ! to the unnormalized version of DCT in the FFTW.
         if (.not. lobattoPoints) then
            do iDof = 1, nIndeps*n, n
-             gam(iDof+1:iDof+n-1:2) = -0.5 * gam(iDof+1:iDof+n-1:2)
-             gam(iDof+2:iDof+n-1:2) = 0.5 * gam(iDof+2:iDof+n-1:2)
+             alph(:) = gam(:)
+             alph(iDof+1:iDof+n-1:2) = -0.5 * gam(iDof+1:iDof+n-1:2)
+             alph(iDof+2:iDof+n-1:2) = 0.5 * gam(iDof+2:iDof+n-1:2)
+          call fftw_execute_r2r( plan, alph(iDof:iDof+n-1), gam(iDof:iDof+n-1))
            end do
   
         else
   
-          do iDof = 2, n-1
-            gam(iDof::n) = 0.5_rk * gam(iDof::n)
-!           alph(1::n) = gam(1::n)
-!           alph(n::n) = gam(n::n)
+          do iDof = 1, nIndeps*n, n
+write(*,*)'idof', idof
+            alph(:) = gam(:)
+            alph(iDof+1:iDof+n-2) = 0.5 * gam(iDof+1:iDof+n-2)
+            call fftw_execute_r2r( plan, alph(iDof:iDof+n-1), &
+              &                    gam(iDof:iDof+n-1)         )
+!            alph(iDof::n) = 0.5_rk * gam(iDof::n)
+!          call fftw_execute_r2r( plan, alph(iDof:iDof+n-1), gam(iDof:iDof+n-1))
           end do
            
         end if ! lobattoPoints
-write(*,*) ' alph after  normalisation', alph
-write(*,*) 'gam after normalisation', gam
-      
-       alph(:) = gam(:)
-
-       do iDof = 1,nIndeps*n, n
-         call fftw_execute_r2r( plan, alph(iDof:iDof+n-1), gam(iDof:iDof+n-1))
-       end do
-
-write(*,*) 'gam after fft', gam
       end if ! trafo
 
     !$OMP END DO
