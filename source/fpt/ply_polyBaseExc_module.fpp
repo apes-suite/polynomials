@@ -27,12 +27,14 @@
 !! additional diagonal that needs to be computed.
 !! Similarily also s itself should probably be even.
 module ply_polyBaseExc_module
+  use, intrinsic :: iso_c_binding
   use env_module,            only: rk
   use tem_param_module,      only: pi
   use tem_aux_module,        only: tem_abort
   use tem_gamma_module
   use tem_logging_module,    only: logUnit
   use ply_fpt_header_module, only: ply_fpt_default_subblockingWidth
+  use fftw_wrap
 
   implicit none
   private
@@ -894,20 +896,20 @@ contains
   !> Convert strip of coefficients of a modal representation in terms of
   !! Legendre polynomials to modal coefficients in terms of Chebyshev
   !! polynomials.
-  subroutine ply_fpt_exec(alph, gam, params, nIndeps)
+  subroutine ply_fpt_exec(alph, gam, params, plan, lobattoPoints, nIndeps)
     !---------------------------------------------------------------------------
     !> Number of values that can be computed independently.
     integer :: nIndeps
 
-    !> The parameters of the fast polynomial transformation.
-    type(ply_trafo_params_type), intent(inout) :: params
+    !> Parameters of the FPT
+!    type(ply_legFpt_type), intent(inout) :: fpt
 
     !> Modal coefficients of the Legendre expansion.
     !! Size has to be: (1:params%n*indeps,nVars)
     !!
     !! The direction which is to be transformed has to run fastest in
     !! the array.
-    real(kind=rk), intent(in) :: alph(:)
+    real(kind=rk), intent(inout) :: alph(:)
 
     !> Modal coefficients of the Chebyshev expansion.
     !! Size has to be: (1:indeps*params%n,nVars)
@@ -916,13 +918,21 @@ contains
     !! transformed direction will run slowest in the array.
     real(kind=rk), intent(out) :: gam(:)
 
+    !> The parameters of the fast polynomial transformation.
+    type(ply_trafo_params_type), intent(inout) :: params
+
+    !> FFTW plan for DCT
+    type(C_PTR) :: plan
+
+    logical, intent(in) :: lobattoPoints      
+
     !> Lower and upper bound of the strip     
 !'  integer, intent(in) :: strip_lb    
 !'  integer, intent(in) :: strip_ub    
 
     !---------------------------------------------------------------------------
     integer :: j, r, i, l, k, h, n, s, m, numberOfBlocks
-    integer :: iStrip, iFun, indep
+    integer :: iStrip, iFun, indep, iDof
     integer :: iVal
     integer :: odd
     integer :: strip_lb
@@ -1047,7 +1057,41 @@ contains
           & subblockingWidth = params%subblockingWidth     )
 
       end do
-!'    end do ! iStrip
+
+write(*,*) ' alph after original exec', alph
+write(*,*) 'gam after original exec', gam
+
+      if (params%trafo == ply_legToCheb_param) then
+write(*,*)'normalisation'
+        ! Normalize the coefficients of the Chebyshev polynomials due
+        ! to the unnormalized version of DCT in the FFTW.
+        if (.not. lobattoPoints) then
+           do iDof = 1, nIndeps*n, n
+             gam(iDof+1:iDof+n-1:2) = -0.5 * gam(iDof+1:iDof+n-1:2)
+             gam(iDof+2:iDof+n-1:2) = 0.5 * gam(iDof+2:iDof+n-1:2)
+           end do
+  
+        else
+  
+          do iDof = 2, n-1
+            gam(iDof::n) = 0.5_rk * gam(iDof::n)
+!           alph(1::n) = gam(1::n)
+!           alph(n::n) = gam(n::n)
+          end do
+           
+        end if ! lobattoPoints
+write(*,*) ' alph after  normalisation', alph
+write(*,*) 'gam after normalisation', gam
+      
+       alph(:) = gam(:)
+
+       do iDof = 1,nIndeps*n, n
+         call fftw_execute_r2r( plan, alph(iDof:iDof+n-1), gam(iDof:iDof+n-1))
+       end do
+
+write(*,*) 'gam after fft', gam
+      end if ! trafo
+
     !$OMP END DO
   end subroutine ply_fpt_exec
   !****************************************************************************

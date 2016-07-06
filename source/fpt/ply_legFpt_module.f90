@@ -180,49 +180,14 @@ contains
    integer :: iFunc
    !---------------------------------------------------------------------------
 
-   ! Transform Legendre expansion to Chebyshev expansion
-!   call ply_fpt_exec_striped( nIndeps = 1,                  &
-!     &                        alph    = legCoeffs,          &
-!     &                        gam     = pntVal,             &
-!     &                        params  = fpt%legToChebParams )
-
-       ! ply_fpt_exec on temp (no memory transpose)
-       call ply_fpt_exec( alph = legCoeffs,             &
-        &                 gam = pntVal,                 &
-        &                 nIndeps = 1,                  &
-        &                 params = fpt%legToChebParams  )
+   ! ply_fpt_exec on temp (no memory transpose)
+   call ply_fpt_exec( alph = legCoeffs,              &
+    &                 gam = pntVal,                  &
+    &                 nIndeps = 1,                   &
+    &                 plan = fpt%planChebToPnt,      &
+    &                 lobattoPoints = lobattoPoints, &
+    &                 params = fpt%legToChebParams   )
   
-   !$OMP SINGLE
-   legCoeffs(1) = pntVal(1)
-   !$OMP END SINGLE
-
-   if(.not. lobattoPoints) then
-
-     ! Normalize the coefficients of the Chebyshev polynomials due
-     ! to the unnormalized version of DCT-III in the FFTW.
-     !$OMP DO
-     do iFunc = 2, fpt%legToChebParams%n
-       legCoeffs(iFunc) = ((-1.0_rk)**(iFunc-1)) * pntval(iFunc) / 2.0_rk
-     end do
-     !$OMP END DO
-
-   else
-
-     ! Transform Chebyshev expansion to point values at Chebyshev nodes by
-     ! DCT I and normalization factor ...
-     !$OMP SINGLE
-     legCoeffs(fpt%legToChebParams%n) = pntVal(fpt%legToChebParams%n)
-     !$OMP END SINGLE
-     !$OMP WORKSHARE
-     legCoeffs(2:fpt%legToChebParams%n-1) &
-       &  = 0.5_rk * pntVal(2:fpt%legToChebParams%n-1)
-     !$OMP END WORKSHARE
-
-   end if
- 
-   !$OMP SINGLE
-   call fftw_execute_r2r( fpt%planChebToPnt, legCoeffs, pntVal )
-   !$OMP END SINGLE
 
   end subroutine ply_legToPnt
   !****************************************************************************
@@ -277,9 +242,11 @@ contains
    end if
 
    ! ply_fpt_exec on temp (no memory transpose)
-   call ply_fpt_exec( alph = pntVal,                &
-    &                 gam = legCoeffs,              &
-    &                 nIndeps = 1,                  &
+   call ply_fpt_exec( alph = pntVal,                 &
+    &                 gam = legCoeffs,               &
+    &                 nIndeps = 1,                   &
+    &                 plan = fpt%planPntToCheb,      &
+    &                 lobattoPoints = lobattoPoints, &
     &                 params = fpt%chebToLegParams  )
 
   end subroutine ply_pntToLeg

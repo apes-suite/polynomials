@@ -304,41 +304,43 @@ contains
 write(*,*)'before z exec alph', alph
 
      ! ply_fpt_exec on temp (no memory transpose)
-     call ply_fpt_exec( alph = alph,                  &
-      &                 gam = gam,                    &
-      &                 nIndeps = nIndeps,            &
-      &                 params = fpt%legToChebParams  )
+     call ply_fpt_exec( alph = alph,                   &
+      &                 gam = gam,                     &
+      &                 nIndeps = nIndeps,             &
+      &                 plan = fpt%planChebToPnt,      &
+      &                 lobattoPoints = lobattoPoints, &
+      &                 params = fpt%legToChebParams   )
  
 write(*,*)'after z exec gam', gam
 
-     if (.not. lobattoPoints) then
-!       alph(1:n**3:n) = gam(1:n**3:n)
-       do iDof = 1, nIndeps*n, n
-         gam(iDof+1:iDof+n-1:2) = -0.5 * gam(iDof+1:iDof+n-1:2)
-         gam(iDof+2:iDof+n-1:2) = 0.5 * gam(iDof+2:iDof+n-1:2)
-       end do
-
-     else
-
-      do iFunc = 2, n-1
-        gam(iFunc::n) = 0.5_rk *  gam(iFunc::n) 
-      end do
-      gam(1::n) = gam(1::n)
-      gam(n::n) = gam(n::n)
-!      gam = alph / (2.0_rk*(n-1))
-
-     end if
-
-write(*,*)'after z normalisation gam', gam
-
-     do iDof = 1,n**3, n
-       call fftw_execute_r2r( fpt%planChebToPnt, gam(iDof:iDof+n-1), alph(iDof:iDof+n-1))
-     end do 
+!     if (.not. lobattoPoints) then
+!!       alph(1:n**3:n) = gam(1:n**3:n)
+!       do iDof = 1, nIndeps*n, n
+!         gam(iDof+1:iDof+n-1:2) = -0.5 * gam(iDof+1:iDof+n-1:2)
+!         gam(iDof+2:iDof+n-1:2) = 0.5 * gam(iDof+2:iDof+n-1:2)
+!       end do
+!
+!     else
+!
+!      do iFunc = 2, n-1
+!        gam(iFunc::n) = 0.5_rk *  gam(iFunc::n) 
+!      end do
+!      gam(1::n) = gam(1::n)
+!      gam(n::n) = gam(n::n)
+!!      gam = alph / (2.0_rk*(n-1))
+!
+!     end if
+!
+!write(*,*)'after z normalisation gam', gam
+!
+!     do iDof = 1,n**3, n
+!       call fftw_execute_r2r( fpt%planChebToPnt, gam(iDof:iDof+n-1), alph(iDof:iDof+n-1))
+!     end do 
 
 write(*,*)'after z fft alph', alph
 
 !    pntVal((iStrip-1)*n+1:min((iStrip+striplen-1)*n, n_cubed))  = gam(:)
-     pntVal((iStrip-1)*n+1 : (iStrip+nIndeps-1)*n)  = alph(1:nIndeps*n)
+     pntVal((iStrip-1)*n+1 : (iStrip+nIndeps-1)*n)  = gam(1:nIndeps*n)
 
      ! todo: fft on temp
      ! temp -> pntVal (stride-1 writing)
@@ -359,44 +361,46 @@ write(*,*)'after z fft alph', alph
 write(*,*)'before y exec alph', alph
 
      ! ply_fpt_exec on temp (no memory transpose)
-     call ply_fpt_exec( alph = alph,                  &
-       &                gam = gam,                    &
-       &                nIndeps = nIndeps,            &
-       &                params = fpt%legToChebParams  )
+     call ply_fpt_exec( alph = alph,                   &
+       &                gam = gam,                     &
+       &                nIndeps = nIndeps,             &
+       &                plan = fpt%planChebToPnt,      &
+       &                lobattoPoints = lobattoPoints, &
+       &                params = fpt%legToChebParams   )
 
-write(*,*)'after y exec gam', gam
-
-     if (.not. lobattoPoints) then
-!       alph(1:n**3:n) = gam(1:n**3:n)
-!      do iDof = 1, n**2
-       do iDof = 1, nIndeps*n, n
-         gam(iDof+1:iDof+n-1:2) = -0.5 * gam(iDof+1:iDof+n-1:2)
-         gam(iDof+2:iDof+n-1:2) = 0.5 * gam(iDof+2:iDof+n-1:2)
-       end do
-
-     else
-
-       do iFunc = 2, n-1
-         gam(iFunc::n) = 0.5_rk *  gam(iFunc::n)
-       end do
-       gam(1::n) = gam(1::n)
-       gam(n::n) = gam(n::n)
-
-     end if
- 
-write(*,*)'after y normalisation gam', gam
-
-     do iDof = 1,n**3, n
-       call fftw_execute_r2r( fpt%planChebToPnt, gam(iDof:iDof+n-1), alph(iDof:iDof+n-1))
-     end do 
-
-write(*,*)'after y fft alph', alph
+!write(*,*)'after y exec gam', gam
+!
+!     if (.not. lobattoPoints) then
+!!       alph(1:n**3:n) = gam(1:n**3:n)
+!!      do iDof = 1, n**2
+!       do iDof = 1, nIndeps*n, n
+!         gam(iDof+1:iDof+n-1:2) = -0.5 * gam(iDof+1:iDof+n-1:2)
+!         gam(iDof+2:iDof+n-1:2) = 0.5 * gam(iDof+2:iDof+n-1:2)
+!       end do
+!
+!     else
+!
+!       do iFunc = 2, n-1
+!         gam(iFunc::n) = 0.5_rk *  gam(iFunc::n)
+!       end do
+!       gam(1::n) = gam(1::n)
+!       gam(n::n) = gam(n::n)
+!
+!     end if
+! 
+!write(*,*)'after y normalisation gam', gam
+!
+!     do iDof = 1,n**3, n
+!       call fftw_execute_r2r( fpt%planChebToPnt, gam(iDof:iDof+n-1), alph(iDof:iDof+n-1))
+!     end do 
+!
+!write(*,*)'after y fft alph', alph
 
        ! todo: fft on temp
        ! temp -> pntVal (stride-1 writing)
      ! legCoeffs((iStrip-1)*n+1 : min((iStrip-1+striplen)*n, n_cubed)) &
      !   &        = gam(:)
-     legCoeffs((iStrip-1)*n+1 : (iStrip+nIndeps-1)*n)  = alph(1:nIndeps*n)
+     legCoeffs((iStrip-1)*n+1 : (iStrip+nIndeps-1)*n)  = gam(1:nIndeps*n)
 
 
    end do yStripLoop ! iStrip
@@ -414,35 +418,37 @@ write(*,*)'after y fft alph', alph
 write(*,*)'before x fpt-exec alph', alph
 
      ! ply_fpt_exec on temp (no memory transpose)
-     call ply_fpt_exec( alph = alph,                  &
-       &                gam = gam,                    &
-       &                nIndeps = nIndeps,            &
-       &                params = fpt%legToChebParams  )
+     call ply_fpt_exec( alph = alph,                   &
+       &                gam = gam,                     &
+       &                nIndeps = nIndeps,             &
+       &                plan = fpt%planChebToPnt,      &
+       &                lobattoPoints = lobattoPoints, &
+       &                params = fpt%legToChebParams   )
 
 write(*,*)'after x fpt-exec gam', gam
 
-     if (.not. lobattoPoints) then
-!       alph(1:n**3:n) = gam(1:n**3:n)
-!      do iDof = 1, n**2
-       do iDof = 1, n**3, n
-         gam(iDof+1:iDof+n-1:2) = -0.5 * gam(iDof+1:iDof+n-1:2)
-         gam(iDof+2:iDof+n-1:2) = 0.5 * gam(iDof+2:iDof+n-1:2)
-       end do
-
-     else
-
-       do iFunc = 2, n-1
-         gam(iFunc::n) = 0.5_rk * gam(iFunc::n) 
-       end do
-       gam(1::n) = gam(1::n)
-       gam(n::n) = gam(n::n)
-     end if
-
-write(*,*)'after x normalization gam', gam
-
-     do iDof = 1,nIndeps*n, n
-       call fftw_execute_r2r( fpt%planChebToPnt, gam(iDof:iDof+n-1), alph(iDof:iDof+n-1))
-     end do 
+!     if (.not. lobattoPoints) then
+!!       alph(1:n**3:n) = gam(1:n**3:n)
+!!      do iDof = 1, n**2
+!       do iDof = 1, n**3, n
+!         gam(iDof+1:iDof+n-1:2) = -0.5 * gam(iDof+1:iDof+n-1:2)
+!         gam(iDof+2:iDof+n-1:2) = 0.5 * gam(iDof+2:iDof+n-1:2)
+!       end do
+!
+!     else
+!
+!       do iFunc = 2, n-1
+!         gam(iFunc::n) = 0.5_rk * gam(iFunc::n) 
+!       end do
+!       gam(1::n) = gam(1::n)
+!       gam(n::n) = gam(n::n)
+!     end if
+!
+!write(*,*)'after x normalization gam', gam
+!
+!     do iDof = 1,nIndeps*n, n
+!       call fftw_execute_r2r( fpt%planChebToPnt, gam(iDof:iDof+n-1), alph(iDof:iDof+n-1))
+!     end do 
 
 write(*,*)'after x fft alph', alph
      ! todo: fft on temp
@@ -450,7 +456,7 @@ write(*,*)'after x fft alph', alph
 
      ! pntVal((iStrip-1)*n+1:min((iStrip+striplen-1)*n, n_cubed))  = gam(:)
 
-     pntVal((iStrip-1)*n+1 : (iStrip+nIndeps-1)*n)  = alph(1:nIndeps*n)
+     pntVal((iStrip-1)*n+1 : (iStrip+nIndeps-1)*n)  = gam(1:nIndeps*n)
 
    end do xStripLoop
 
@@ -825,10 +831,12 @@ write(*,*)'after x fft alph', alph
      nIndeps = min(striplen, n_squared-iStrip+1)
 
      ! ply_fpt_exec on temp (no memory transpose)
-     call ply_fpt_exec( alph = alph,                  &
-      &                 gam = gam,                    &
-      &                 nIndeps = nIndeps,            &
-      &                 params = fpt%chebToLegParams  )
+     call ply_fpt_exec( alph = alph,                   &
+      &                 gam = gam,                     &
+      &                 nIndeps = nIndeps,             &
+      &                 plan = fpt%planPntToCheb,      &
+      &                 lobattoPoints = lobattoPoints, &
+      &                 params = fpt%chebToLegParams   )
  
      legCoeffs((iStrip-1)*n+1 : (iStrip+nIndeps-1)*n)  = gam(1:nIndeps*n)
 
@@ -849,10 +857,12 @@ write(*,*)'after x fft alph', alph
      nIndeps = min(striplen, n_squared-iStrip+1)
 
      ! ply_fpt_exec on temp (no memory transpose)
-     call ply_fpt_exec( alph = alph,                  &
-       &                gam = gam,                    &
-       &                nIndeps = nIndeps,            &
-       &                params = fpt%chebToLegParams  )
+     call ply_fpt_exec( alph = alph,                    &
+       &                gam = gam,                      &
+       &                nIndeps = nIndeps,              &
+       &                 plan = fpt%planPntToCheb,      &
+       &                 lobattoPoints = lobattoPoints, &
+       &                params = fpt%chebToLegParams    )
  
        ! todo: fft on temp
        ! temp -> pntVal (stride-1 writing)
@@ -872,10 +882,12 @@ write(*,*)'after x fft alph', alph
      nIndeps = min(striplen, n_squared-iStrip+1)
 
      ! ply_fpt_exec on temp (no memory transpose)
-     call ply_fpt_exec( alph = alph,                  &
-       &                gam = gam,                    &
-       &                nIndeps = nIndeps,            &
-       &                params = fpt%chebToLegParams  )
+     call ply_fpt_exec( alph = alph,                    &
+       &                gam = gam,                      &
+       &                nIndeps = nIndeps,              &
+       &                 plan = fpt%planPntToCheb,      &
+       &                 lobattoPoints = lobattoPoints, &
+       &                params = fpt%chebToLegParams    )
 
      ! todo: fft on temp
      ! temp -> pntVal (stride-1 writing)

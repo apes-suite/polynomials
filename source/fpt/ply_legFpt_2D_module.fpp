@@ -187,6 +187,8 @@ contains
    !  1  4  7
    !  2  5  8
    !  3  6  9
+write(*,*) '////////////////'
+write(*,*) 'y-Direction'
    yStripLoop: do iStrip = 1, n, striplen
      ! iAlph is the index of the first element in a line for the transformation in 
      ! y-direction. 
@@ -199,44 +201,47 @@ contains
      nIndeps = min(striplen, n-iStrip+1)
  
      ! ply_fpt_exec on temp (no memory transpose)
-     call ply_fpt_exec( alph = alph,                  &
-       &                gam = gam,                    &
-       &                nIndeps = nIndeps,            &
-       &                params = fpt%legToChebParams  )
+     call ply_fpt_exec( alph = alph,                   &
+       &                gam = gam,                     &
+       &                nIndeps = nIndeps,             &
+       &                plan = fpt%planChebToPnt,      &
+       &                lobattoPoints = lobattoPoints, &
+       &                params = fpt%legToChebParams   )
 
-   if(.not. lobattoPoints) then
-
-     ! Normalize the coefficients of the Chebyshev polynomials due
-     ! to the unnormalized version of DCT-III in the FFTW.
-     !$OMP DO
-!     do iFunc = 2, fpt%legToChebParams%n
-     do iFunc = 2, n
-       gam(iFunc:n**2:n) = ((-1.0_rk)**(iFunc-1)) * gam(iFunc:n**2:n) / 2.0_rk
-     end do
-     !$OMP END DO
-
-   else
-
-     ! Transform Chebyshev expansion to point values at Chebyshev nodes by
-     ! DCT I and normalization factor ...
-     !$OMP WORKSHARE
-     do iFunc = 2, n-1
-       gam(iFunc:n**2:n) = gam(iFunc:n**2:n) / 2.0_rk
-     end do
-     !$OMP END WORKSHARE
-!     gam(2:fpt%legToChebParams%n-1) &
-!       &  = 0.5_rk * gam(2:fpt%legToChebParams%n-1)
-
-   end if
-
-     !$OMP SINGLE
-do iDof = 1,n**2,n
-     call fftw_execute_r2r( fpt%planChebToPnt, gam(iDof:iDof+n-1), alph(iDof:iDof+n-1) )
-end do
-     !$OMP END SINGLE
+!   if(.not. lobattoPoints) then
+!
+!     ! Normalize the coefficients of the Chebyshev polynomials due
+!     ! to the unnormalized version of DCT-III in the FFTW.
+!     !$OMP DO
+!!     do iFunc = 2, fpt%legToChebParams%n
+!     do iFunc = 2, n
+!       gam(iFunc:n**2:n) = ((-1.0_rk)**(iFunc-1)) * gam(iFunc:n**2:n) / 2.0_rk
+!     end do
+!     !$OMP END DO
+!
+!   else
+!
+!     ! Transform Chebyshev expansion to point values at Chebyshev nodes by
+!     ! DCT I and normalization factor ...
+!     !$OMP WORKSHARE
+!     do iFunc = 2, n-1
+!       gam(iFunc:n**2:n) = gam(iFunc:n**2:n) / 2.0_rk
+!     end do
+!     !$OMP END WORKSHARE
+!!     gam(2:fpt%legToChebParams%n-1) &
+!!       &  = 0.5_rk * gam(2:fpt%legToChebParams%n-1)
+!
+!   end if
+!
+!     !$OMP SINGLE
+!do iDof = 1,n**2,n
+!     call fftw_execute_r2r( fpt%planChebToPnt, gam(iDof:iDof+n-1), alph(iDof:iDof+n-1) )
+!end do
+!     !$OMP END SINGLE
 
      ! Write gam to pntVal array
-     pntVal((iStrip-1)*n+1 : (iStrip+nIndeps-1)*n)  = alph(1:nIndeps*n)
+!    pntVal((iStrip-1)*n+1 : (iStrip+nIndeps-1)*n)  = alph(1:nIndeps*n)
+     pntVal((iStrip-1)*n+1 : (iStrip+nIndeps-1)*n)  = gam(1:nIndeps*n)
 
    end do yStripLoop
 
@@ -244,42 +249,46 @@ end do
    xStripLoop: do iStrip = 1, n, striplen
      do iAlph = iStrip, min(iStrip+striplen-1, n)  
        alph((iAlph-iStrip)*n+1:(iAlph-iStrip+1)*n) = &
-           & PntVal(iAlph::n) !ztrafo
+           & pntVal(iAlph::n) !ztrafo
      end do
 
      ! At the end of the array the number of computed strips might be smaller
      nIndeps = min(striplen, n-iStrip+1)
-
+write(*,*) '////////////////'
+write(*,*) 'x-Direction'
      ! ply_fpt_exec on temp (no memory transpose)
-     call ply_fpt_exec( alph = alph,                  &
-       &                gam = gam,                    &
-       &                nIndeps = nIndeps,            &
-       &                params = fpt%legToChebParams  )
+     call ply_fpt_exec( alph = alph,                   &
+       &                gam = gam,                     &
+       &                nIndeps = nIndeps,             &
+       &                plan = fpt%planChebToPnt,      &
+       &                lobattoPoints = lobattoPoints, &
+       &                params = fpt%legToChebParams   )
 
-   if(.not. lobattoPoints) then
+!   if(.not. lobattoPoints) then
+!
+!     ! Normalize the coefficients of the Chebyshev polynomials due
+!     ! to the unnormalized version of DCT-III in the FFTW.
+!     !$OMP DO
+!!     do iFunc = 2, fpt%legToChebParams%n
+!     do iFunc = 2, n
+!       gam(iFunc:n**2:n) = ((-1.0_rk)**(iFunc-1)) * gam(iFunc:n**2:n) / 2.0_rk
+!     end do
+!     !$OMP END DO
+!
+!   else
+!
+!     ! Transform Chebyshev expansion to point values at Chebyshev nodes by
+!     ! DCT I and normalization factor ...
+!     !$OMP WORKSHARE
+!     do iFunc = 2, n-1
+!       gam(iFunc:n**2:n) = gam(iFunc:n**2:n) / 2.0_rk
+!     end do
+!     !$OMP END WORKSHARE
+!!     gam(2:fpt%legToChebParams%n-1) &
+!!       &  = gam(2:fpt%legToChebParams%n-1) / 2.0_rk
+!
+!   end if
 
-     ! Normalize the coefficients of the Chebyshev polynomials due
-     ! to the unnormalized version of DCT-III in the FFTW.
-     !$OMP DO
-!     do iFunc = 2, fpt%legToChebParams%n
-     do iFunc = 2, n
-       gam(iFunc:n**2:n) = ((-1.0_rk)**(iFunc-1)) * gam(iFunc:n**2:n) / 2.0_rk
-     end do
-     !$OMP END DO
-
-   else
-
-     ! Transform Chebyshev expansion to point values at Chebyshev nodes by
-     ! DCT I and normalization factor ...
-     !$OMP WORKSHARE
-     do iFunc = 2, n-1
-       gam(iFunc:n**2:n) = gam(iFunc:n**2:n) / 2.0_rk
-     end do
-     !$OMP END WORKSHARE
-!     gam(2:fpt%legToChebParams%n-1) &
-!       &  = gam(2:fpt%legToChebParams%n-1) / 2.0_rk
-
-   end if
 !   if(.not. lobattoPoints) then
 !
 !     ! Normalize the coefficients of the Chebyshev polynomials due
@@ -301,19 +310,20 @@ end do
 !
 !   end if
 
-     ! todo: fft on temp
-     ! temp -> pntVal (stride-1 writing)
-     !$OMP SINGLE
-!     call fftw_execute_r2r( fpt%planChebToPnt, gam(:), alph(:) )
-do iDof = 1,n**2,n
-     call fftw_execute_r2r( fpt%planChebToPnt,  &
-       &                    gam(iDof:iDof+n-1), &
-       &                    alph(iDof:iDof+n-1) )
-end do
-     !$OMP END SINGLE
+!     ! todo: fft on temp
+!     ! temp -> pntVal (stride-1 writing)
+!     !$OMP SINGLE
+!!     call fftw_execute_r2r( fpt%planChebToPnt, gam(:), alph(:) )
+!do iDof = 1,n**2,n
+!     call fftw_execute_r2r( fpt%planChebToPnt,  &
+!       &                    gam(iDof:iDof+n-1), &
+!       &                    alph(iDof:iDof+n-1) )
+!end do
+!     !$OMP END SINGLE
 
      ! pntVal((iStrip-1)*n+1:min((iStrip+striplen-1)*n, n_cubed))  = gam(:)
-     pntVal((iStrip-1)*n+1 : (iStrip+nIndeps-1)*n)  = alph(1:nIndeps*n)
+!     pntVal((iStrip-1)*n+1 : (iStrip+nIndeps-1)*n)  = alph(1:nIndeps*n)
+     pntVal((iStrip-1)*n+1 : (iStrip+nIndeps-1)*n)  = gam(1:nIndeps*n)
 
    end do xStripLoop
 
@@ -625,10 +635,12 @@ write(*,*) 'alph  after norm', alph
      ! At the end of the array the number of computed strips might be smaller
      nIndeps = min(striplen, n-iStrip+1)
      ! ply_fpt_exec on temp (no memory transpose)
-     call ply_fpt_exec( alph = alph,                  &
-       &                gam = gam,                    &
-       &                nIndeps = nIndeps,            &
-       &                params = fpt%chebToLegParams  )
+     call ply_fpt_exec( alph = alph,                   &
+       &                gam = gam,                     &
+       &                nIndeps = nIndeps,             &
+       &                plan = fpt%planPntToCheb,      &
+       &                lobattoPoints = lobattoPoints, &
+       &                params = fpt%chebToLegParams   )
  
        ! todo: fft on temp
        ! temp -> pntVal (stride-1 writing)
@@ -748,10 +760,12 @@ write(*,*) 'alph  after norm', alph
      nIndeps = min(striplen, n-iStrip+1)
 
      ! ply_fpt_exec on temp (no memory transpose)
-     call ply_fpt_exec( alph = alph,                  &
-       &                gam = gam,                    &
-       &                nIndeps = nIndeps,            &
-       &                params = fpt%chebToLegParams  )
+     call ply_fpt_exec( alph = alph,                   &
+       &                gam = gam,                     &
+       &                nIndeps = nIndeps,             &
+       &                plan = fpt%planPntToCheb,      &
+       &                lobattoPoints = lobattoPoints, &
+       &                params = fpt%chebToLegParams   )
 
 write(*,*)'nach fpt_exec gam', gam
 
