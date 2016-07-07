@@ -2,8 +2,9 @@
 module ply_sampled_tracking_module
   use aotus_module, only: flu_State
 
-  use hvs_output_module, only: hvs_output_init, hvs_output_open, &
-    &                          hvs_output_write, hvs_output_close
+  use hvs_output_module, only: hvs_output_init, hvs_output_open,   &
+    &                          hvs_output_write, hvs_output_close, &
+    &                          hvs_output_finalize
 
   use env_module, only: pathLen, labelLen
 
@@ -429,6 +430,8 @@ contains
         end do
         call tem_empty_varSys(sampled_vars)
         call unload_treelmesh(sampled_mesh)
+
+        call hvs_output_finalize(me%tracking(iTrack)%output_file)
 
       else
 

@@ -10,7 +10,7 @@ module ply_sampling_module
   use aotus_module, only: flu_state, aot_get_val, aoterr_Fatal
   use aot_table_module, only: aot_table_open, aot_table_close
 
-  use treelmesh_module, only: treelmesh_type
+  use treelmesh_module, only: treelmesh_type, free_treelmesh
   use tem_aux_module, only: tem_abort
   use tem_bc_prop_module, only: tem_bc_prop_type
   use tem_logging_module, only: logunit
@@ -233,6 +233,7 @@ contains
     integer :: cur, prev
     integer :: ans(3)
     integer :: i
+    integer :: iMesh
     integer :: iLevel
     integer :: iChild
     integer :: iComp
@@ -313,6 +314,10 @@ contains
       call tem_create_tree_from_sub( intree  = tmp_mesh(cur), &
         &                            subtree = tmp_subtree,   &
         &                            newtree = new_mesh       )
+
+      do iMesh=0,1
+        call free_treelmesh(tmp_mesh(iMesh))
+      end do
 
       maxdofs = 0
       nVars = tracking%varmap%varPos%nVals
@@ -626,7 +631,7 @@ contains
       if (allocated(p%dat)) then
         deallocate(p%dat)
       end if
-      nullify(p)
+      deallocate(p)
       fun%method_data = c_loc(p)
     end if
 
