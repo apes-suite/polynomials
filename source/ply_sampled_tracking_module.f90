@@ -176,6 +176,7 @@ contains
       RETURN
     end if
 
+
     do iTrack=1,me%trackCtrl%nTrackings
 
       ! map variables
@@ -216,41 +217,26 @@ contains
           &                                                  %val(:nVars)  )
       end if
 
-      if (me%tracking(iTrack)%output_file%useGetPoint) then
+      if (me%tracking(iTrack)%header%output_config%useGetPoint) then
         ! For point trackings do the initialization here, as no subsampling is
         ! required for them.
         basename = trim(me%tracking(iTrack)%header%prefix) &
           &        // trim(me%tracking(iTrack)%header%label)
 
-        if (me%tracking(iTrack)%subtree%useGlobalMesh) then
-          call hvs_output_init(                         &
-            &    out_file    = me%tracking(iTrack)      &
-            &                    %output_file,          &
-            &    out_config  = me%tracking(iTrack)      &
-            &                    %header%output_config, &
-            &    tree        = mesh,                    &
-            &    varSys      = varsys,                  &
-            &    geometry    = me%tracking(iTrack)      &
-            &                    %header%geometry,      &
-            &    basename    = trim(basename),          &
-            &    globProc    = proc,                    &
-            &    solver      = solver                   )
-        else
-          call hvs_output_init(                         &
-            &    out_file    = me%tracking(iTrack)      &
-            &                    %output_file,          &
-            &    out_config  = me%tracking(iTrack)      &
-            &                    %header%output_config, &
-            &    tree        = mesh,                    &
-            &    subtree     = me%tracking(iTrack)      &
-            &                    %subtree,              &
-            &    varSys      = varsys,                  &
-            &    geometry    = me%tracking(iTrack)      &
-            &                    %header%geometry,      &
-            &    basename    = trim(basename),          &
-            &    globProc    = proc,                    &
-            &    solver      = solver                   )
-        end if
+        call hvs_output_init(                         &
+          &    out_file    = me%tracking(iTrack)      &
+          &                    %output_file,          &
+          &    out_config  = me%tracking(iTrack)      &
+          &                    %header%output_config, &
+          &    tree        = mesh,                    &
+          &    subtree     = me%tracking(iTrack)      &
+          &                    %subtree,              &
+          &    varSys      = varsys,                  &
+          &    geometry    = me%tracking(iTrack)      &
+          &                    %header%geometry,      &
+          &    basename    = trim(basename),          &
+          &    globProc    = proc,                    &
+          &    solver      = solver                   )
 
       end if
 
@@ -371,7 +357,7 @@ contains
           &            simControl = simControl         ) ) CYCLE
       end if
 
-      if (.not. me%tracking(iTrack)%output_file%useGetPoint) then
+      if (.not. me%tracking(iTrack)%header%output_config%useGetPoint) then
         ! Only perform subsampling if not using get_point anyway.
         call ply_sample_data( me         = me%sampling,         &
           &                   orig_mesh  = mesh,                &
