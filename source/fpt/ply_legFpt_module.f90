@@ -132,19 +132,6 @@ contains
     ! Init the DCT II ( Point values -> Leg )
     fpt%planPntToCheb = fftw_plan_r2r_1d(fpt%legToChebParams%n,tmpIn,&
                              & tmpOut,FFTW_REDFT10,FFTW_ESTIMATE )
-     ! Init the DCT III ( Leg -> Point values )
-!!     fpt%planChebToPnt = fftw_plan_r2r_1d( n = fpt%legToChebParams%n,&
-!!                                        &  in = tmpIn,&  !legCoeffs
-!!                                        &  out = tmpOut, &! pntVal
-!!                                        &  kind = FFTW_REDFT01, &
-!!                                        &  flags = FFTW_ESTIMATE )
-!!
-!!     ! Init the DCT II ( Point values -> Leg )
-!!     fpt%planChebToPnt = fftw_plan_r2r_1d( n = fpt%legToChebParams%n,&
-!!                                        &  in = tmpIn,&   !pntVal
-!!                                        &  out = tmpOut, & !legCoeffs
-!!                                        &  kind = FFTW_REDFT10, &
-!!                                        &  flags = FFTW_ESTIMATE )
    else
      ! Init the DCT I  (Leg -> nodal): To be used with a normalization factor for trafo ...
      fpt%planChebToPnt = fftw_plan_r2r_1d( n = fpt%legToChebParams%n,&
@@ -205,41 +192,6 @@ contains
    !---------------------------------------------------------------------------
    integer :: iFunc
    !---------------------------------------------------------------------------
-   
-   ! Transform the point values to Chebyshev polynomials by DCT II
-   !$OMP SINGLE
-   call fftw_execute_r2r( fpt%planPntToCheb, pntVal, legCoeffs )
-   !$OMP END SINGLE
-
-   ! Apply normalization factors of the DCT II
-   if (.not. lobattoPoints) then
-
-     !$OMP SINGLE
-     pntVal(1) = legCoeffs(1) / (2.0_rk*fpt%chebToLegParams%n)
-     !$OMP END SINGLE
-
-     !$OMP DO
-     do iFunc = 2, fpt%chebToLegParams%n
-       pntVal(iFunc) = legCoeffs(iFunc) * ((-1.0_rk)**(iFunc-1)) &
-               & / ( fpt%chebToLegParams%n )
-     end do
-     !$OMP END DO
-
-   else
-
-     !$OMP SINGLE
-     pntVal(1) = legCoeffs(1)
-     pntVal(fpt%chebToLegParams%n) = legCoeffs(fpt%chebToLegParams%n)
-     !$OMP END SINGLE
-
-     !$OMP WORKSHARE
-     pntVal(2:fpt%chebToLegParams%n-1) = 2.0_rk * legCoeffs(2:fpt%chebToLegParams%n-1) 
-     !$OMP END WORKSHARE
-     !$OMP WORKSHARE
-     pntVal(:) = pntVal(:) / (2.0_rk*(fpt%chebToLegParams%n-1))
-     !$OMP END WORKSHARE
-
-   end if
 
    ! ply_fpt_exec on temp (no memory transpose)
    call ply_fpt_exec( alph = pntVal,                 &
@@ -247,7 +199,7 @@ contains
     &                 nIndeps = 1,                   &
     &                 plan = fpt%planPntToCheb,      &
     &                 lobattoPoints = lobattoPoints, &
-    &                 params = fpt%chebToLegParams  )
+    &                 params = fpt%chebToLegParams   )
 
   end subroutine ply_pntToLeg
 

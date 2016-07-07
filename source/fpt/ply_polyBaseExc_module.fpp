@@ -931,6 +931,7 @@ contains
 !'  integer, intent(in) :: strip_ub    
 
     !---------------------------------------------------------------------------
+    real(kind=rk) :: normFactor
     integer :: j, r, i, l, k, h, n, s, m, numberOfBlocks
     integer :: iStrip, iFun, indep, iDof
     integer :: iVal
@@ -961,13 +962,45 @@ contains
     !$OMP WORKSHARE
     gam = 0.0_rk
     !$OMP END WORKSHARE
-    !$OMP DO
     ! Loop over all strips
 !'    do iStrip = 0,nIndeps-1,striplen
 !'      ! Calculate the upper bound of the current strip
        iStrip = 0
        strip_ub = nIndeps
 !"     strip_ub = min(strip_lb + striplen, nIndeps)
+
+      if (params%trafo == ply_ChebToLeg_param) then
+        ! Normalize the coefficients of the Chebyshev polynomials due
+        ! to the unnormalized version of DCT in the FFTW.
+        if (.not. lobattoPoints) then
+           normFactor = 1.0 / real(n,kind=rk)
+           do iDof = 1, nIndeps*n, n
+          call fftw_execute_r2r( plan, alph(iDof:iDof+n-1), gam(iDof:iDof+n-1))
+             alph(iDof:iDof+n-1:n) = gam(iDof:iDof+n-1:n) * 0.5 * normfactor
+             alph(iDof+1:iDof+n-1:2) = -normFactor * gam(iDof+1:iDof+n-1:2)
+             alph(iDof+2:iDof+n-1:2) = normFactor * gam(iDof+2:iDof+n-1:2)
+           end do
+  
+        else
+  
+!          normFactor = 1.0 / real(n,kind=rk)
+          normFactor = 1.0 / (2.0_rk*(n-1))
+          do iDof = 1, nIndeps*n, n
+write(*,*)'iDof', iDof
+            call fftw_execute_r2r( plan, alph(iDof:iDof+n-1), &
+              &                    gam(iDof:iDof+n-1)         )
+write(*,*)'alph before normalisation', alph
+            alph(iDof:iDof+n-1) = gam(iDof:iDof+n-1) * normFactor
+            alph(iDof+1:iDof+n-2) = 2.0 * alph(iDof+1:iDof+n-2)
+write(*,*)'alph after normalisation', alph
+write(*,*)'gam after fft', gam
+          end do
+           
+        end if ! lobattoPoints
+      end if ! trafo
+    !$OMP WORKSHARE
+    gam = 0.0_rk
+    !$OMP END WORKSHARE
 
 !'      do indep = iStrip+1, strip_ub
       do indep = 1, nIndeps 
@@ -1058,11 +1091,7 @@ contains
 
       end do
 
-write(*,*) ' alph after original exec', alph
-write(*,*) 'gam after original exec', gam
-
       if (params%trafo == ply_legToCheb_param) then
-write(*,*)'normalisation'
         ! Normalize the coefficients of the Chebyshev polynomials due
         ! to the unnormalized version of DCT in the FFTW.
         if (.not. lobattoPoints) then
@@ -1076,19 +1105,15 @@ write(*,*)'normalisation'
         else
   
           do iDof = 1, nIndeps*n, n
-write(*,*)'idof', idof
             alph(:) = gam(:)
             alph(iDof+1:iDof+n-2) = 0.5 * gam(iDof+1:iDof+n-2)
             call fftw_execute_r2r( plan, alph(iDof:iDof+n-1), &
               &                    gam(iDof:iDof+n-1)         )
-!            alph(iDof::n) = 0.5_rk * gam(iDof::n)
-!          call fftw_execute_r2r( plan, alph(iDof:iDof+n-1), gam(iDof:iDof+n-1))
           end do
            
         end if ! lobattoPoints
       end if ! trafo
 
-    !$OMP END DO
   end subroutine ply_fpt_exec
   !****************************************************************************
 
