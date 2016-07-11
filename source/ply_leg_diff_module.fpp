@@ -343,8 +343,8 @@ module ply_leg_diff_module
 !******************************************************************************!
 
 
-  subroutine calcDiff_leg_1d( legCoeffs, legCoeffsDiff, maxPolyDegree, nVars,  &
-                              elemLength )       
+  subroutine calcDiff_leg_1d( legCoeffs, legCoeffsDiff, maxPolyDegree, &
+                              elemLength )
     !---------------------------------------------------------------------------
     real(kind=rk), intent(in) :: legCoeffs(:,:)
     !> Modal expansion of the derivative of legCoeffs in terms of Legendre
@@ -353,8 +353,6 @@ module ply_leg_diff_module
     !! Second index is the number of var components \n
     real(kind=rk), intent(inout) :: legCoeffsDiff(:,:)
     integer, intent(in) :: maxPolyDegree
-    !> The number of varibales to differentiate
-    integer, intent(in) :: nVars
     !> The physical length of the element to build the derivatives for.
     real(kind=rk),intent(in) :: elemLength
     !---------------------------------------------------------------------------
