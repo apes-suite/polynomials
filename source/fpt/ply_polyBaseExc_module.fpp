@@ -986,14 +986,10 @@ contains
 !          normFactor = 1.0 / real(n,kind=rk)
           normFactor = 1.0 / (2.0_rk*(n-1))
           do iDof = 1, nIndeps*n, n
-write(*,*)'iDof', iDof
             call fftw_execute_r2r( plan, alph(iDof:iDof+n-1), &
               &                    gam(iDof:iDof+n-1)         )
-write(*,*)'alph before normalisation', alph
             alph(iDof:iDof+n-1) = gam(iDof:iDof+n-1) * normFactor
             alph(iDof+1:iDof+n-2) = 2.0 * alph(iDof+1:iDof+n-2)
-write(*,*)'alph after normalisation', alph
-write(*,*)'gam after fft', gam
           end do
            
         end if ! lobattoPoints
@@ -1096,7 +1092,9 @@ write(*,*)'gam after fft', gam
         ! to the unnormalized version of DCT in the FFTW.
         if (.not. lobattoPoints) then
            do iDof = 1, nIndeps*n, n
-             alph(:) = gam(:)
+             !alph(:) = gam(:)
+             alph(iDof) = gam(iDof)
+             alph(iDof+n-1) = gam(iDof+n-1)
              alph(iDof+1:iDof+n-1:2) = -0.5 * gam(iDof+1:iDof+n-1:2)
              alph(iDof+2:iDof+n-1:2) = 0.5 * gam(iDof+2:iDof+n-1:2)
           call fftw_execute_r2r( plan, alph(iDof:iDof+n-1), gam(iDof:iDof+n-1))
@@ -1105,7 +1103,9 @@ write(*,*)'gam after fft', gam
         else
   
           do iDof = 1, nIndeps*n, n
-            alph(:) = gam(:)
+             !alph(:) = gam(:)
+            alph(iDof) = gam(iDof)
+            alph(iDof+n-1) = gam(iDof+n-1)
             alph(iDof+1:iDof+n-2) = 0.5 * gam(iDof+1:iDof+n-2)
             call fftw_execute_r2r( plan, alph(iDof:iDof+n-1), &
               &                    gam(iDof:iDof+n-1)         )

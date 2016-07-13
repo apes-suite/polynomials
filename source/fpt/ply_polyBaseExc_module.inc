@@ -1,5 +1,4 @@
 ?? text :: EightTimesUnrolledLoop(m_lowerbound, m_upperbound, m_next)
-write(*,*)'8 times unrolled loop'
       do m_blocking = ?m_lowerbound?, ?m_upperbound?, subblockingWidth
         do m = m_blocking,                                       &
           & min(m_blocking + subblockingWidth - 1, ?m_upperbound?)
@@ -25,7 +24,6 @@ write(*,*)'8 times unrolled loop'
 ?? end text
 
 ?? text :: SevenTimesUnrolledLoop(m_lowerbound, m_upperbound, m_next)
-write(*,*)'7 times unrolled loop'
       do m_blocking = ?m_lowerbound?, ?m_upperbound?, subblockingWidth
         do m = m_blocking,                                       &
           & min(m_blocking + subblockingWidth - 1, ?m_upperbound?)
@@ -50,7 +48,6 @@ write(*,*)'7 times unrolled loop'
 ?? end text
 
 ?? text :: SixTimesUnrolledLoop(m_lowerbound, m_upperbound, m_next)
-write(*,*)'6 times unrolled loop'
       do m_blocking = ?m_lowerbound?, ?m_upperbound?, subblockingWidth
         do m = m_blocking,                                       &
           & min(m_blocking + subblockingWidth - 1, ?m_upperbound?)
@@ -74,7 +71,6 @@ write(*,*)'6 times unrolled loop'
 ?? end text
 
 ?? text :: FiveTimesUnrolledLoop(m_lowerbound, m_upperbound, m_next)
-write(*,*)'5 times unrolled loop'
       do m_blocking = ?m_lowerbound?, ?m_upperbound?, subblockingWidth
         do m = m_blocking,                                       &
           & min(m_blocking + subblockingWidth - 1, ?m_upperbound?)
@@ -97,7 +93,6 @@ write(*,*)'5 times unrolled loop'
 ?? end text
 
 ?? text :: FourTimesUnrolledLoop(m_lowerbound, m_upperbound, m_next)
-write(*,*)'4 times unrolled loop'
       do m_blocking = ?m_lowerbound?, ?m_upperbound?, subblockingWidth
         do m = m_blocking,                                       &
           & min(m_blocking + subblockingWidth - 1, ?m_upperbound?)
@@ -119,7 +114,6 @@ write(*,*)'4 times unrolled loop'
 ?? end text
 
 ?? text :: ThreeTimesUnrolledLoop(m_lowerbound, m_upperbound, m_next)
-write(*,*)'3 times unrolled loop'
       do m_blocking = ?m_lowerbound?, ?m_upperbound?, subblockingWidth
         do m = m_blocking,                                       &
           & min(m_blocking + subblockingWidth - 1, ?m_upperbound?)
@@ -140,7 +134,6 @@ write(*,*)'3 times unrolled loop'
 ?? end text
 
 ?? text :: TwoTimesUnrolledLoop(m_lowerbound, m_upperbound, m_next)
-write(*,*)'2 times unrolled loop'
       do m_blocking = ?m_lowerbound?, ?m_upperbound?, subblockingWidth
         do m = m_blocking,                                       &
           & min(m_blocking + subblockingWidth - 1, ?m_upperbound?)
@@ -160,7 +153,6 @@ write(*,*)'2 times unrolled loop'
 ?? end text
 
 ?? text :: BaseLoop(m_lowerbound, m_upperbound)
-write(*,*)'base loop'
       do m_blocking = ?m_lowerbound?, ?m_upperbound?, subblockingWidth
         do m = m_blocking,                                       &
           & min(m_blocking + subblockingWidth - 1, ?m_upperbound?)

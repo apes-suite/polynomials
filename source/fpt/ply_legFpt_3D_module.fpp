@@ -8,6 +8,7 @@ module ply_legFpt_3D_module
   use env_module, only: rk
   use tem_aux_module, only: tem_abort
   use tem_logging_module, only: logUnit
+  use tem_timer_module
   use ply_polyBaseExc_module, only: ply_trafo_params_type, &
                                   & ply_fpt_init, &
                                   & ply_fpt_exec_striped, &
@@ -78,7 +79,15 @@ contains
     real(kind=rk), allocatable :: tmpOut(:,:), tmpIn(:,:)
     logical :: lob
     !$ integer :: fftwMultThread
-    !---------------------------------------------------------------------------
+   type(tem_timer_type), save :: init3dTimer
+   integer :: timerHandle
+   !---------------------------------------------------------------------------
+   timerHandle = tem_getNTimers(init3dTimer) 
+   if (timerHandle .eq. 0 ) then
+     write(*,*)     'add timer'
+     call tem_addTimer(me = init3dTimer, timerHandle = timerHandle, timerName='init3dTimer')
+   end if
+   call tem_startTimer(me = init3dTimer, timerHandle = timerHandle)
 
     lob = .false.
     if (present(lobattoPoints)) then
@@ -180,6 +189,8 @@ contains
     end if
 
     deallocate( tmpIn, tmpOut )
+  call tem_stopTimer(me= init3dTimer, timerHandle = timerHandle)
+  call tem_writeTimer(me = init3dTimer, timerHandle = timerHandle)
 
   end subroutine ply_init_legFpt_3D
   !****************************************************************************
@@ -227,7 +238,15 @@ contains
 !   real(kind=rk), dimension (fpt%legToChebParams%striplen) :: gam
    real(kind=rk), dimension(:), allocatable :: alph
    real(kind=rk), dimension(:), allocatable :: gam
-   !---------------------------------------------------------------------------
+    type(tem_timer_type), save :: legToPnt3dTimer
+    integer :: timerHandle
+    !---------------------------------------------------------------------------
+ timerHandle = tem_getNTimers(legToPnt3dTimer) 
+   if (timerHandle .eq. 0 ) then
+     write(*,*)     'add timer'
+     call tem_addTimer(me = legToPnt3dTimer, timerHandle = timerHandle, timerName='legToPnt3dTimer')
+   end if
+   call tem_startTimer(me = legToPnt3dTimer, timerHandle = timerHandle)
 
    striplen = fpt%legToChebParams%striplen
    n = fpt%legToChebParams%n
@@ -301,8 +320,6 @@ contains
      ! At the end of the array the number of computed strips might be smaller
      nIndeps = min(striplen, n_squared-iStrip+1)
 
-write(*,*)'before z exec alph', alph
-
      ! ply_fpt_exec on temp (no memory transpose)
      call ply_fpt_exec( alph = alph,                   &
       &                 gam = gam,                     &
@@ -311,8 +328,6 @@ write(*,*)'before z exec alph', alph
       &                 lobattoPoints = lobattoPoints, &
       &                 params = fpt%legToChebParams   )
  
-write(*,*)'after z exec gam', gam
-
 !     if (.not. lobattoPoints) then
 !!       alph(1:n**3:n) = gam(1:n**3:n)
 !       do iDof = 1, nIndeps*n, n
@@ -337,8 +352,6 @@ write(*,*)'after z exec gam', gam
 !       call fftw_execute_r2r( fpt%planChebToPnt, gam(iDof:iDof+n-1), alph(iDof:iDof+n-1))
 !     end do 
 
-write(*,*)'after z fft alph', alph
-
 !    pntVal((iStrip-1)*n+1:min((iStrip+striplen-1)*n, n_cubed))  = gam(:)
      pntVal((iStrip-1)*n+1 : (iStrip+nIndeps-1)*n)  = gam(1:nIndeps*n)
 
@@ -357,8 +370,6 @@ write(*,*)'after z fft alph', alph
 
      ! At the end of the array the number of computed strips might be smaller
      nIndeps = min(striplen, n_squared-iStrip+1)
-
-write(*,*)'before y exec alph', alph
 
      ! ply_fpt_exec on temp (no memory transpose)
      call ply_fpt_exec( alph = alph,                   &
@@ -415,8 +426,6 @@ write(*,*)'before y exec alph', alph
      ! At the end of the array the number of computed strips might be smaller
      nIndeps = min(striplen, n_squared-iStrip+1)
 
-write(*,*)'before x fpt-exec alph', alph
-
      ! ply_fpt_exec on temp (no memory transpose)
      call ply_fpt_exec( alph = alph,                   &
        &                gam = gam,                     &
@@ -424,8 +433,6 @@ write(*,*)'before x fpt-exec alph', alph
        &                plan = fpt%planChebToPnt,      &
        &                lobattoPoints = lobattoPoints, &
        &                params = fpt%legToChebParams   )
-
-write(*,*)'after x fpt-exec gam', gam
 
 !     if (.not. lobattoPoints) then
 !!       alph(1:n**3:n) = gam(1:n**3:n)
@@ -450,7 +457,6 @@ write(*,*)'after x fpt-exec gam', gam
 !       call fftw_execute_r2r( fpt%planChebToPnt, gam(iDof:iDof+n-1), alph(iDof:iDof+n-1))
 !     end do 
 
-write(*,*)'after x fft alph', alph
      ! todo: fft on temp
      ! temp -> pntVal (stride-1 writing)
 
@@ -594,6 +600,9 @@ write(*,*)'after x fft alph', alph
 ! 
 !   end if
 
+  call tem_stopTimer(me= legToPnt3dTimer, timerHandle = timerHandle)
+  call tem_writeTimer(me = legToPnt3dTimer, timerHandle = timerHandle)
+
   end subroutine ply_legToPnt_3D_singVar
   !****************************************************************************
 
@@ -679,7 +688,16 @@ write(*,*)'after x fft alph', alph
    real(kind=rk) :: normFactor(0:1)
    real(kind=rk), dimension(:), allocatable :: alph
    real(kind=rk), dimension(:), allocatable :: gam
-   !---------------------------------------------------------------------------
+    type(tem_timer_type), save :: pntToLeg3dTimer
+    integer :: timerHandle
+    !---------------------------------------------------------------------------
+ timerHandle = tem_getNTimers(pntToLeg3dTimer) 
+   if (timerHandle .eq. 0 ) then
+     write(*,*)     'add timer'
+     call tem_addTimer(me = pntToLeg3dTimer, timerHandle = timerHandle, timerName='pntToLeg3dTimer')
+   end if
+   call tem_startTimer(me = pntToLeg3dTimer, timerHandle = timerHandle)
+
    striplen = fpt%legToChebParams%striplen
    n = fpt%legToChebParams%n
    n_squared = fpt%legToChebParams%n**2
@@ -735,8 +753,8 @@ write(*,*)'after x fft alph', alph
      call ply_fpt_exec( alph = alph,                    &
        &                gam = gam,                      &
        &                nIndeps = nIndeps,              &
-       &                 plan = fpt%planPntToCheb,      &
-       &                 lobattoPoints = lobattoPoints, &
+       &                plan = fpt%planPntToCheb,      &
+       &                lobattoPoints = lobattoPoints, &
        &                params = fpt%chebToLegParams    )
  
        ! todo: fft on temp
@@ -760,8 +778,8 @@ write(*,*)'after x fft alph', alph
      call ply_fpt_exec( alph = alph,                    &
        &                gam = gam,                      &
        &                nIndeps = nIndeps,              &
-       &                 plan = fpt%planPntToCheb,      &
-       &                 lobattoPoints = lobattoPoints, &
+       &                plan = fpt%planPntToCheb,      &
+       &                lobattoPoints = lobattoPoints, &
        &                params = fpt%chebToLegParams    )
 
      ! todo: fft on temp
@@ -770,6 +788,9 @@ write(*,*)'after x fft alph', alph
      legCoeffs((iStrip-1)*n+1 : (iStrip+nIndeps-1)*n)  = gam(1:nIndeps*n)
 
    end do xStripLoop
+
+  call tem_stopTimer(me= pntToLeg3dTimer, timerHandle = timerHandle)
+  call tem_writeTimer(me = pntToLeg3dTimer, timerHandle = timerHandle)
 
   end subroutine ply_pntToLeg_3D_singVar
 

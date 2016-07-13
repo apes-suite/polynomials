@@ -8,6 +8,7 @@ module ply_legFpt_2D_module
   use env_module, only: rk
   use tem_aux_module, only: tem_abort
   use tem_logging_module, only: logUnit
+  use tem_timer_module
   use ply_polyBaseExc_module, only: ply_trafo_params_type, &
                                   & ply_fpt_init, &
                                   & ply_fpt_exec_striped, &
@@ -34,7 +35,6 @@ module ply_legFpt_2D_module
   end interface ply_pntToLeg_2D
 
   public :: ply_init_legFpt_2D, ply_legToPnt_2D, ply_pntToLeg_2D
-
 
 contains
 
@@ -67,7 +67,15 @@ contains
     real(kind=rk), allocatable :: tmpOut(:,:), tmpIn(:,:)
     logical :: lob
     !$ integer :: fftwMultThread
+    type(tem_timer_type), save :: init2dTimer
+    integer :: timerHandle
     !---------------------------------------------------------------------------
+   timerHandle = tem_getNTimers(init2dTimer) 
+   if (timerHandle .eq. 0 ) then
+     write(*,*)     'add timer'
+     call tem_addTimer(me = init2dTimer, timerHandle = timerHandle, timerName='init2dTimer')
+   end if
+   call tem_startTimer(me = init2dTimer, timerHandle = timerHandle)
 
     lob = .false.
     if(present(lobattoPoints)) then
@@ -143,6 +151,8 @@ contains
 
       deallocate( tmpIn, tmpOut )
     end if
+  call tem_stopTimer(me= init2dTimer, timerHandle = timerHandle)
+  call tem_writeTimer(me = init2dTimer, timerHandle = timerHandle)
 
   end subroutine ply_init_legFpt_2D
   !****************************************************************************
@@ -171,7 +181,19 @@ contains
    real(kind=rk), dimension(:), allocatable :: alph
    real(kind=rk), dimension(:), allocatable :: gam
    real(kind=rk) :: normFactor
+   type(tem_timer_type), save :: legToPnt2dTimer
+   integer :: timerHandle
    !---------------------------------------------------------------------------
+ timerHandle = tem_getNTimers(legToPnt2dTimer) 
+! write(*,*)' timerHandle ', timerHandle
+   if ( timerHandle .eq. 0 ) then
+     write(*,*)     'add timer'
+     call tem_addTimer(me = legToPnt2dTimer, timerHandle = timerHandle, timerName='legToPnt2dTimer')
+!   else
+! write(*,*)     'no need to add timer'
+!     call tem_writeTimer(me = plyTimer, timerHandle = timerHandle)
+   end if
+   call tem_startTimer(me = legToPnt2dTimer, timerHandle = timerHandle)
 
    striplen = fpt%legToChebParams%striplen
    n = fpt%legToChebParams%n
@@ -187,8 +209,6 @@ contains
    !  1  4  7
    !  2  5  8
    !  3  6  9
-write(*,*) '////////////////'
-write(*,*) 'y-Direction'
    yStripLoop: do iStrip = 1, n, striplen
      ! iAlph is the index of the first element in a line for the transformation in 
      ! y-direction. 
@@ -222,8 +242,7 @@ write(*,*) 'y-Direction'
 
      ! At the end of the array the number of computed strips might be smaller
      nIndeps = min(striplen, n-iStrip+1)
-write(*,*) '////////////////'
-write(*,*) 'x-Direction'
+
      ! ply_fpt_exec on temp (no memory transpose)
      call ply_fpt_exec( alph = alph,                   &
        &                gam = gam,                     &
@@ -235,6 +254,9 @@ write(*,*) 'x-Direction'
      pntVal((iStrip-1)*n+1 : (iStrip+nIndeps-1)*n)  = gam(1:nIndeps*n)
 
    end do xStripLoop
+
+  call tem_stopTimer(me= legToPnt2dTimer, timerHandle = timerHandle)
+  call tem_writeTimer(me = legToPnt2dTimer, timerHandle = timerHandle)
 
   end subroutine ply_legToPnt_2D_singVar
   !****************************************************************************
@@ -292,7 +314,15 @@ write(*,*) 'x-Direction'
     real(kind=rk), dimension(:), allocatable :: alph
     real(kind=rk), dimension(:), allocatable :: gam
     real(kind=rk) :: normFactor, inv_ndofs
+    type(tem_timer_type), save :: pntToLeg2dTimer
+    integer :: timerHandle
     !---------------------------------------------------------------------------
+ timerHandle = tem_getNTimers(pntToLeg2dTimer) 
+   if (timerHandle .eq. 0 ) then
+     write(*,*)     'add timer'
+     call tem_addTimer(me = pntToLeg2dTimer, timerHandle = timerHandle, timerName='pntToLeg2dTimer')
+   end if
+   call tem_startTimer(me = pntToLeg2dTimer, timerHandle = timerHandle)
 
    striplen = fpt%chebToLegParams%striplen
    n = fpt%legToChebParams%n
@@ -345,7 +375,9 @@ write(*,*) 'x-Direction'
      legCoeffs((iStrip-1)*n+1 : (iStrip+nIndeps-1)*n)  = gam(1:nIndeps*n)
 
    end do xStripLoop
-
+  call tem_stopTimer(me= pntToLeg2dTimer, timerHandle = timerHandle)
+  call tem_writeTimer(me = pntToLeg2dTimer, timerHandle = timerHandle)
+  
   end subroutine ply_pntToLeg_2D_singVar
   !****************************************************************************
 
