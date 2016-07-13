@@ -417,8 +417,6 @@ contains
         call tem_empty_varSys(sampled_vars)
         call free_treelmesh(sampled_mesh)
 
-        call hvs_output_finalize(me%tracking(iTrack)%output_file)
-
       else
 
         if (present(simControl)) then
