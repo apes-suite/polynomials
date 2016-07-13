@@ -514,19 +514,19 @@ contains
       ! and the projection is on evluation of the nodes at the points with
       ! additional summation
       select case(dim)
-      case(1)
+      case (1)
         do iVar = 1, nVars
           call ply_l2p_trafo_1D( trafo = me%body_1D%l2p%leg2node, &
             &                    projected = nodal_data(:,iVar),  &
             &                    original  = modal_data(:,iVar)   )
         end do
-      case(2)
+      case (2)
         do iVar = 1, nVars
           call ply_l2p_trafo_2D( trafo = me%body_2D%l2p%leg2node, &
             &                    projected = nodal_data(:,iVar),  &
             &                    original  = modal_data(:,iVar)   )
         end do
-      case(3)
+      case (3)
         do iVar = 1, nVars
           call ply_l2p_trafo_3D( trafo = me%body_3D%l2p%leg2node, &
             &                    projected = nodal_data(:,iVar),  &
@@ -536,54 +536,53 @@ contains
 
     case ('fpt')
 
-      if (dim .eq. 3 ) then
-         call ply_LegToPnt_3D( fpt = me%body_3d%fpt,           &
-            &                  pntVal = nodal_data,            &
-            &                  legCoeffs = modal_data,         &
-            &                  nVars = nVars,                  &
-            &                  lobattoPoints = me%lobattoPoints)
-      elseif (dim .eq. 2 ) then
-         call ply_LegToPnt_2D( fpt = me%body_2d%fpt,           &
-            &                  pntVal = nodal_data,            &
-            &                  legCoeffs = modal_data,         &
-            &                  nVars = nVars,                  &
-            &                  lobattoPoints = me%lobattoPoints)
-      else !1d
+      select case (dim)
+      case (3)
+        call ply_LegToPnt_3D( fpt = me%body_3d%fpt,           &
+           &                  pntVal = nodal_data,            &
+           &                  legCoeffs = modal_data,         &
+           &                  nVars = nVars,                  &
+           &                  lobattoPoints = me%lobattoPoints)
+      case (2)
+        call ply_LegToPnt_2D( fpt = me%body_2d%fpt,           &
+           &                  pntVal = nodal_data,            &
+           &                  legCoeffs = modal_data,         &
+           &                  nVars = nVars,                  &
+           &                  lobattoPoints = me%lobattoPoints)
+      case (1)
         do iVar = 1,nVars
           call ply_LegToPnt( fpt = me%body_1d%fpt,           &
              &               pntVal = nodal_data(:,iVar),    &
              &               legCoeffs = modal_data(:,iVar), &
              &               lobattoPoints = me%lobattoPoints)
         end do
-      end if
+      end select
 
     case ('fxt')
-      if (dim .eq. 3) then
+      select case (dim)
+      case (3)
         do iVar = 1,nVars
           call ply_fxt_m2n_3D( fxt = me%body_3d%fxt,             &
             &               modal_data = modal_data(:,iVar),     &
             &               nodal_data = nodal_data(:,iVar),     &
             &              oversamp_degree = me%oversamp_degree  )
         end do
-      end if
-
-      if (dim .eq. 2) then
+      case (2)
         do iVar = 1,nVars
           call ply_fxt_m2n_2D( fxt = me%body_2d%fxt,             &
             &               modal_data = modal_data(:,iVar),     &
             &               nodal_data = nodal_data(:,iVar),     &
             &              oversamp_degree = me%oversamp_degree  )
         end do
-      end if
 
-      if (dim .eq. 1) then
+      case (1)
         do iVar = 1,nVars
           call ply_fxt_m2n_1D( fxt = me%body_1d%fxt,             &
             &               modal_data = modal_data(:,iVar),     &
             &               nodal_data = nodal_data(:,iVar),     &
             &              oversamp_degree = me%oversamp_degree  )
         end do
-      end if
+      end select
     end select
 
   end subroutine ply_poly_project_m2n_multivar
@@ -607,20 +606,20 @@ contains
 
     select case(trim(me%kind))
     case ('l2p')
-      select case(dim)
-      case(1)
+      select case (dim)
+      case (1)
         do iVar = 1, nVars
           call ply_l2p_trafo_1D( trafo = me%body_1D%l2p%node2leg, &
             &                    projected = modal_data(:,iVar),  &
             &                    original  = nodal_data(:,iVar)   )
         end do
-      case(2)
+      case (2)
         do iVar = 1, nVars
           call ply_l2p_trafo_2D( trafo = me%body_2D%l2p%node2leg, &
             &                    projected = modal_data(:,iVar),  &
             &                    original  = nodal_data(:,iVar)   )
         end do
-      case(3)
+      case (3)
         do iVar = 1, nVars
           call ply_l2p_trafo_3D( trafo = me%body_3D%l2p%node2leg, &
             &                    projected = modal_data(:,iVar),  &
@@ -630,29 +629,31 @@ contains
 
     case ('fpt')
       !projection via fpt
-      if (dim .eq. 3 ) then
+      select case (dim)
+      case (3)
          call ply_pntToLeg_3D( fpt = me%body_3d%fpt,           &
             &                  nVars = nVars,                  &
             &                  pntVal = nodal_data,            &
             &                  legCoeffs = modal_data,         &
             &                  lobattoPoints = me%lobattoPoints)
-      elseif (dim .eq. 2 ) then
+      case (2)
          call ply_pntToLeg_2D( fpt = me%body_2d%fpt,           &
             &                  nVars = nVars,                  &
             &                  pntVal = nodal_data,            &
             &                  legCoeffs = modal_data,         &
             &                  lobattoPoints = me%lobattoPoints)
-      else !1d
+      case (1)
          do iVar = 1,nVars
            call ply_pntToLeg( fpt = me%body_1d%fpt,           &
               &               pntVal = nodal_data(:,iVar),    &
               &               legCoeffs = modal_data(:,iVar), &
               &               lobattoPoints = me%lobattoPoints)
          end do
-      end if
+      end select
 
     case ('fxt')
-      if (dim .eq. 3) then
+      select case (dim)
+      case (3)
         do iVar = 1, nVars 
           call ply_fxt_n2m_3D(                                  &
             &         fxt              = me%body_3d%fxt,        &
@@ -660,9 +661,8 @@ contains
             &         modal_data       = modal_data(:,iVar),    &
             &         oversamp_degree  = me%oversamp_degree     )
         end do
-      end if
 
-      if (dim .eq. 2) then
+      case (2)
         do iVar = 1, nVars 
           call ply_fxt_n2m_2D(                                  &
             &         fxt              = me%body_2d%fxt,        &
@@ -670,9 +670,8 @@ contains
             &         modal_data       = modal_data(:,iVar),    &
             &         oversamp_degree  = me%oversamp_degree     )
         end do
-      end if
 
-      if (dim .eq. 1) then
+      case (1)
         do iVar = 1, nVars 
           call ply_fxt_n2m_1D(                                  &
             &         fxt              = me%body_1d%fxt,        &
@@ -680,7 +679,7 @@ contains
             &         modal_data       = modal_data(:,iVar),    &
             &         oversamp_degree  = me%oversamp_degree     )
         end do
-      end if
+      end select
 
     case default
        write(logUnit(1),*) 'ERROR in projection nodal to modal'
