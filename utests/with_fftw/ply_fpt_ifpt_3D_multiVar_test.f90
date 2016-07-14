@@ -70,11 +70,10 @@ contains
     write(logUnit(10),*) 'Calculating FPT ...'
     !$OMP PARALLEL &
     !$OMP DEFAULT(shared) 
-    call ply_legToPnt_3D( fpt       = fpt, &
+    call ply_legToPnt_3D( fpt       = fpt,         &
       &                   legCoeffs = legCoeffsIn, &
-      &                   pntVal    = pntVal, &
-      &                   nVars = nVars, &
-      &                   lobattoPoints = .false. ) 
+      &                   pntVal    = pntVal,      &
+      &                   nVars     = nVars        ) 
     !$OMP END PARALLEL
     write(logUnit(10),*) 'Finished'
 
@@ -83,11 +82,10 @@ contains
     write(logUnit(10),*) 'Calculating inverse FPT ...'
     !$OMP PARALLEL &
     !$OMP DEFAULT(shared) 
-    call ply_pntToLeg_3D( fpt = fpt, &
-      &                   pntVal = pntVal, &
+    call ply_pntToLeg_3D( fpt       = fpt,    &
+      &                   pntVal    = pntVal, &
       &                   legCoeffs = legVal, &
-      &                   nVars = nVars, &
-      &                   lobattoPoints = .false. ) 
+      &                   nVars     = nVars   )
     !$OMP END PARALLEL
     write(logUnit(10),*) 'Finished'
   

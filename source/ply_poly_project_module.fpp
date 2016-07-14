@@ -158,7 +158,9 @@ module ply_poly_project_module
   public :: get_quadpoints_faces_1d
   public :: ply_prj_body_type
 
+
 contains
+
 
   !**************************************************************************!
   subroutine Copy_poly_project(left,right)
@@ -373,7 +375,6 @@ contains
       me%lobattopoints = proj_init%header%fpt_header%nodes_header%lobattopoints
 
       !> Initialize the fpt data type
-write(*,*) 'initlegfpt 1d'
       call ply_init_legfpt(                                                  &
         &    maxPolyDegree    = me%oversamp_degree,                          &
         &    nIndeps          = 1,                                           &
@@ -392,7 +393,6 @@ write(*,*) 'initlegfpt 1d'
         &    nQuadPointsPerDir = me%nQuadPointsPerDir       )
 
       if (scheme_dim >= 2) then
-write(*,*) 'initlegfpt 2d'
         call ply_init_legfpt(                                                  &
           &    maxPolyDegree    = me%oversamp_degree,                          &
           &    nIndeps          = me%oversamp_degree+1,                        &
@@ -410,7 +410,6 @@ write(*,*) 'initlegfpt 2d'
       end if
 
       if (scheme_dim >= 3) then
-write(*,*) 'initlegfpt 3d'
         call ply_init_legfpt(                                                  &
           &    maxPolyDegree    = me%oversamp_degree,                          &
           &    nIndeps          = (me%oversamp_degree+1)**2,                   &
@@ -544,23 +543,21 @@ write(*,*) 'initlegfpt 3d'
 
       select case (dim)
       case (3)
-        call ply_LegToPnt_3D( fpt = me%body_3d%fpt,           &
-           &                  pntVal = nodal_data,            &
-           &                  legCoeffs = modal_data,         &
-           &                  nVars = nVars,                  &
-           &                  lobattoPoints = me%lobattoPoints)
+        call ply_LegToPnt_3D( fpt       = me%body_3d%fpt, &
+          &                   pntVal    = nodal_data,     &
+          &                   legCoeffs = modal_data,     &
+          &                   nVars     = nVars           )
       case (2)
-        call ply_LegToPnt_2D( fpt = me%body_2d%fpt,           &
-           &                  pntVal = nodal_data,            &
-           &                  legCoeffs = modal_data,         &
-           &                  nVars = nVars,                  &
-           &                  lobattoPoints = me%lobattoPoints)
+        call ply_LegToPnt_3D( fpt       = me%body_2d%fpt, &
+          &                   pntVal    = nodal_data,     &
+          &                   legCoeffs = modal_data,     &
+          &                   nVars     = nVars           )
       case (1)
         do iVar = 1,nVars
-          call ply_LegToPnt( fpt = me%body_1d%fpt,           &
-             &               pntVal = nodal_data(:,iVar),    &
-             &               legCoeffs = modal_data(:,iVar), &
-             &               lobattoPoints = me%lobattoPoints)
+          call ply_LegToPnt( fpt       = me%body_1d%fpt,     &
+            &                pntVal    = nodal_data(:,iVar), &
+            &                legCoeffs = modal_data(:,iVar), &
+            &                nIndeps   = 1                   )
         end do
       end select
 
@@ -637,24 +634,22 @@ write(*,*) 'initlegfpt 3d'
       !projection via fpt
       select case (dim)
       case (3)
-         call ply_pntToLeg_3D( fpt = me%body_3d%fpt,           &
-            &                  nVars = nVars,                  &
-            &                  pntVal = nodal_data,            &
-            &                  legCoeffs = modal_data,         &
-            &                  lobattoPoints = me%lobattoPoints)
+        call ply_pntToLeg_3D( fpt       = me%body_3d%fpt, &
+          &                   nVars     = nVars,          &
+          &                   pntVal    = nodal_data,     &
+          &                   legCoeffs = modal_data      )
       case (2)
-         call ply_pntToLeg_2D( fpt = me%body_2d%fpt,           &
-            &                  nVars = nVars,                  &
-            &                  pntVal = nodal_data,            &
-            &                  legCoeffs = modal_data,         &
-            &                  lobattoPoints = me%lobattoPoints)
+        call ply_pntToLeg_2D( fpt       = me%body_2d%fpt, &
+          &                   nVars     = nVars,          &
+          &                   pntVal    = nodal_data,     &
+          &                   legCoeffs = modal_data      )
       case (1)
-         do iVar = 1,nVars
-           call ply_pntToLeg( fpt = me%body_1d%fpt,           &
-              &               pntVal = nodal_data(:,iVar),    &
-              &               legCoeffs = modal_data(:,iVar), &
-              &               lobattoPoints = me%lobattoPoints)
-         end do
+        do iVar = 1,nVars
+          call ply_pntToLeg( fpt       = me%body_1d%fpt,     &
+            &                nIndeps   = 1,                  &
+            &                pntVal    = nodal_data(:,iVar), &
+            &                legCoeffs = modal_data(:,iVar)  )
+        end do
       end select
 
     case ('fxt')

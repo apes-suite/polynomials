@@ -121,8 +121,7 @@ contains
     write(logUnit(10),*) 'Calculating FPT ...'
     !$OMP PARALLEL &
     !$OMP DEFAULT(shared)
-    call ply_legToPnt_2D( fpt = fpt, legCoeffs = legCoeffs, pntVal = pntVal, &
-      &                   lobattoPoints = .true. )
+    call ply_legToPnt_2D( fpt = fpt, legCoeffs = legCoeffs, pntVal = pntVal )
     !$OMP END PARALLEL
     write(logUnit(10),*) 'Finished'
 

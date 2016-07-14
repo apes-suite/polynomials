@@ -9,15 +9,11 @@ module ply_legFpt_3D_module
   use tem_aux_module, only: tem_abort
   use tem_logging_module, only: logUnit
   use tem_timer_module
-  use ply_polyBaseExc_module, only: ply_trafo_params_type, &
-                                  & ply_fpt_init, &
-                                  & ply_fpt_exec_striped, &
-                                  & ply_fpt_exec, & 
-                                  & ply_legToCheb_param, ply_chebToLeg_param, &
-                                  & assignment(=)
   use fftw_wrap
-  use ply_nodes_module,        only: ply_faceNodes_type
-  use ply_legFpt_module,       only: ply_legFpt_type
+  use ply_nodes_module,  only: ply_faceNodes_type
+  use ply_legFpt_module, only: ply_legFpt_type, &
+    &                          ply_legToPnt, &
+    &                          ply_PntToLeg
 
   implicit none
 
@@ -40,7 +36,7 @@ contains
 
 
   !****************************************************************************
-  subroutine ply_legToPnt_3D_singvar( fpt, legCoeffs, pntVal, lobattoPoints )
+  subroutine ply_legToPnt_3D_singvar( fpt, legCoeffs, pntVal )
    !---------------------------------------------------------------------------
    !> The FPT parameters.
    type(ply_legFpt_type), intent(inout) :: fpt
@@ -51,7 +47,6 @@ contains
    !! be modified.
    real(kind=rk), intent(inout) :: legCoeffs(:) 
    real(kind=rk), intent(inout) :: pntVal(:)
-   logical, intent(in)  :: lobattoPoints
    !---------------------------------------------------------------------------
    integer :: iFuncX, iFuncY, iFuncZ, funcIndex
    integer :: iFunc, iDof
@@ -163,13 +158,10 @@ contains
      ! At the end of the array the number of computed strips might be smaller
      nIndeps = min(striplen, n_squared-iStrip+1)
 
-     ! ply_fpt_exec on temp (no memory transpose)
-     call ply_fpt_exec( alph = alph,                   &
-      &                 gam = gam,                     &
-      &                 nIndeps = nIndeps,             &
-      &                 plan = fpt%planChebToPnt,      &
-      &                 lobattoPoints = lobattoPoints, &
-      &                 params = fpt%legToChebParams   )
+     call ply_legToPnt( fpt       = fpt,     &
+       &                nIndeps   = nIndeps, &
+       &                legCoeffs = alph,    &
+       &                pntVal    = gam      )
  
 !     if (.not. lobattoPoints) then
 !!       alph(1:n**3:n) = gam(1:n**3:n)
@@ -214,13 +206,10 @@ contains
      ! At the end of the array the number of computed strips might be smaller
      nIndeps = min(striplen, n_squared-iStrip+1)
 
-     ! ply_fpt_exec on temp (no memory transpose)
-     call ply_fpt_exec( alph = alph,                   &
-       &                gam = gam,                     &
-       &                nIndeps = nIndeps,             &
-       &                plan = fpt%planChebToPnt,      &
-       &                lobattoPoints = lobattoPoints, &
-       &                params = fpt%legToChebParams   )
+     call ply_legToPnt( fpt       = fpt,     &
+       &                nIndeps   = nIndeps, &
+       &                legCoeffs = alph,    &
+       &                pntVal    = gam      )
 
 !write(*,*)'after y exec gam', gam
 !
@@ -269,13 +258,10 @@ contains
      ! At the end of the array the number of computed strips might be smaller
      nIndeps = min(striplen, n_squared-iStrip+1)
 
-     ! ply_fpt_exec on temp (no memory transpose)
-     call ply_fpt_exec( alph = alph,                   &
-       &                gam = gam,                     &
-       &                nIndeps = nIndeps,             &
-       &                plan = fpt%planChebToPnt,      &
-       &                lobattoPoints = lobattoPoints, &
-       &                params = fpt%legToChebParams   )
+     call ply_legToPnt( fpt       = fpt,     &
+       &                nIndeps   = nIndeps, &
+       &                legCoeffs = alph,    &
+       &                pntVal    = gam      )
 
 !     if (.not. lobattoPoints) then
 !!       alph(1:n**3:n) = gam(1:n**3:n)
@@ -454,7 +440,7 @@ contains
   !> Subroutine to transform Legendre expansion to point values
   !! at Chebyshev nodes.
   !!VK: no multivar fashion of this routine is used anymore
-  subroutine ply_legToPnt_3D_multVar(fpt,legCoeffs,pntVal,nVars,lobattoPoints )
+  subroutine ply_legToPnt_3D_multVar(fpt,legCoeffs,pntVal,nVars )
    !---------------------------------------------------------------------------
    !> The Legendre coefficients to convert to point values (Chebyshev nodes).
    !! \attention Although this array serves as input only, it is modified 
@@ -465,13 +451,12 @@ contains
    type(ply_legFpt_type), intent(inout) :: fpt
    real(kind=rk), intent(inout) :: pntVal(:,:)
    integer, intent(in) :: nVars
-   logical, intent(in) :: lobattoPoints
    !---------------------------------------------------------------------------
    integer :: iVar
    !---------------------------------------------------------------------------
 
    do iVar = 1, nVars
-    call ply_legToPnt_3D(fpt, legCoeffs(:,iVar), pntVal(:,iVar), lobattoPoints) 
+    call ply_legToPnt_3D( fpt, legCoeffs(:,iVar), pntVal(:,iVar) ) 
    end do
 
   end subroutine ply_legToPnt_3D_multVar
@@ -481,7 +466,7 @@ contains
   !****************************************************************************
   !> Subroutine to transform Legendre expansion to point values
   !! at Chebyshev nodes.
-  subroutine ply_pntToLeg_3D_multVar(fpt,pntVal,legCoeffs,nVars,lobattoPoints )
+  subroutine ply_pntToLeg_3D_multVar(fpt,pntVal,legCoeffs,nVars )
    !---------------------------------------------------------------------------
    type(ply_legFpt_type), intent(inout) :: fpt
    !> The point values to transform to 3D modal Legendre expansion.
@@ -492,13 +477,12 @@ contains
    real(kind=rk), intent(inout) :: pntVal(:,:)
    real(kind=rk), intent(inout) :: legCoeffs(:,:) 
    integer, intent(in) :: nVars
-   logical, intent(in) :: lobattoPoints
    !---------------------------------------------------------------------------
    integer :: iVar
    !---------------------------------------------------------------------------
 
    do iVar = 1, nVars
-     call ply_pntToLeg_3D(fpt, pntVal(:,iVar), legCoeffs(:,iVar), lobattoPoints)
+     call ply_pntToLeg_3D( fpt, pntVal(:,iVar), legCoeffs(:,iVar) )
    end do
 
   end subroutine ply_pntToLeg_3D_multVar
@@ -508,134 +492,123 @@ contains
   !****************************************************************************
   !> Subroutine to transform Legendre expansion to point values
   !! at Chebyshev nodes.
-  subroutine ply_pntToLeg_3D_singVar( fpt, pntVal, legCoeffs, lobattoPoints )
-   !---------------------------------------------------------------------------
-   type(ply_legFpt_type), intent(inout) :: fpt
-   !> The point values to transform to 3D modal Legendre expansion.
-   !! \attention Although this array serves as input only, it is modified 
-   !! inside of this routine by the underlying DCT algorithm. So, when
-   !! this routine returns from its call the original values of pntVal will
-   !! be modified.
-   real(kind=rk), intent(inout) :: pntVal(:)
-   real(kind=rk), intent(inout) :: legCoeffs(:) 
-   logical, intent(in) :: lobattoPoints
-   !---------------------------------------------------------------------------
-   integer :: iFunc, iDof, iFuncX, iFuncY, iFuncZ, funcIndex
-   integer :: striplen
-   integer :: iStrip
-   integer :: iAlph
-   integer :: n
-   integer :: n_squared
-   integer :: n_cubed
-   integer :: nIndeps
-   real(kind=rk) :: normFactor(0:1)
-   real(kind=rk), dimension(:), allocatable :: alph
-   real(kind=rk), dimension(:), allocatable :: gam
+  subroutine ply_pntToLeg_3D_singVar( fpt, pntVal, legCoeffs )
+    !---------------------------------------------------------------------------
+    type(ply_legFpt_type), intent(inout) :: fpt
+    !> The point values to transform to 3D modal Legendre expansion.
+    !! \attention Although this array serves as input only, it is modified 
+    !! inside of this routine by the underlying DCT algorithm. So, when
+    !! this routine returns from its call the original values of pntVal will
+    !! be modified.
+    real(kind=rk), intent(inout) :: pntVal(:)
+    real(kind=rk), intent(inout) :: legCoeffs(:) 
+    !---------------------------------------------------------------------------
+    integer :: iFunc, iDof, iFuncX, iFuncY, iFuncZ, funcIndex
+    integer :: striplen
+    integer :: iStrip
+    integer :: iAlph
+    integer :: n
+    integer :: n_squared
+    integer :: n_cubed
+    integer :: nIndeps
+    real(kind=rk) :: normFactor(0:1)
+    real(kind=rk), dimension(:), allocatable :: alph
+    real(kind=rk), dimension(:), allocatable :: gam
     type(tem_timer_type), save :: pntToLeg3dTimer
     integer :: timerHandle
     !---------------------------------------------------------------------------
- timerHandle = tem_getNTimers(pntToLeg3dTimer) 
-   if (timerHandle .eq. 0 ) then
-     write(*,*)     'add timer'
-     call tem_addTimer(me = pntToLeg3dTimer, timerHandle = timerHandle, timerName='pntToLeg3dTimer')
-   end if
-   call tem_startTimer(me = pntToLeg3dTimer, timerHandle = timerHandle)
+    timerHandle = tem_getNTimers(pntToLeg3dTimer) 
+    if (timerHandle .eq. 0 ) then
+      write(*,*)     'add timer'
+      call tem_addTimer( me          = pntToLeg3dTimer,  &
+        &                timerHandle = timerHandle,      &
+        &                timerName   = 'pntToLeg3dTimer' )
+    end if
+    call tem_startTimer(me = pntToLeg3dTimer, timerHandle = timerHandle)
 
-   striplen = fpt%legToChebParams%striplen
-   n = fpt%legToChebParams%n
-   n_squared = fpt%legToChebParams%n**2
-   n_cubed = n_squared * fpt%legToChebParams%n
-   
-   ! number of strips to execute the fpt on in one call
-   ! (usually n_squared, but a smaller value might be assigned at the end of 
-   ! the array)
-   nIndeps = n_squared !'
+    striplen = fpt%legToChebParams%striplen
+    n = fpt%legToChebParams%n
+    n_squared = fpt%legToChebParams%n**2
+    n_cubed = n_squared * fpt%legToChebParams%n
+    
+    ! number of strips to execute the fpt on in one call
+    ! (usually n_squared, but a smaller value might be assigned at the end of 
+    ! the array)
+    nIndeps = n_squared !'
 
-   allocate(alph(min(striplen,n_squared)*n))
-   allocate(gam(min(striplen,n_squared)*n))
+    allocate(alph(min(striplen,n_squared)*n))
+    allocate(gam(min(striplen,n_squared)*n))
 
-   ! zStripLoop: Loop over all strips in z-direction
-   zStripLoop: do iStrip = 1, n_squared, striplen
-     ! iAlph is the index of the first element in a line for the transformation in 
-     ! z-direction. 
-     do iAlph = iStrip, min(iStrip+striplen-1, n_squared)  !z_Trafo
-       alph((iAlph-iStrip)*n+1:(iAlph-iStrip+1)*n) = &
-           & pntVal(iAlph::n_squared) !ztrafo
-     end do
+    ! zStripLoop: Loop over all strips in z-direction
+    zStripLoop: do iStrip = 1, n_squared, striplen
+      ! iAlph is the index of the first element in a line for the transformation in 
+      ! z-direction. 
+      do iAlph = iStrip, min(iStrip+striplen-1, n_squared)  !z_Trafo
+        alph((iAlph-iStrip)*n+1:(iAlph-iStrip+1)*n) = &
+            & pntVal(iAlph::n_squared) !ztrafo
+      end do
 
-     ! At the end of the array the number of computed strips might be smaller
-     nIndeps = min(striplen, n_squared-iStrip+1)
+      ! At the end of the array the number of computed strips might be smaller
+      nIndeps = min(striplen, n_squared-iStrip+1)
 
-     ! ply_fpt_exec on temp (no memory transpose)
-     call ply_fpt_exec( alph = alph,                   &
-      &                 gam = gam,                     &
-      &                 nIndeps = nIndeps,             &
-      &                 plan = fpt%planPntToCheb,      &
-      &                 lobattoPoints = lobattoPoints, &
-      &                 params = fpt%chebToLegParams   )
+      call ply_pntToLeg( fpt       = fpt,     &
+        &                nIndeps   = nIndeps, &
+        &                legCoeffs = gam,     &
+        &                pntVal    = alph     )
+
+      legCoeffs((iStrip-1)*n+1 : (iStrip+nIndeps-1)*n)  = gam(1:nIndeps*n)
+
+      ! todo: fft on temp
+      ! temp -> pntVal (stride-1 writing)
+
+    end do zStripLoop
+
+    ! y-direction
+    yStripLoop: do iStrip = 1,n_squared,striplen
+      do iAlph = iStrip, min(iStrip+striplen-1, n_squared)  !z_Trafo
+        alph((iAlph-iStrip)*n+1:(iAlph-iStrip+1)*n) = &
+            & legCoeffs(iAlph::n_squared) !ztrafo
+      end do
+
+      ! At the end of the array the number of computed strips might be smaller
+      nIndeps = min(striplen, n_squared-iStrip+1)
+
+      call ply_pntToLeg( fpt       = fpt,     &
+        &                nIndeps   = nIndeps, &
+        &                legCoeffs = gam,     &
+        &                pntVal    = alph     )
  
-     legCoeffs((iStrip-1)*n+1 : (iStrip+nIndeps-1)*n)  = gam(1:nIndeps*n)
+        ! todo: fft on temp
+        ! temp -> pntVal (stride-1 writing)
+      pntVal((iStrip-1)*n+1 : (iStrip+nIndeps-1)*n)  = gam(1:nIndeps*n)
 
-     ! todo: fft on temp
-     ! temp -> pntVal (stride-1 writing)
+    end do yStripLoop ! iStrip
 
-   end do zStripLoop
+    ! x-direction
+    xStripLoop: do iStrip = 1,n_squared,striplen
+      do iAlph = iStrip, min(iStrip+striplen-1, n_squared)  !z_Trafo
+        alph((iAlph-iStrip)*n+1:(iAlph-iStrip+1)*n) = &
+            & pntVal(iAlph::n_squared) !ztrafo
+      end do
 
-  ! y-direction
+      ! At the end of the array the number of computed strips might be smaller
+      nIndeps = min(striplen, n_squared-iStrip+1)
 
-   yStripLoop: do iStrip = 1,n_squared,striplen
-     do iAlph = iStrip, min(iStrip+striplen-1, n_squared)  !z_Trafo
-       alph((iAlph-iStrip)*n+1:(iAlph-iStrip+1)*n) = &
-           & legCoeffs(iAlph::n_squared) !ztrafo
-     end do
+      call ply_pntToLeg( fpt       = fpt,     &
+        &                nIndeps   = nIndeps, &
+        &                legCoeffs = gam,     &
+        &                pntVal    = alph     )
 
-     ! At the end of the array the number of computed strips might be smaller
-     nIndeps = min(striplen, n_squared-iStrip+1)
+      ! todo: fft on temp
+      ! temp -> pntVal (stride-1 writing)
 
-     ! ply_fpt_exec on temp (no memory transpose)
-     call ply_fpt_exec( alph = alph,                    &
-       &                gam = gam,                      &
-       &                nIndeps = nIndeps,              &
-       &                plan = fpt%planPntToCheb,      &
-       &                lobattoPoints = lobattoPoints, &
-       &                params = fpt%chebToLegParams    )
- 
-       ! todo: fft on temp
-       ! temp -> pntVal (stride-1 writing)
-     pntVal((iStrip-1)*n+1 : (iStrip+nIndeps-1)*n)  = gam(1:nIndeps*n)
+      legCoeffs((iStrip-1)*n+1 : (iStrip+nIndeps-1)*n)  = gam(1:nIndeps*n)
 
+    end do xStripLoop
 
-   end do yStripLoop ! iStrip
-
-  ! x-direction
-   xStripLoop: do iStrip = 1,n_squared,striplen
-     do iAlph = iStrip, min(iStrip+striplen-1, n_squared)  !z_Trafo
-       alph((iAlph-iStrip)*n+1:(iAlph-iStrip+1)*n) = &
-           & pntVal(iAlph::n_squared) !ztrafo
-     end do
-
-     ! At the end of the array the number of computed strips might be smaller
-     nIndeps = min(striplen, n_squared-iStrip+1)
-
-     ! ply_fpt_exec on temp (no memory transpose)
-     call ply_fpt_exec( alph = alph,                    &
-       &                gam = gam,                      &
-       &                nIndeps = nIndeps,              &
-       &                plan = fpt%planPntToCheb,      &
-       &                lobattoPoints = lobattoPoints, &
-       &                params = fpt%chebToLegParams    )
-
-     ! todo: fft on temp
-     ! temp -> pntVal (stride-1 writing)
-
-     legCoeffs((iStrip-1)*n+1 : (iStrip+nIndeps-1)*n)  = gam(1:nIndeps*n)
-
-   end do xStripLoop
-
-  call tem_stopTimer(me= pntToLeg3dTimer, timerHandle = timerHandle)
-  call tem_writeTimer(me = pntToLeg3dTimer, timerHandle = timerHandle)
+    call tem_stopTimer(me= pntToLeg3dTimer, timerHandle = timerHandle)
+    call tem_writeTimer(me = pntToLeg3dTimer, timerHandle = timerHandle)
 
   end subroutine ply_pntToLeg_3D_singVar
 
 end module ply_legFpt_3D_module
-

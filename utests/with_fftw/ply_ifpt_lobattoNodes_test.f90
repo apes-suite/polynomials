@@ -84,7 +84,7 @@ contains
     allocate(legVal(1:maxPolyDegree+1)) 
     write(logUnit(10),*) 'Calculating inverse FPT ...'
     call ply_pntToLeg( fpt = fpt, pntVal = pntVal, legCoeffs = legVal, &
-     &                 lobattoPoints = .true. ) 
+      &                nIndeps = 1 ) 
     write(logUnit(10),*) 'Finished'
   
     !!do iPoly = 1, maxPolyDegree+1

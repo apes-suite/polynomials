@@ -63,14 +63,12 @@ contains
     ! now transform to the Chebyshev nodes
     allocate(pntVal(1:maxPolyDegree+1)) 
     write(logUnit(10),*) 'Calculating FPT ...'
-    call ply_legToPnt( fpt = fpt, legCoeffs = legVal, pntVal = pntVal, &
-      &                lobattoPoints = .false. ) 
+    call ply_legToPnt( fpt = fpt, legCoeffs = legVal, pntVal = pntVal, nIndeps = 1 )
     write(logUnit(10),*) 'Finished'
 
     ! now transform to the Legendre coefficients
     write(logUnit(10),*) 'Calculating inverse FPT ...'
-    call ply_pntToLeg( fpt = fpt, pntVal = pntVal, legCoeffs = legVal, & 
-      &                lobattoPoints = .false. ) 
+    call ply_pntToLeg( fpt = fpt, pntVal = pntVal, legCoeffs = legVal, nIndeps = 1 )
     write(logUnit(10),*) 'Finished'
 
     ! Write out the polynomial coefficient with the largest absolute error

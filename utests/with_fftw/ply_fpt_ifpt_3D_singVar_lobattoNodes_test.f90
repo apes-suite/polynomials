@@ -75,8 +75,7 @@ contains
     !$OMP DEFAULT(shared) private(iVar)
     do iVar=1,nVars
       call ply_legToPnt_3D( fpt = fpt, legCoeffs = legCoeffsIn(:,iVar), &
-        &                   pntVal = pntVal(:,iVar), &
-        &                   lobattoPoints = .true. )
+        &                   pntVal = pntVal(:,iVar) )
     end do
     !$OMP END PARALLEL
     write(logUnit(10),*) 'Finished'
@@ -88,8 +87,7 @@ contains
     !$OMP DEFAULT(shared) private(iVar)
     do iVar=1,nVars
       call ply_pntToLeg_3D( fpt = fpt, pntVal = pntVal(:,iVar), &
-        &                   legCoeffs = legVal(:,iVar), &
-        &                   lobattoPoints = .true. )
+        &                   legCoeffs = legVal(:,iVar)          )
     end do
     !$OMP END PARALLEL
     write(logUnit(10),*) 'Finished'

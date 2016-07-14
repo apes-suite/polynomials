@@ -83,8 +83,8 @@ contains
     ! now transform to the Chebyshev nodes
     allocate(pntVal(1:maxPolyDegree+1)) 
     write(logUnit(10),*) 'Calculating FPT ...'
-    call ply_legToPnt( fpt = fpt, legCoeffs = legCoeffs, pntVal = pntVal , &
-      &                lobattoPoints = .true. )
+    call ply_legToPnt( fpt = fpt, legCoeffs = legCoeffs, pntVal = pntVal, &
+      &                nIndeps = 1                                        )
     write(logUnit(10),*) 'Finished'
   
     !!do iPoint = 1, maxPolyDegree+1
