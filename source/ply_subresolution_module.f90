@@ -134,12 +134,6 @@ contains
     integer :: nElems
     integer(kind=long_k) :: offset
     integer :: iElem
-    integer :: iStep, iDof
-    integer :: tt_X, tt_Y, tt_Z
-    integer :: in_X, in_Y, in_Z
-    integer :: tt_pos, in_pos
-    integer :: tt_off, tt_zoff
-    integer :: in_off, in_zoff
     integer :: minOrd
     integer :: in_dim
     integer :: recs_per_elem

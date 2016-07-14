@@ -99,8 +99,8 @@ contains
     integer :: out_X, out_Y, out_Z
     integer :: in_X, in_Y, in_Z
     integer :: out_pos, in_pos
-    integer :: out_off, out_zoff
-    integer :: in_off, in_zoff
+    integer :: out_off
+    integer :: in_off
     integer :: minOrd
     ! -------------------------------------------------------------------- !
 
