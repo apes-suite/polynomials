@@ -87,6 +87,7 @@ contains
 
     ! Init the FPT
     call ply_init_legFpt( maxPolyDegree = maxPolyDegree, &
+      &                   nIndeps       = 1,             &
       &                   fpt           = fpt,           &
       &                   blocksize     = blocksize      )
 

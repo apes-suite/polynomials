@@ -33,167 +33,10 @@ module ply_legFpt_3D_module
     module procedure ply_pntToLeg_3D_singVar
   end interface ply_pntToLeg_3D
 
-  public :: ply_init_legFpt_3D, ply_legToPnt_3D, ply_pntToLeg_3D
+  public :: ply_legToPnt_3D, ply_pntToLeg_3D
 
 
 contains
-
-
-  !****************************************************************************
-  !> Subroutine to initialize the fast polynomial transformation
-  !! for Legendre expansion.
-  !! \todo VK: change maxPolyDegree to number of quadpoints to include the 
-  !! dealising factor 
-  subroutine ply_init_legFpt_3D( maxPolyDegree, nVars, fpt, &
-    &                            blocksize, approx_terms, striplen, &
-    &                            lobattoPoints, subblockingWidth )
-    !---------------------------------------------------------------------------
-    integer, intent(in) :: maxPolyDegree
-    integer, intent(in) :: nVars
-    type(ply_legFpt_type), intent(inout) :: fpt
-
-    !> Smallest block that is approximated by approx_terms coefficients.
-    !!
-    !! Please note, that this has to be larger than 2*approx_terms to result
-    !! in a reduced number of operations. Default is 64.
-    integer, optional, intent(in) :: blocksize
-
-    !> Number of approximation terms used to compute off-diagonal products.
-    !!
-    !! Defaults to 18, which is the suggested accuracy for double precision.
-    integer, optional, intent(in) :: approx_terms
-
-    !> Length to use in vectorization, this is the number of independent
-    !! matrix multiplications that are to be done simultaneously.
-    !!
-    !! Defaults to 512, but the optimal setting is platform specific.
-    integer, optional, intent(in) :: striplen
-
-    !> Use Chebyshev-Lobtatto Points (true) or simple Chebyshev points (false)
-    logical, intent(in), optional  :: lobattoPoints
-    !> The width of the subblocks used during the unrolled base exchange to 
-    !! ensure a better cache usage.
-    integer, optional, intent(in) :: subblockingWidth
-    !---------------------------------------------------------------------------
-    integer :: n_cubed
-    real(kind=rk), allocatable :: tmpOut(:,:), tmpIn(:,:)
-    logical :: lob
-    !$ integer :: fftwMultThread
-   type(tem_timer_type), save :: init3dTimer
-   integer :: timerHandle
-   !---------------------------------------------------------------------------
-   timerHandle = tem_getNTimers(init3dTimer) 
-   if (timerHandle .eq. 0 ) then
-     write(*,*)     'add timer'
-     call tem_addTimer(me = init3dTimer, timerHandle = timerHandle, timerName='init3dTimer')
-   end if
-   call tem_startTimer(me = init3dTimer, timerHandle = timerHandle)
-
-    lob = .false.
-    if (present(lobattoPoints)) then
-      lob = lobattoPoints
-    end if
-
-    ! init the fast Legendre to Chebyshev transformation.
-    call ply_fpt_init( n                = maxPolyDegree+1,     &
-      &                params           = fpt%legToChebParams, &
-      &                trafo            = ply_legToCheb_param, &
-      &                blocksize        = blocksize,           &
-      &                approx_terms     = approx_terms,        &
-      &                striplen         = striplen,            &
-      &                subblockingWidth = subblockingWidth     )
-
-    call ply_fpt_init( n                = maxPolyDegree+1,     &
-      &                params           = fpt%chebToLegParams, &
-      &                trafo            = ply_chebToLeg_param, &
-      &                blocksize        = blocksize,           &
-      &                approx_terms     = approx_terms,        &
-      &                striplen         = striplen,            &
-      &                subblockingWidth = subblockingWidth     )
-
-    ! Create the buffers for the intermediate arrays
-    n_cubed = fpt%legToChebParams%n**3
-
-    ! Temporary arrays to initialize FFTW real->real transformations
-    allocate( tmpIn(fpt%legToChebParams%n, nVars) )
-    allocate( tmpOut(fpt%legToChebParams%n, nVars) )
- 
-    ! If we have OpenMP parallelism, we have to init FFTW with the
-    ! corrseponding function call
-    !$ fftwMultThread = fftw_init_threads() 
-    !$ if(fftwMultThread.eq.0) then
-    !$   write(logUnit(1),*) 'ERROR in ply_init_legFpt_3D: ' &
-    !$     &                 //'Not able to init OpenMP parallel FFTW'
-    !$   write(logUnit(1),*) 'Stopping!'
-    !$   call tem_abort()    
-    !$ end if
-
-    ! Tell FFTW how many threads at max we want to use: at max
-    ! we use the number of OMP threads in the current team.
-    !$ call fftw_plan_with_nthreads( omp_get_max_threads() )
-
-    if (.not.lob) then
-
-      ! Init the DCT III ( Leg -> Point values )
-      fpt%planChebToPnt = fftw_plan_r2r_1d( n = fpt%legToChebParams%n,&
-                                          & in = tmpIn, &!legCoeffs, &
-                                          & out = tmpOut, &!fpt%pntVal, &
-                                          & kind = FFTW_REDFT01, &
-                                          & flags = FFTW_ESTIMATE )
-
-      ! Init the DCT II ( Point values -> Leg )
-      fpt%planPntToCheb = fftw_plan_r2r_1d( n = fpt%legToChebParams%n, &
-                                          & in = tmpIn, & !fpt%pntVal,&
-                                          & out = tmpOut, & !legCoeffs, &
-                                          & kind = FFTW_REDFT10, &
-                                          & flags = FFTW_ESTIMATE )
-
-      ! Init the DCT III ( Leg -> Point values )
-!      fpt%planChebToPnt = fftw_plan_r2r_3d( n0    = fpt%legToChebParams%n, &
-!        &                                   n1    = fpt%legToChebParams%n, &
-!        &                                   n2    = fpt%legToChebParams%n, &
-!        &                                   in    = tmpIn,                 &
-!        &                                   out   = tmpOut,                &
-!        &                                   kind0 = FFTW_REDFT01,          &
-!        &                                   kind1 = FFTW_REDFT01,          &
-!        &                                   kind2 = FFTW_REDFT01,          &
-!        &                                   flags = FFTW_ESTIMATE          )
-!
-!      ! Init the DCT II ( Point values -> Leg )
-!      fpt%planPntToCheb = fftw_plan_r2r_3d( n0    = fpt%legToChebParams%n, &
-!        &                                   n1    = fpt%legToChebParams%n, &
-!        &                                   n2    = fpt%legToChebParams%n, &
-!        &                                   in    = tmpIn,                 &
-!        &                                   out   = tmpOut,                &
-!        &                                   kind0 = FFTW_REDFT10,          &
-!        &                                   kind1 = FFTW_REDFT10,          &
-!        &                                   kind2 = FFTW_REDFT10,          &
-!        &                                   flags = FFTW_ESTIMATE          )
-
-    else
-
-      ! Init the DCT I ( Leg -> Point values )
-      fpt%planChebToPnt = fftw_plan_r2r_1d( n     = fpt%legToChebParams%n, &
-        &                                   in    = tmpIn,                 &
-        &                                   out   = tmpOut,                &
-        &                                   kind  = FFTW_REDFT00,          &
-        &                                   flags = FFTW_ESTIMATE          )
-
-      ! Init the DCT I ( Point values -> Leg )
-      fpt%planPntToCheb = fftw_plan_r2r_1d( n     = fpt%legToChebParams%n, &
-        &                                   in    = tmpIn,                 &
-        &                                   out   = tmpOut,                &
-        &                                   kind  = FFTW_REDFT00,          &
-        &                                   flags = FFTW_ESTIMATE          )
-
-    end if
-
-    deallocate( tmpIn, tmpOut )
-  call tem_stopTimer(me= init3dTimer, timerHandle = timerHandle)
-  call tem_writeTimer(me = init3dTimer, timerHandle = timerHandle)
-
-  end subroutine ply_init_legFpt_3D
-  !****************************************************************************
 
 
   !****************************************************************************
@@ -234,17 +77,17 @@ contains
    integer :: jPerStrip
    integer :: linesInAlph
    integer :: iIndex
-!   real(kind=rk), dimension (fpt%legToChebParams%striplen) :: alph
-!   real(kind=rk), dimension (fpt%legToChebParams%striplen) :: gam
-   real(kind=rk), dimension(:), allocatable :: alph
-   real(kind=rk), dimension(:), allocatable :: gam
-    type(tem_timer_type), save :: legToPnt3dTimer
-    integer :: timerHandle
-    !---------------------------------------------------------------------------
- timerHandle = tem_getNTimers(legToPnt3dTimer) 
-   if (timerHandle .eq. 0 ) then
+   real(kind=rk), allocatable :: alph(:)
+   real(kind=rk), allocatable :: gam(:)
+   type(tem_timer_type), save :: legToPnt3dTimer
+   integer :: timerHandle
+   !---------------------------------------------------------------------------
+   timerHandle = tem_getNTimers(legToPnt3dTimer) 
+   if ( timerHandle == 0 ) then
      write(*,*)     'add timer'
-     call tem_addTimer(me = legToPnt3dTimer, timerHandle = timerHandle, timerName='legToPnt3dTimer')
+     call tem_addTimer( me          = legToPnt3dTimer,  &
+       &                timerHandle = timerHandle,      &
+       &                timerName   = 'legToPnt3dTimer' )
    end if
    call tem_startTimer(me = legToPnt3dTimer, timerHandle = timerHandle)
 

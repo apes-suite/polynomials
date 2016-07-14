@@ -56,7 +56,9 @@ contains
     legVal = legCoeffs
 
     ! Init the FPT 
-    call ply_init_legFpt( maxPolyDegree = maxPolyDegree, fpt = fpt )
+    call ply_init_legFpt( maxPolyDegree = maxPolyDegree, &
+      &                   nIndeps       = 1,             &
+      &                   fpt           = fpt            )
 
     ! now transform to the Chebyshev nodes
     allocate(pntVal(1:maxPolyDegree+1)) 

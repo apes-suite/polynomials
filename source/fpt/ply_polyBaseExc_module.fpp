@@ -215,9 +215,8 @@ contains
 
     !> Length to use in vectorization, this is the number of independent
     !! matrix multiplications that are to be done simultaneously.
-    !!
-    !! Defaults to 512, but the optimal setting is platform specific.
-    integer, optional, intent(in) :: striplen
+    integer, intent(in) :: striplen
+
     !> The width of the subblocks used during the unrolled base exchange to
     !! ensure a better cache usage.
     integer, optional, intent(in) :: subblockingWidth
@@ -235,12 +234,7 @@ contains
     !---------------------------------------------------------------------------
 
     params%trafo = trafo
-
-    if (present(striplen)) then
-      params%striplen = striplen
-    else
-      params%striplen = 512
-    end if
+    params%striplen = striplen
 
     if(present(subblockingWidth)) then
       params%subblockingWidth = subblockingWidth

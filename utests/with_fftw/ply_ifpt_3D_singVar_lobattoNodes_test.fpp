@@ -6,9 +6,8 @@ program ply_ifpt_3D_singVar_lobattoNodes_test
   use tem_param_module,         only: PI
   use tem_logging_module,       only: logUnit
   use tem_aux_module,           only: tem_abort
-  use ply_legFpt_module,        only: ply_legFpt_type
-  use ply_legFpt_3D_module,     only: ply_init_legFpt_3D, &
-                                    & ply_pntToLeg_3D
+  use ply_legFpt_module,        only: ply_legFpt_type, ply_init_legFPT
+  use ply_legFpt_3D_module,     only: ply_pntToLeg_3D
   use ply_modg_basis_module,    only: evalLegendreTensPoly
   use ply_dof_module,           only: Q_space
   use tem_general_module,       only: tem_general_type, tem_start
@@ -117,8 +116,10 @@ contains
     write(logUnit(10),*) 'Finished'
 
     ! Init the FPT
-    call ply_init_legFpt_3D( maxPolyDegree = maxPolyDegree, &
-      &                      nVars = 1, fpt = fpt, lobattoPoints = .true.)
+    call ply_init_legFpt( maxPolyDegree = maxPolyDegree,        &
+      &                   nIndeps       = (maxPolyDegree+1)**2, &
+      &                   fpt           = fpt,                  &
+      &                   lobattoPoints = .true.                )
 
     ! now transform to the Chebyshev nodes
     write(logUnit(10),*) 'Calculating FPT ...'

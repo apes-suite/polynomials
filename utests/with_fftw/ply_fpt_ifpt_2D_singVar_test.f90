@@ -4,9 +4,8 @@ program ply_fpt_ifpt_2D_singVar_test
   use env_module,               only: rk, fin_env
   use tem_logging_module,       only: logUnit
   use tem_general_module,       only: tem_general_type, tem_start
-  use ply_legFpt_module,        only: ply_legFpt_type
-  use ply_legFpt_2D_module,     only: ply_init_legFpt_2D,  & 
-                                 & ply_legToPnt_2D, ply_pntToLeg_2D
+  use ply_legFpt_module,        only: ply_legFpt_type, ply_init_legFPT
+  use ply_legFpt_2D_module,     only: ply_legToPnt_2D, ply_pntToLeg_2D
 
   implicit none
 
@@ -57,8 +56,9 @@ contains
     legCoeffs(:) = real(1,rk)
   
     ! Init the FPT 
-    call ply_init_legFpt_2D( maxPolyDegree = maxPolyDegree, &
-      &                      fpt = fpt, nVars = 1)
+    call ply_init_legFpt( maxPolyDegree = maxPolyDegree,  &
+      &                   fpt           = fpt,            &
+      &                   nIndeps       = maxPolyDegree+1 )
   
     ! now transform to the Chebyshev nodes
     allocate(pntVal( (maxPolyDegree+1)**2)) 

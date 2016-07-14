@@ -74,7 +74,9 @@ contains
     write(logUnit(10),*) 'Finished'
   
     ! Init the FPT 
-    call ply_init_legFpt( maxPolyDegree = maxPolyDegree, fpt = fpt )
+    call ply_init_legFpt( maxPolyDegree = maxPolyDegree, &
+      &                   nIndeps       = 1,             &
+      &                   fpt           = fpt            )
   
     ! now transform to the Legendre coefficients
     allocate(legVal(1:maxPolyDegree+1)) 

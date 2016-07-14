@@ -119,6 +119,7 @@ contains
       &                       nodal_data=nodal_data,    &
       &                       modal_data= oversamp_modal)
 
+
     do iDegX = 1, maxdegree+1
       do iDegY = 1, maxdegree+1
         dof = 1 + (iDegX-1) + (iDegY-1)*(maxdegree+1)
