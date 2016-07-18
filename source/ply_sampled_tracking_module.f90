@@ -160,7 +160,7 @@ contains
     end if
 
 
-    do iTrack = 1, me%tracking%control%nTrackings
+    do iTrack = 1, me%tracking%control%nActive
       iConfig = me%tracking%instance(iTrack)%pntConfig 
 
       ! map variables
@@ -226,9 +226,9 @@ contains
 
     end do
 
-    if (me%tracking%control%nTrackings > 0) then
-      allocate(me%mesh(me%tracking%control%nTrackings))
-      allocate(me%varsys(me%tracking%control%nTrackings))
+    if (me%tracking%control%nActive > 0) then
+      allocate(me%mesh(me%tracking%control%nActive))
+      allocate(me%varsys(me%tracking%control%nActive))
     end if
 
   end subroutine ply_sampled_track_init
@@ -310,7 +310,7 @@ contains
           &               varSys     = varsys,      &
           &               tree       = mesh         )
       else
-        do iTrack=1,me%tracking%control%nTrackings
+        do iTrack=1,me%tracking%control%nActive
           iConfig = me%tracking%instance(iTrack)%pntConfig
           call hvs_output_open( out_file   = me%tracking%instance(iTrack) &
             &                                           %output_file,     &
@@ -335,7 +335,7 @@ contains
       RETURN
     end if
 
-    do iTrack=1,me%tracking%control%nTrackings
+    do iTrack=1,me%tracking%control%nActive
       iConfig = me%tracking%instance(iTrack)%pntConfig
       if (present(simControl)) then
         ! If a simControl is provided, check each tracking on whether it is to
