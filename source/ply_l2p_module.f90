@@ -137,6 +137,7 @@ contains
         nodes(lb:ub,1) = gaussP1D
         nodes(lb:ub,2) = gaussP1D(iPoint)
       end do
+      nodes(:,3) = 0.0_rk
 
       allocate( faces(2,2) )
       do iDir = 1,2
