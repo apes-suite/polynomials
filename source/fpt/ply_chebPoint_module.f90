@@ -80,7 +80,7 @@ contains
     integer, intent(in) :: num_intp_per_direction
     real(kind=rk),allocatable, intent(inout) :: points(:,:)
     !---------------------------------------------------------------------------
-    integer :: i, j, k !> loop indices
+    integer :: i, j, k ! loop indices
     integer :: pointNumber
     real(kind=rk), allocatable :: chebPnt1D(:)
     integer :: nquadpoints
@@ -114,7 +114,7 @@ contains
     integer, intent(in) :: num_intp_per_direction
     real(kind=rk),allocatable, intent(inout) :: points(:,:)
     !---------------------------------------------------------------------------
-    integer :: i, j, k !> loop indices
+    integer :: i, j, k ! loop indices
     integer :: pointNumber
     real(kind=rk), allocatable :: chebPnt1D(:)
     integer :: nquadpoints
@@ -216,7 +216,7 @@ contains
     integer, intent(in) :: num_intp_per_direction
     real(kind=rk), allocatable, intent(inout) :: points(:,:)
     !---------------------------------------------------------------------------
-    integer :: i !> loop indices
+    integer :: i ! loop indices
     integer :: pointNumber
     real(kind=rk), allocatable :: chebPnt1D(:)
     !---------------------------------------------------------------------------
@@ -246,7 +246,7 @@ contains
     integer, intent(in) :: num_intp_per_direction
     real(kind=rk),allocatable, intent(inout) :: points(:,:)
     !---------------------------------------------------------------------------
-    integer :: i !> loop indices
+    integer :: i ! loop indices
     integer :: pointNumber
     real(kind=rk), allocatable :: chebPnt1D(:)
     !---------------------------------------------------------------------------
@@ -282,7 +282,7 @@ contains
     !> Left or right face of the reference element
     integer :: align
     !---------------------------------------------------------------------------
-    integer :: i, j !> loop indices
+    integer :: i, j ! loop indices
     integer :: pointNumber
     real(kind=rk), allocatable :: chebPnt1D(:)
     integer :: nquadpoints
@@ -348,7 +348,7 @@ contains
     !> Left or right face of the reference element
     integer :: align
     !---------------------------------------------------------------------------
-    integer :: i, j !> loop indices
+    integer :: i, j ! loop indices
     integer :: pointNumber
     real(kind=rk), allocatable :: chebPnt1D(:)
     integer :: nquadpoints
