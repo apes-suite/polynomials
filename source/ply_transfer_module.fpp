@@ -75,7 +75,8 @@ contains
 
     !> Multi-dimensional polynomial layout of the input data.
     !!
-    !! Has to be either [[Q_Space]] or [[P_Space]].
+    !! Has to be either [[ply_dof_module:Q_Space]]
+    !! or [[ply_dof_module:P_Space]].
     integer, intent(in) :: inspace
 
     !> Maximal polynomial degree in the input data.
@@ -86,7 +87,8 @@ contains
 
     !> Multi-dimensional polynomial layout of the output data.
     !!
-    !! Has to be either [[Q_Space]] or [[P_Space]].
+    !! Has to be either [[ply_dof_module:Q_Space]]
+    !! or [[ply_dof_module:P_Space]].
     integer, intent(in) :: outspace
 
     !> Maximal polynomial degree in the output data.
@@ -202,7 +204,8 @@ contains
 
     !> Multi-dimensional polynomial layout of the input data.
     !!
-    !! Has to be either [[Q_Space]] or [[P_Space]].
+    !! Has to be either [[ply_dof_module:Q_Space]]
+    !! or [[ply_dof_module:P_Space]].
     integer, intent(in) :: inspace
 
     !> Maximal polynomial degree in the input data.
@@ -213,7 +216,8 @@ contains
 
     !> Multi-dimensional polynomial layout of the output data.
     !!
-    !! Has to be either [[Q_Space]] or [[P_Space]].
+    !! Has to be either [[ply_dof_module:Q_Space]]
+    !! or [[ply_dof_module:P_Space]].
     integer, intent(in) :: outspace
 
     !> Maximal polynomial degree in the output data.
@@ -333,7 +337,8 @@ contains
 
     !> Multi-dimensional polynomial layout of the input data.
     !!
-    !! Has to be either [[Q_Space]] or [[P_Space]].
+    !! Has to be either [[ply_dof_module:Q_Space]]
+    !! or [[ply_dof_module:P_Space]].
     integer, intent(in) :: inspace
 
     !> Maximal polynomial degree in the input data.
@@ -344,7 +349,8 @@ contains
 
     !> Multi-dimensional polynomial layout of the output data.
     !!
-    !! Has to be either [[Q_Space]] or [[P_Space]].
+    !! Has to be either [[ply_dof_module:Q_Space]]
+    !! or [[ply_dof_module:P_Space]].
     integer, intent(in) :: outspace
 
     !> Maximal polynomial degree in the output data.
