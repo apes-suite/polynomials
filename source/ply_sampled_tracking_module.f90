@@ -216,6 +216,9 @@ contains
           &    subtree     = me%tracking%instance(iTrack) &
           &                    %subtree,                  &
           &    varSys      = varsys,                      &
+          &    varPos      = me%tracking%instance(iTrack) &
+          &                               %varMap%varPos  &
+          &                               %val(:nVars),   &
           &    geometry    = me%tracking%config(iConfig)  &
           &                    %geometry,                 &
           &    basename    = trim(basename),              &
