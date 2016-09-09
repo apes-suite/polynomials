@@ -121,11 +121,12 @@ module ply_modg_basis_module
 
   public :: init_modg_multilevelCoeffs, evalLegendreTensPoly, scalProdLeg, &
     &       scalProdDualLeg, scalProdDualLegDiff, ply_modg_refine_type,    &
-    &       faceValLeftBndAns, faceValLeftBndTest, faceValRightBndTest,    &
-    &       ply_modg_basis_type, legendre_1D, faceValLeftBndTestGrad,      &
-    &       faceValRightBndTestGrad, faceValLeftBndgradTest,               &
-    &       faceValRightBndgradTest, faceValLeftBndDiffAns,                &
-    &       faceValRightBndDiffAns, init_modg_covolumeCoeffs, integrateLeg
+    &       faceValLeftBndAns, faceValRightBndAns, faceValLeftBndTest,     &
+    &       faceValRightBndTest, ply_modg_basis_type, legendre_1D,         &
+    &       faceValLeftBndTestGrad, faceValRightBndTestGrad,               &
+    &       faceValLeftBndgradTest, faceValRightBndgradTest,               &
+    &       faceValLeftBndDiffAns, faceValRightBndDiffAns,                 &
+    &       init_modg_covolumeCoeffs, integrateLeg
 
 contains
 
@@ -462,6 +463,21 @@ contains
 
 
   end subroutine evalLegendreTensPoly
+
+  !> Returns the value of the non-normalized Legendre polynomial at the right
+  !! boundary of the reference element, i.e. at +1.
+  pure function faceValRightBndAns(ansFunc) result(val)
+    !---------------------------------------------------------------------------
+    !> The ansatz function index, first ansatz function has index 1.
+    integer, intent(in) :: ansFunc
+    !> The function value.
+    real(kind=rk) :: val
+    !---------------------------------------------------------------------------
+    !---------------------------------------------------------------------------
+
+    val = 1.0_rk
+
+  end function faceValRightBndAns
 
   !> Returns the value of the non-normalized differentiated Legendre polynomial
   !! at the right boundary of the reference element, i.e. at +1.
