@@ -175,7 +175,7 @@ contains
    !! Note: The modal and nodal data array sizes need to match the flpt
    !! definitions, provided in the fxtf_flptld_init call.
   !> Convert modal data to nodal data in 1D using flpt.
-   subroutine ply_fxt_m2n_1D( fxt, modal_data, nodal_data, oversamp_degree )
+   subroutine ply_fxt_m2n_1D( fxt, modal_data, nodal_data )
     !--------------------------------------------------------------------------!
      !> Description of the Fast Legendre Polynomial Transform
      type(ply_fxt_type) :: fxt
@@ -183,7 +183,6 @@ contains
      real(kind=rk), target, intent(inout) :: nodal_data(:)
      !> Modal data
      real(kind=rk), target, intent(inout) :: modal_data(:)
-     integer, intent(in) :: oversamp_degree
      !-----------------------------------------------------------!
 
      call fxtf_flptld_m2n(flpt       = fxt%flpt,   &
@@ -294,7 +293,7 @@ contains
    !!
    !! Note: The modal and nodal data array sizes need to match the flpt
    !! definitions, provided in the fxtf_flptld_init call.
-   subroutine ply_fxt_n2m_1D(fxt, nodal_data, modal_data, oversamp_degree )
+   subroutine ply_fxt_n2m_1D(fxt, nodal_data, modal_data )
     !--------------------------------------------------------------------------!
      !> Description of the Fast Legendre Polynomial Transform
      type(ply_fxt_type) :: fxt
@@ -302,7 +301,6 @@ contains
      real(kind=rk), target, intent(inout) :: nodal_data(:)
      !> Modal data
      real(kind=rk), target, intent(inout) :: modal_data(:)
-     integer, intent(in) :: oversamp_degree
     !--------------------------------------------------------------------------!
 
      call fxtf_flptld_n2m(flpt       = fxt%flpt,   &

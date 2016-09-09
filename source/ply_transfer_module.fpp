@@ -98,8 +98,8 @@ contains
     integer :: indofs
     integer :: min_dofs
     integer :: iStep, iDof
-    integer :: out_X, out_Y, out_Z
-    integer :: in_X, in_Y, in_Z
+    integer :: out_X, out_Y
+    integer :: in_X, in_Y
     integer :: out_pos, in_pos
     integer :: out_off
     integer :: in_off
@@ -143,7 +143,7 @@ contains
           outdat(out_pos) = indat(in_pos)
           ! Ensure, that next iteration is in the minord range
           do istep=iDof,indofs
-            call nextModgCoeffPTens2D(in_X, in_Y, in_Z, indegree)
+            call nextModgCoeffPTens2D(in_X, in_Y)
             if ((in_X <= minord) .and. (in_Y <= minord)) EXIT
           end do
           if ( (in_X > minord) .or. (in_Y > minord) &
@@ -167,7 +167,7 @@ contains
           outdat(out_pos) = indat(in_pos)
           ! Ensure, that next iteration is in the target range
           do istep=iDof,outdofs
-            call nextModgCoeffPTens2D(out_X, out_Y, out_Z, outdegree)
+            call nextModgCoeffPTens2D(out_X, out_Y)
             if ((out_X <= minord) .and. (out_Y <= minord)) EXIT
           end do
           if ( (out_X > minord) .or. (out_Y > minord) &
@@ -463,10 +463,8 @@ contains
         do iMode=1,nInDofs
 ?? copy :: posOfModgCoeffPTens( iX, iY, iZ, iPos )
           outdat(iPos) = indat(iMode)
-          call nextModgCoeffPTens2D( ansFuncX  = iX,    &
-            &                        ansFuncY  = iY,    &
-            &                        ansFuncZ  = iZ,    &
-            &                        maxDegree = degree )
+          call nextModgCoeffPTens2D( ansFuncX  = iX, &
+            &                        ansFuncY  = iY  )
         end do
 
       end select i2_out_d
@@ -489,10 +487,8 @@ contains
         do iMode=1,nOutDofs
 ?? copy :: posOfModgCoeffPTens( iX, iY, iZ, iPos )
           outdat(iMode) = indat(iPos)
-          call nextModgCoeffPTens2D( ansFuncX  = iX,    &
-            &                        ansFuncY  = iY,    &
-            &                        ansFuncZ  = iZ,    &
-            &                        maxDegree = degree )
+          call nextModgCoeffPTens2D( ansFuncX  = iX, &
+            &                        ansFuncY  = iY  )
         end do
 
       case(3) i3_out_d

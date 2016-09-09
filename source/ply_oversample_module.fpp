@@ -295,7 +295,7 @@ contains
 ?? copy :: posOfModgCoeffPTens2D(iDegX, iDegY, dof)
         dofOverSamp = iDegX + (iDegY-1)*(oversamp_degree+1)
         modalCoeffs(dofOverSamp,1:nPVars) = state(dof,1:nPVars)
-        call nextModgCoeffPTens2D(iDegX, iDegY, iDegZ, poly_proj%min_degree)
+        call nextModgCoeffPTens2D(iDegX, iDegY)
       end do
       !$OMP END SINGLE
 
@@ -365,7 +365,7 @@ contains
 ?? copy :: posOfModgCoeffPTens2D(iDegX, iDegY, dof)
         dofOverSamp = iDegX + (iDegY-1)*(oversamp_degree+1)
         state(dof,1:nPVars) = modalCoeffs(dofOverSamp,1:nPVars)
-        call nextModgCoeffPTens2D(iDegX, iDegY, iDegZ, poly_proj%min_degree)
+        call nextModgCoeffPTens2D(iDegX, iDegY)
       end do
       !$OMP END SINGLE
 

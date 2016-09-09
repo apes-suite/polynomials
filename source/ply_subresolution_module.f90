@@ -106,13 +106,12 @@ contains
   !****************************************************************************!
   !> Get the subresolution data for all elements for a given color and in the
   !! requested format.
-  subroutine ply_subres_import_color( me, tree, proc, coloring, iColor,        &
+  subroutine ply_subres_import_color( me, tree, coloring, iColor,              &
     &                                 target_degree, target_space, target_dim, &
     &                                 subresdat )
     !--------------------------------------------------------------------------!
     type(ply_subresolution_type), intent(in) :: me
     type(treelmesh_type), intent(in) :: tree
-    type(tem_comm_env_type), intent(in) :: proc
     type(tem_color_prop_type), intent(in) :: coloring
     integer, intent(in) :: iColor
     integer, intent(in) :: target_degree

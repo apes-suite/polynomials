@@ -478,13 +478,9 @@ contains
                 case (2)
                   call nextModgCoeffQTens2D( ansFuncX  = ans(1),            &
                     &                        ansFuncY  = ans(2),            &
-                    &                        ansFuncZ  = ans(3),            &
                     &                        maxdegree = var_degree(varpos) )
                 case (1)
-                  call nextModgCoeffQTens1D( ansFuncX  = ans(1),            &
-                    &                        ansFuncY  = ans(2),            &
-                    &                        ansFuncZ  = ans(3),            &
-                    &                        maxdegree = var_degree(varpos) )
+                  call nextModgCoeffQTens1D( ansFuncX  = ans(1) )
                 end select
               else
                 select case(ndims)
@@ -494,15 +490,10 @@ contains
                     &                      ansFuncZ  = ans(3),            &
                     &                      maxdegree = var_degree(varpos) )
                 case (2)
-                  call nextModgCoeffPTens2D( ansFuncX  = ans(1),            &
-                    &                        ansFuncY  = ans(2),            &
-                    &                        ansFuncZ  = ans(3),            &
-                    &                        maxdegree = var_degree(varpos) )
+                  call nextModgCoeffPTens2D( ansFuncX  = ans(1), &
+                    &                        ansFuncY  = ans(2)  )
                 case (1)
-                  call nextModgCoeffPTens1D( ansFuncX  = ans(1),            &
-                    &                        ansFuncY  = ans(2),            &
-                    &                        ansFuncZ  = ans(3),            &
-                    &                        maxdegree = var_degree(varpos) )
+                  call nextModgCoeffPTens1D( ansFuncX  = ans(1) )
                 end select
               end if
               legval = pointval(ans(1), pointCoord(1))
