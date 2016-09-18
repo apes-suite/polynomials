@@ -313,18 +313,18 @@ contains
     real(kind=rk) :: integral(maxdegree+1)
 
     integer :: nOrigModes
-    integer :: commonModes
+    integer :: minModes
     integer :: iMode
 
     nOrigModes = size(integrand)
-    commonModes = min(nOrigModes-1, maxdegree+1)
+    minModes = min(nOrigModes-1, maxdegree+1)
 
     if (nOrigModes >= 2) then
       integral(1) = -1.0_rk/3.0_rk * integrand(2)
     else
       integral(1) = 0.0_rk
     end if
-    do iMode=2,commonModes
+    do iMode=2,minModes
       integral(iMode) = integrand(iMode-1)/real(2*iMode-3, kind=rk) &
         &             - integrand(iMode+1)/real(2*iMode+1, kind=rk)
     end do
