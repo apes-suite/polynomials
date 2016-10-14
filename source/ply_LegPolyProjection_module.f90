@@ -118,6 +118,7 @@ contains
     real(kind=rk), allocatable :: workData(:)
     integer :: nChildDofs, nWorkDofs, nLevels
     !---------------------------------------------------------------------------
+    allocate(workData(size(meshData)))
     if (subsamp%projectionType.ne.ply_QLegendrePoly_prp) then
       write(logunit(0),*) 'ERROR in ply_QPolyProjection: subsampling is '    &
         &                 // 'only implemented for Q-Legendre-Polynomials, ' &
@@ -125,39 +126,49 @@ contains
       call tem_abort()
     end if
     ! now, subsample the data for one level in a loop until we reached to 
-    ! goal level.
-    workTree = tree
-    workData = meshData
-    nWorkDofs = nDofs
+    ! goal level or there is only on dof left in the polynomial representation.
     nLevels = subsamp%nLevels
-    do iLevel = 1, nLevels
-      ! Check if nWorkDofs is > 1.
-      if (nworkDofs == 1) EXIT
-      write(*,*) 'sampling level',nLevels
-      ! Reduce the number of dofs per direction in each subsample step
-      nChildDofs = (ceiling(nint(nWorkDofs**(1.0_rk/real(ndims, kind=rk))) &
-        &                      / subsamp%dofReducFactor))**3
-      if (nChildDofs < 1) then
-        nChildDofs = 1
-      end if
-      ! init the projection coefficients for the current number of child dofs
-      call ply_initQLegProjCoeff( subsamp%projectionType, nWorkDofs, ndims, &
-        &                         nChildDofs, projection )
-      ! now, apply the subsampling.
-      ! ... build the tree for the next level
-      call ply_refineTree( workTree, ndims, newTree )
-      ! ... subsample the data
-      call ply_subsampleData( workTree, workData, varSys, nWorkDofs,     &
-        &                     nChildDofs,nComponents, projection, ndims, &
-        &                     newTree, newMeshData ) 
-      workTree = newTree
-      workData = newMeshData
-      nWorkDofs = nChildDofs
-      deallocate(projection%projCoeff)
-    end do
+    if (nLevels > 0) then
+      workTree = tree
+      workData = meshData
+      nWorkDofs = nDofs
+      !> Projection is only done for sampling level of 1 or biggger.
+      sampling_loop: do iLevel = 1, nLevels
+        ! Reduce the number of dofs per direction in each subsample step
+        nChildDofs = (ceiling(nint(nWorkDofs**(1.0_rk/real(ndims, kind=rk))) &
+          &                      / subsamp%dofReducFactor))**3
+        if (nChildDofs < 1) then
+          nChildDofs = 1
+        end if
+        ! init the projection coefficients for the current number of child dofs
+        call ply_initQLegProjCoeff( subsamp%projectionType, nWorkDofs, ndims, &
+          &                         nChildDofs, projection )
+        ! now, apply the subsampling.
+        ! ... build the tree for the next level
+        call ply_refineTree( workTree, ndims, newTree )
+        ! ... subsample the data
+        call ply_subsampleData( workTree, workData, varSys, nWorkDofs,     &
+          &                     nChildDofs,nComponents, projection, ndims, &
+          &                     newTree, newMeshData )
+        deallocate(workData)
+        allocate(workData(size(newMeshData)))
 
-    newDofs = nChildDofs    
- 
+        workTree = newTree
+        workData = newMeshData
+        nWorkDofs = nChildDofs
+
+        deallocate(projection%projCoeff)
+
+        if (nWorkDofs == 1) EXIT sampling_loop
+      end do sampling_loop
+      newDofs = nChildDofs
+    else
+      !> Projection is not necessary.
+      newTree     = tree
+      newMeshData = meshData
+      newDofs     = nDofs
+    end if
+
   end subroutine ply_QPolyProjection
   !****************************************************************************!
 
@@ -197,6 +208,7 @@ contains
     !---------------------------------------------------------------------------
     select case(dofType)
     case(ply_QLegendrePoly_prp)
+!!      write(logunit(0),*)'Creating 3D projection coeffficient for Q-Polynomials'
   
       allocate(projection%projCoeff(nDofs, nChildDofs, 2**ndims))
       projection%projCoeff = 0.0_rk
@@ -571,6 +583,7 @@ contains
 
     ! Now, we set the correct data for the newMeshData.
     allocate(newMeshData(nChildElems*nChildDofs*nComponents))
+    allocate(childData(nChildDofs*nChilds*nComponents))
     newMeshData = 0.0_rk
     elementLoop: do iElem = 1, nElems
       ! Create lower and upper indices for all data of iElem.
@@ -587,16 +600,16 @@ contains
         &  projection  = projection,                         &
         &  childData   = childData                           )
 
-        ! Iterate over all childDofs and set the data corectly in newMeshData
-        lowChildIndex = 1 + (iElem - 1) * nChilds * nChildDofs * nComponents
+      ! Iterate over all childDofs and set the data corectly in newMeshData
+      lowChildIndex = 1 + (iElem - 1) * nChilds * nChildDofs * nComponents
   
-        upChildIndex = (lowChildIndex-1) + nChilds * nChildDofs * nComponents
+      upChildIndex = (lowChildIndex-1) + nChilds * nChildDofs * nComponents
   
-        newMeshData(lowChildIndex:upChildIndex) = childData
-
-        deallocate(childData) 
+      newMeshData(lowChildIndex:upChildIndex) = childData
  
     end do elementLoop
+    
+    deallocate(childData)
 
   end subroutine ply_subsampleData
   !****************************************************************************!
@@ -629,14 +642,12 @@ contains
     type(ply_ProjCoeff_type), intent(in) :: projection
 
     !> The created childData. 
-    real(kind=rk), allocatable, intent(out) :: childData(:)
+    real(kind=rk), intent(out) :: childData(:)
     !---------------------------------------------------------------------------
     integer :: iChildDof, iComp, iChild, iParentDof
     integer :: childDof_pos, parentDof_pos
     real(kind=rk) :: projCoeff
     !---------------------------------------------------------------------------
-    !> Allocate the output array
-    allocate(childData(size(parentData)*nChildDofs))
     childData(:) = 0.0_rk
 
     childLoop: do iChild = 1, nChilds

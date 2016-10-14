@@ -277,6 +277,7 @@ contains
     integer :: bitlevel
     real(kind=rk) :: legval
     real(kind=rk) :: point_spacing, point_start
+    logical :: dofIndicator
     procedure(tem_varSys_proc_element), pointer :: get_element => NULL()
     procedure(tem_varSys_proc_point), pointer :: get_point => NULL()
     procedure(tem_varSys_proc_setParams), pointer :: set_params => NULL()
@@ -306,8 +307,8 @@ contains
         &                             new_mesh  = tmp_mesh(cur),     &
         &                             new_bcs   = tmp_bcs(cur),      &
         &                             restrict_to_sub = .true.       )
-      call tem_create_subTree_of( inTree  = tmp_mesh(0),         &
-        &                         bc_prop = tmp_bcs(0),          &
+      call tem_create_subTree_of( inTree  = tmp_mesh(cur),       &
+        &                         bc_prop = tmp_bcs(cur),        &
         &                         subtree = tmp_subtree,         &
         &                         inShape = trackConfig%geometry )
       do iLevel=2,me%max_nLevels
@@ -570,7 +571,7 @@ contains
       deallocate(pointval)
 
     case('adaptive')
-
+      dofIndicator = .FALSE.
       iLevel = 1
       cur = 0
       call tem_create_tree_from_sub ( inTree  = orig_mesh,         &
@@ -586,6 +587,7 @@ contains
         &                               var_degree     = var_degree,     &
         &                               var_space      = var_space,      &
         &                               dofReducFactor = dofReducFactor, &
+        &                               dofIndicator   = dofIndicator,   &
         &                               refined_sub    = refined_sub     )
       call tem_refine_global_subtree ( orig_mesh = orig_mesh,     &
         &                              orig_bcs  = orig_bcs,      &
@@ -595,6 +597,7 @@ contains
         &                              new_bcs   = tmp_bcs(cur),  &
         &                              restrict_to_sub = .false.  )
       do iLevel=2,me%max_nLevels !>Loop to maximum level of refinement
+        write(*,*) 'sampling level', iLevel-1
         prev = mod(iLevel-2, 2)
         cur = mod(iLevel-1, 2)
         call ply_adaptive_refine_subtree( mesh           = initial_tree,   &
@@ -607,6 +610,7 @@ contains
           &                               var_degree     = var_degree,     &
           &                               var_space      = var_space,      &
           &                               dofReducFactor = dofReducFactor, &
+          &                               dofIndicator   = dofIndicator,   &
           &                               refined_sub    = refined_sub     )
         call tem_refine_global_subtree( orig_mesh = tmp_mesh(prev), &
           &                             orig_bcs  = tmp_bcs(prev),  &
@@ -630,6 +634,7 @@ contains
           &                         bc_prop = tmp_bcs(cur),        &
           &                         subtree = tmp_subtree,         &
           &                         inShape = trackConfig%geometry )
+        if (dofIndicator) EXIT
       end do  
       call tem_create_tree_from_sub( intree  = tmp_mesh(cur), &
         &                            subtree = tmp_subtree,   &
@@ -652,7 +657,8 @@ contains
   subroutine ply_adaptive_refine_subtree( mesh, sampling_lvl, eps_osci,  &
     &                                     ndims, trackInst, time,        &
     &                                     varsys, var_degree, var_space, &
-    &                                     dofReducFactor, refined_sub    )  
+    &                                     dofReducFactor,  dofIndicator, &
+    &                                     refined_sub    )  
     !> The mesh to be refined.
     type(treelmesh_type), intent(in) :: mesh
 
@@ -685,6 +691,10 @@ contains
     !> Factor to Reduce dofs for every sampling level.
     !! Can be used to avoid too drastic increase of memory consumption.
     real(kind=rk), intent(in), optional :: dofReducFactor
+
+    !> Indicator that there is only one dof left in the polynomial
+    !! representation.
+    logical, intent(out) :: dofIndicator
   
     !> Subtree that marks those elements that need to be refined.
     type(tem_subtree_type), intent(out) :: refined_sub
@@ -710,7 +720,6 @@ contains
     integer :: nDofs
     integer :: newDofs
     integer :: Refine_pos 
-    integer :: maxdofs
     integer :: varpos
     integer :: nComponents
     integer :: i
@@ -724,37 +733,32 @@ contains
     !! the solution are observed while sticking to coarse large elements
     !! elsewhere.
 
-!!    maxdofs = 0
     nVars = trackInst%varmap%varPos%nVals
 
     allocate(vardofs(nVars))
-!!    do iVar=1,nVars
-!!      varpos = trackInst%varmap%varPos%val(iVar)
-!!      select case(var_space(varpos))
-!!      case (q_space)
-!!        select case(ndims)
-!!        case(3)
-!!?? copy :: getDofsQTens(var_degree(varpos), vardofs(iVar))
-!!        case(2)
-!!?? copy :: getDofsQTens2D(var_degree(varpos), vardofs(iVar))
-!!        case(1)
-!!?? copy :: getDofsQTens1D(var_degree(varpos), vardofs(iVar))
-!!        end select
-!!        maxdofs = max( maxdofs, varsys%method%val(varpos)%nComponents &
-!!          &                     * vardofs(iVar)                       )
-!!      case (p_space)
-!!        select case(ndims)
-!!        case(3)
-!!?? copy :: getDofsPTens(var_degree(varpos), vardofs(iVar))
-!!        case(2)
-!!?? copy :: getDofsPTens2D(var_degree(varpos), vardofs(iVar))
-!!        case(1)
-!!?? copy :: getDofsPTens1D(var_degree(varpos), vardofs(iVar))
-!!        end select
-!!        maxdofs = max( maxdofs, varsys%method%val(varpos)%nComponents &
-!!          &                     * vardofs(iVar)                       )
-!!      end select
-!!    end do
+    do iVar=1,nVars
+      varpos = trackInst%varmap%varPos%val(iVar)
+      select case(var_space(varpos))
+      case (q_space)
+        select case(ndims)
+        case(3)
+?? copy :: getDofsQTens(var_degree(varpos), vardofs(iVar))
+        case(2)
+?? copy :: getDofsQTens2D(var_degree(varpos), vardofs(iVar))
+        case(1)
+?? copy :: getDofsQTens1D(var_degree(varpos), vardofs(iVar))
+        end select
+      case (p_space)
+        select case(ndims)
+        case(3)
+?? copy :: getDofsPTens(var_degree(varpos), vardofs(iVar))
+        case(2)
+?? copy :: getDofsPTens2D(var_degree(varpos), vardofs(iVar))
+        case(1)
+?? copy :: getDofsPTens1D(var_degree(varpos), vardofs(iVar))
+        end select
+      end select
+    end do
 
     nElems = mesh%nElems
     allocate(elempos(nElems))
@@ -777,42 +781,38 @@ contains
         &                      nElems  = nElems,      &
         &                      nDofs   = nDofs,       &
         &                      res     = vardat       )
-      !> Projection for sampling level >  1 
-      if (sampling_lvl > 1) then
-        
-        !> Set the current sampling level for projection.
-        subsamp%nLevels = sampling_lvl-1
+      !> Set the current sampling level for projection.
+      subsamp%nLevels = sampling_lvl-1
 
-        !> Set dofReducFactor if it is prescribed.
-        !! Default is set to 2.0_rk, it means the number of dofs
-        !! will be halfed in each refinement step to maintain the original
-        !! amount of memory consumption.
-        if (present(dofReducFactor)) then
-          subsamp%dofReducFactor = dofReducFactor
-        end if
+      !> Set dofReducFactor if it is prescribed.
+      !! Default is set to 2.0_rk, it means the polynomial degree
+      !! will be halfed in each refinement step to maintain the original
+      !! amount of memory usage.
+      if (present(dofReducFactor)) then
+        subsamp%dofReducFactor = dofReducFactor
+      end if
 
-        call ply_QPolyProjection( subsamp     = subsamp,     &
-          &                       tree        = mesh,        &
-          &                       meshData    = vardat,      &
-          &                       varSys      = varSys,      &
-          &                       nDofs       = nDofs,       &
-          &                       ndims       = ndims,       &
-          &                       nComponents = nComponents, &
-          &                       newTree     = newTree,     &
-          &                       newMeshData = newVardat,   &  
-          &                       newDofs     = newDofs      )
-        nNewElems = newTree%nElems
+      call ply_QPolyProjection( subsamp     = subsamp,     &
+        &                       tree        = mesh,        &
+        &                       meshData    = vardat,      &
+        &                       varSys      = varSys,      &
+        &                       nDofs       = nDofs,       &
+        &                       ndims       = ndims,       &
+        &                       nComponents = nComponents, &
+        &                       newTree     = newTree,     &
+        &                       newMeshData = newVardat,   &  
+        &                       newDofs     = newDofs      )
 
-      else
-        allocate(newVardat(nDofs*nElems*nComponents))
-        newVardat = vardat
-        nNewElems = nElems
-        newDofs = nDofs
+      nNewElems = newTree%nElems
+
+      if (newDofs == 1) then
+        dofIndicator = .TRUE.
       end if
 
       allocate(tmp_dat(newDofs))
       allocate(WV(nNewElems))
 
+      !> Allocate refine for the first var
       if (iVar == 1) then
         allocate(refine(nNewElems))
         refine(:) = .FALSE. 
@@ -847,7 +847,9 @@ contains
       deallocate(newVardat)
       deallocate(tmp_dat)
       deallocate(WV)
-      if (nElemsToRefine == nNewElems) EXIT
+      
+      !> Don't need to check other vars if all elements already need refinement. 
+      if (nElemsToRefine == nNewElems) EXIT varLoop
     end do varLoop
 
     !> Create new Subtree (refined_sub).
@@ -860,7 +862,6 @@ contains
         map2global(Refine_pos) = iElem
       end if
     end do
-
     refined_sub%global = newtree%global
     call tem_subTree_from(me         = refined_sub, &
       &                   map2global = map2global   )
@@ -868,6 +869,7 @@ contains
     deallocate(map2global)
     deallocate(elempos)
     deallocate(refine)
+
   end subroutine ply_adaptive_refine_subtree
   !----------------------------------------------------------------------------!
   !----------------------------------------------------------------------------!
