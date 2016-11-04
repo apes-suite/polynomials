@@ -189,7 +189,7 @@ contains
   !! used.
   subroutine ply_sample_data( me, orig_mesh, orig_bcs, varsys, var_degree,    &
     &                         var_space, ndims, trackInst, trackConfig, time, &
-    &                         new_mesh, resvars, eps_osci, dofReducFactor     )
+    &                         new_mesh, eps_osci, dofReducFactor, resvars     )
     !> A ply_sampling_type to describe the sampling method.
     type(ply_sampling_type), intent(in) :: me
 
@@ -245,11 +245,17 @@ contains
     type(tem_subtree_type) :: tmp_subtree
     type(tem_subtree_type) :: refined_sub
     type(capsule_array_type), pointer :: res
+    type(capsule_array_type), allocatable :: nVarsDat(:)
+    type(capsule_array_type), allocatable :: newnVarsDat(:)
+    type(capsule_array_type), allocatable :: work_varDat(:)
     real(kind=rk), allocatable :: vardat(:)
     real(kind=rk), allocatable :: points(:)
     real(kind=rk), allocatable :: pointval(:,:)
     integer, allocatable :: vardofs(:)
+    integer, allocatable :: newVardofs(:)
+    integer, allocatable :: work_vardofs(:)
     integer, allocatable :: elempos(:)
+    integer, allocatable :: varcomps(:)
     integer :: pointCoord(4)
     integer :: nOrigElems
     integer :: nVars
@@ -277,7 +283,8 @@ contains
     integer :: bitlevel
     real(kind=rk) :: legval
     real(kind=rk) :: point_spacing, point_start
-    logical :: dofIndicator
+    logical, allocatable :: refine_tree(:)
+    logical, allocatable :: new_refine_tree(:)
     procedure(tem_varSys_proc_element), pointer :: get_element => NULL()
     procedure(tem_varSys_proc_point), pointer :: get_point => NULL()
     procedure(tem_varSys_proc_setParams), pointer :: set_params => NULL()
@@ -571,24 +578,92 @@ contains
       deallocate(pointval)
 
     case('adaptive')
-      dofIndicator = .FALSE.
       iLevel = 1
       cur = 0
+
+      ! Get the data for all vars of all elements in orig_mesh.
+      nVars = trackInst%varmap%varPos%nVals
+
+      call tem_varSys_init( me         = resvars,       &
+        &                   systemName = 'sampledVars', &
+        &                   length     = nVars          )
+ 
+      allocate(vardofs(nVars))
+      allocate(nVarsDat(nVars))
+      allocate(work_vardat(nVars))
+      allocate(work_vardofs(nVars))
+      allocate(varcomps(nVars))
+
+      do iVar=1,nVars
+        varpos = trackInst%varmap%varPos%val(iVar)
+        select case(var_space(varpos))
+        case (q_space)
+          select case(ndims)
+          case(3)
+?? copy :: getDofsQTens(var_degree(varpos), vardofs(iVar))
+          case(2)
+?? copy :: getDofsQTens2D(var_degree(varpos), vardofs(iVar))
+          case(1)
+?? copy :: getDofsQTens1D(var_degree(varpos), vardofs(iVar))
+          end select
+        case (p_space)
+          select case(ndims)
+          case(3)
+?? copy :: getDofsPTens(var_degree(varpos), vardofs(iVar))
+          case(2)
+?? copy :: getDofsPTens2D(var_degree(varpos), vardofs(iVar))
+          case(1)
+?? copy :: getDofsPTens1D(var_degree(varpos), vardofs(iVar))
+          end select
+        end select
+      end do
+
+      nOrigElems = orig_mesh%nElems
+      allocate(elempos(nOrigElems))
+      elempos = [ (i, i=1,nOrigElems) ]
+
+      get_element => get_sampled_element
+
+      varLoop: do iVar=1,nVars
+        varpos = trackInst%varmap%varPos%val(iVar)
+        varcomps(iVar) = varsys%method%val(varpos)%nComponents
+        nDofs = vardofs(iVar)
+        nComponents = varcomps(iVar)
+        allocate(vardat(nDofs*nOrigElems*nComponents))
+        allocate(nVarsDat(iVar)%dat(size(vardat)))
+        call varSys%method%val(varpos)                 &
+          &        %get_element( varSys  = varSys,     &
+          &                      elempos = elempos,    &
+          &                      time    = time,       &
+          &                      tree    = orig_mesh,  &
+          &                      nElems  = nOrigElems, &
+          &                      nDofs   = nDofs,      &
+          &                      res     = vardat      )
+        nVarsDat(iVar)%dat(:) = vardat(:)
+        deallocate(vardat)
+      end do varLoop
+
+      ! Now we have nVarsDat, it contains the data for all vars of all elements. 
+
+      allocate(refine_tree(nOrigElems))
+      refine_tree(:) = .TRUE.
+      
       call tem_create_tree_from_sub ( inTree  = orig_mesh,         &
         &                             subtree = trackInst%subtree, &
         &                             newtree = initial_tree       ) 
-      call ply_adaptive_refine_subtree( mesh           = initial_tree,   &
-        &                               sampling_lvl   = iLevel,         &
-        &                               eps_osci       = eps_osci,       &
-        &                               ndims          = ndims,          &
-        &                               trackInst      = trackInst,      &
-        &                               time           = time,           &
-        &                               varsys         = varsys,         &
-        &                               var_degree     = var_degree,     &
-        &                               var_space      = var_space,      &
-        &                               dofReducFactor = dofReducFactor, &
-        &                               dofIndicator   = dofIndicator,   &
-        &                               refined_sub    = refined_sub     )
+      call ply_adaptive_refine_subtree( mesh            = initial_tree,    &
+        &                               nVarsDat        = nVarsDat,        &
+        &                               vardofs         = vardofs,         &
+        &                               sampling_lvl    = iLevel,          &
+        &                               eps_osci        = eps_osci,        &
+        &                               ndims           = ndims,           &
+        &                               varcomps        = varcomps,        &
+        &                               dofReducFactor  = dofReducFactor,  &
+        &                               refine_tree     = refine_tree,     &
+        &                               new_refine_tree = new_refine_tree, &
+        &                               newVardofs      = newVardofs,      &
+        &                               refined_sub     = refined_sub,     &
+        &                               newnVarsDat     = newnVarsDat      )
       call tem_refine_global_subtree ( orig_mesh = orig_mesh,     &
         &                              orig_bcs  = orig_bcs,      &
         &                              subtree   = refined_sub,   &
@@ -596,22 +671,29 @@ contains
         &                              new_mesh  = tmp_mesh(cur), &
         &                              new_bcs   = tmp_bcs(cur),  &
         &                              restrict_to_sub = .false.  )
-      do iLevel=2,me%max_nLevels !>Loop to maximum level of refinement
+      new_mesh = tmp_mesh(cur)
+      samplingLoop: do iLevel=2,me%max_nLevels !>Loop to maximum level of refinement
         write(*,*) 'sampling level', iLevel-1
         prev = mod(iLevel-2, 2)
         cur = mod(iLevel-1, 2)
-        call ply_adaptive_refine_subtree( mesh           = initial_tree,   &
-          &                               sampling_lvl   = iLevel,         &
-          &                               eps_osci       = eps_osci,       &
-          &                               ndims          = ndims,          &
-          &                               trackInst      = trackInst,      &
-          &                               time           = time,           &
-          &                               varsys         = varsys,         &
-          &                               var_degree     = var_degree,     &
-          &                               var_space      = var_space,      &
-          &                               dofReducFactor = dofReducFactor, &
-          &                               dofIndicator   = dofIndicator,   &
-          &                               refined_sub    = refined_sub     )
+        work_vardat  = newnVarsDat
+        work_vardofs = newVardofs
+        deallocate(newnVarsDat)
+        write(*,*) size(new_refine_tree)
+        refine_tree = new_refine_tree
+        call ply_adaptive_refine_subtree( mesh            = tmp_mesh(prev),  &
+          &                               nVarsDat        = work_vardat,     &
+          &                               vardofs         = work_vardofs,    &
+          &                               sampling_lvl    = iLevel,          &
+          &                               eps_osci        = eps_osci,        &
+          &                               ndims           = ndims,           &
+          &                               varcomps        = varcomps,        &
+          &                               dofReducFactor  = dofReducFactor,  &
+          &                               refine_tree     = refine_tree,     &
+          &                               new_refine_tree = new_refine_tree, &
+          &                               newVardofs      = newVardofs,      &
+          &                               refined_sub     = refined_sub,     &
+          &                               newnVarsDat     = newnVarsDat      )
         call tem_refine_global_subtree( orig_mesh = tmp_mesh(prev), &
           &                             orig_bcs  = tmp_bcs(prev),  &
           &                             subtree   = refined_sub,    &
@@ -634,11 +716,35 @@ contains
           &                         bc_prop = tmp_bcs(cur),        &
           &                         subtree = tmp_subtree,         &
           &                         inShape = trackConfig%geometry )
-        if (dofIndicator) EXIT
-      end do  
+        ! Check if ndofs of all vars are already reduced to 1.
+      end do samplingLoop 
       call tem_create_tree_from_sub( intree  = tmp_mesh(cur), &
         &                            subtree = tmp_subtree,   &
         &                            newtree = new_mesh       ) 
+
+      do iVar=1,nVars
+        allocate(res)
+        allocate( res%dat(size(newnvarsdat(iVar)%dat)) )
+        res%dat = newnVarsDat(iVar)%dat(:)
+        varpos = trackInst%varmap%varPos%val(iVar)
+     
+        ! assign res as method data to the variable in the resvars.
+        call tem_varSys_append_stateVar( me          = resvars,            &
+          &                              varname     = varsys%varname      &
+          &                                                  %val(varpos), &
+          &                              nComponents = nComponents,        &
+          &                              method_data = c_loc(res),         &
+          &                              set_params     = set_params,     &
+          &                              get_point      = get_point,      &
+          &                              get_element    = get_element,    &
+          &                              get_params     = get_params,     &
+          &                              setup_indices  = setup_indices,  &
+          &                              get_valofindex = get_valofindex  )
+
+        nullify(res)
+
+      end do
+
 
     case default
       write(logunit(1),*) 'Not implemented sampling method!'
@@ -654,13 +760,19 @@ contains
   !----------------------------------------------------------------------------!
   !> Adaptive subsampling of polynomial data
   !!
-  subroutine ply_adaptive_refine_subtree( mesh, sampling_lvl, eps_osci,  &
-    &                                     ndims, trackInst, time,        &
-    &                                     varsys, var_degree, var_space, &
-    &                                     dofReducFactor,  dofIndicator, &
-    &                                     refined_sub    )  
+  subroutine ply_adaptive_refine_subtree( mesh, nVarsDat, vardofs,             &
+    &                                     sampling_lvl, eps_osci, ndims,       &
+    &                                     varcomps, dofReducFactor,            &
+    &                                     refine_tree, new_refine_tree,        &
+    &                                     newVardofs, refined_sub, newnVarsDat )  
     !> The mesh to be refined.
     type(treelmesh_type), intent(in) :: mesh
+
+    !> The polynomial data for all Vars of all elements.
+    type(capsule_array_type), intent(in) :: nVarsDat(:)
+
+    !> The Dofs for all Vars.
+    integer, intent(in) :: vardofs(:)
 
     !> The current sampling level for projection.
     integer, intent(in) :: sampling_lvl
@@ -671,193 +783,169 @@ contains
     !> Number of dimensions in the polynomial representation.
     integer, intent(in) :: ndims
 
-    type(tem_tracking_instance_type), intent(in) :: trackInst
-
-    type(tem_time_type), intent(in) :: time
-
-    !>
-    type(tem_varsys_type), intent(in) :: varsys
-
-    !> Maximal polynomial degree for each variable.
-    !!
-    !! Needs to be matching the variable defintion in the variable system.
-    integer, intent(in) :: var_degree(:)
-
-    !> Polynomial space for each variable
-    !!
-    !! Needs to be matching the variable definintion in the variable system.
-    integer, intent(in) ::  var_space(:)
+    !> The number of components for the different vars.
+    integer, intent(in) :: varcomps(:)
    
     !> Factor to Reduce dofs for every sampling level.
     !! Can be used to avoid too drastic increase of memory consumption.
     real(kind=rk), intent(in), optional :: dofReducFactor
 
-    !> Indicator that there is only one dof left in the polynomial
-    !! representation.
-    logical, intent(out) :: dofIndicator
+    !> Logical array that indicates elements for refinement.
+    !! It is also used to handle different ndofs in the mesh.
+    logical, allocatable, intent(in) :: refine_tree(:)
+
+    !> refine_tree for the next sampling level.
+    logical, allocatable, intent(out) :: new_refine_tree(:)
+
+    !> The new dofs for all vars.
+    integer, allocatable, intent(out) :: newVardofs(:)
   
     !> Subtree that marks those elements that need to be refined.
     type(tem_subtree_type), intent(out) :: refined_sub
+
+    !> The varsys for the next subsampling level.
+    type(capsule_array_type), allocatable, intent(out) :: newnVarsDat(:)
     !----------------------------------------------------------------------!
     type(treelmesh_type) :: newtree
     type(ply_subsample_type) :: subsamp
-    real(kind=rk), allocatable :: vardat(:)
-    real(kind=rk), allocatable :: newVardat(:)
     real(kind=rk), allocatable :: tmp_dat(:)
-    real(kind=rk), allocatable :: WV(:)
-    integer, allocatable :: vardofs(:)
-    integer, allocatable :: elempos(:)
-    logical, allocatable :: refine(:)
+    real(kind=rk), allocatable :: work_dat(:)
+    real(kind=rk), allocatable :: new_work_dat(:)
+    real(kind=rk) :: WV
     integer, allocatable :: map2global(:)
     integer :: pointCoord(4)
     integer :: iVar
     integer :: iDof
     integer :: iComp
+    integer :: iParentElem
     integer :: iElem
-    integer :: nELems
+    integer :: iChild
+    integer :: nElems
+    integer :: nParentElems
+    integer :: nChilds
     integer :: nNewElems
     integer :: nVars
     integer :: nDofs
     integer :: newDofs
     integer :: Refine_pos 
-    integer :: varpos
     integer :: nComponents
-    integer :: i
     integer :: nElemsToRefine
     integer :: dof_pos
-    procedure(tem_varSys_proc_element), pointer :: get_element => NULL()
+    integer :: lowElemIndex
+    integer :: upElemIndex
     !----------------------------------------------------------------------!
     !> Adaptive subsampling means the voxelization of the polynomial data
     !! based on the properties of the solution (the polynomial to subsample).
     !! It results in a fine resolution of flow features where many changes in
     !! the solution are observed while sticking to coarse large elements
     !! elsewhere.
-
-    nVars = trackInst%varmap%varPos%nVals
-
-    allocate(vardofs(nVars))
-    do iVar=1,nVars
-      varpos = trackInst%varmap%varPos%val(iVar)
-      select case(var_space(varpos))
-      case (q_space)
-        select case(ndims)
-        case(3)
-?? copy :: getDofsQTens(var_degree(varpos), vardofs(iVar))
-        case(2)
-?? copy :: getDofsQTens2D(var_degree(varpos), vardofs(iVar))
-        case(1)
-?? copy :: getDofsQTens1D(var_degree(varpos), vardofs(iVar))
-        end select
-      case (p_space)
-        select case(ndims)
-        case(3)
-?? copy :: getDofsPTens(var_degree(varpos), vardofs(iVar))
-        case(2)
-?? copy :: getDofsPTens2D(var_degree(varpos), vardofs(iVar))
-        case(1)
-?? copy :: getDofsPTens1D(var_degree(varpos), vardofs(iVar))
-        end select
-      end select
-    end do
-
+    if (sampling_lvl > 1) then
+      nChilds = 2**ndims
+    else
+      nChilds = 1
+    end if
+    nParentElems = size(refine_tree)
+    nVars = size(varcomps)
     nElems = mesh%nElems
-    allocate(elempos(nElems))
-    elempos = [ (i, i=1,nElems) ]
-
-    get_element => get_sampled_element
+    
+    allocate(newnVarsDat(nVars))
+    allocate(newVardofs(nVars))
+    allocate(new_refine_tree(mesh%nElems))
+    new_refine_tree(:) = .FALSE.
 
     varLoop: do iVar=1,nVars
-      varpos = trackInst%varmap%varPos%val(iVar)
-      nComponents = varsys%method%val(varpos)%nComponents
       nDofs = vardofs(iVar)
-      allocate(vardat(nDofs*nElems*nComponents))
+      nComponents = varcomps(iVar)
+      work_dat = nVarsDat(iVar)%dat(:)
 
-      !> Get data for every element and store it in vardat.
-      call varSys%method%val(varpos)                  &
-        &        %get_element( varSys  = varSys,      &
-        &                      elempos = elempos,     &
-        &                      time    = time,        &
-        &                      tree    = mesh,        &
-        &                      nElems  = nElems,      &
-        &                      nDofs   = nDofs,       &
-        &                      res     = vardat       )
-      !> Set the current sampling level for projection.
-      subsamp%nLevels = sampling_lvl-1
+      allocate(tmp_dat(nDofs))
+      refine_pos = 1
+      lowElemIndex = 1
 
-      !> Set dofReducFactor if it is prescribed.
-      !! Default is set to 2.0_rk, it means the polynomial degree
-      !! will be halfed in each refinement step to maintain the original
-      !! amount of memory usage.
-      if (present(dofReducFactor)) then
-        subsamp%dofReducFactor = dofReducFactor
-      end if
+      ParentElemLoop: do iParentElem=1,nParentElems
+        ! Check if element is refined or not.
+        ! 
+        if (refine_tree(iParentElem)) then
+          childLoop:  do iChild=1,nChilds
+            compLoop: do iComp=1,nComponents
+              !> dof_pos describes the postiions of all dofs for the current 
+              !! component and element.
+              !!
+              !> tmp_dat is a temporary array that contains all dofs for the
+              !! current component and element.
+              dofLoop: do iDof=1,nDofs
+                ! Get the right dof_pos.
+                !
+                dof_pos = lowELemIndex + (iDof-1) * nComponents + &
+                  &       (iComp-1)
+                tmp_dat(iDof) = work_dat(dof_pos)
+              end do dofLoop
 
-      call ply_QPolyProjection( subsamp     = subsamp,     &
-        &                       tree        = mesh,        &
-        &                       meshData    = vardat,      &
-        &                       varSys      = varSys,      &
-        &                       nDofs       = nDofs,       &
-        &                       ndims       = ndims,       &
-        &                       nComponents = nComponents, &
-        &                       newTree     = newTree,     &
-        &                       newMeshData = newVardat,   &  
-        &                       newDofs     = newDofs      )
-
-      nNewElems = newTree%nElems
-
-      if (newDofs == 1) then
-        dofIndicator = .TRUE.
-      end if
-
-      allocate(tmp_dat(newDofs))
-      allocate(WV(nNewElems))
-
-      !> Allocate refine for the first var
-      if (iVar == 1) then
-        allocate(refine(nNewElems))
-        refine(:) = .FALSE. 
-      end if
-      elemLoop: do iElem=1,nNewElems
-        compLoop: do iComp=1,nComponents
-          dofLoop: do iDof=1,newDofs
-            !> dof_pos describes the postiions of all dofs for the current 
-            !! component and element.
-            !!
-            dof_pos = (iElem-1)*nComponents*newDofs + &
-              &       (iDof-1)*nComponents + iComp
-            !> tmp_dat is a temporary array that contains all dofs for the
-            !! current component and element.
-            tmp_dat(iDof) = newVardat(dof_pos)
-          end do dofLoop
-          if (.NOT. refine(iElem)) then
-            !> WV is used to calcualte the Euclidean norm from all dofs of the
-            !! current component and element.
-            !!
-            !! Norms with weighted dofs will be implemented later.
-            WV(iElem) = sqrt(sum(tmp_dat(1:newDofs)**2))
-            !> Check for oscillation in the current element.
-            refine(iElem) = (WV(iElem) > 0.001) !> 0.001 is a placeholder for eps_osci
-          end if
-        end do compLoop
-      end do elemLoop
+              if (new_refine_tree(refine_pos)) then
+                EXIT compLoop
+              else
+                !> WV is used to calcualte the Euclidean norm from all dofs of the
+                !! current component and element.
+                !!
+                !! Norms with weighted dofs will be implemented later.
+                WV = sqrt(sum(tmp_dat(1:nDofs)**2))
+                !> Check for oscillation in the current element.
+                !> 0.001 is a placeholder for eps_osci
+                new_refine_tree(refine_pos) = (WV > 0.001)
+              end if
+            end do compLoop
+            refine_pos = refine_pos + 1
+            upElemIndex = (lowElemIndex-1) + nDofs + nComponents
+            lowELemIndex = upElemIndex + 1
+          end do childLoop
+        else
+          new_refine_tree(refine_pos) = .FALSE.
+          lowElemIndex = upElemIndex + 1
+          upElemIndex = (lowElemIndex-1) + nComponents
+          refine_pos = refine_pos + 1
+        end if
+      end do ParentElemLoop
+write(*,*) "any refinement:", any(new_refine_tree)
+write(*,*) "any NOT refinement:", any(.not.new_refine_tree)
       !> Number of Elements that need refinement.
-      nElemsToRefine = count(refine(:))
+      nElemsToRefine = count(new_refine_tree(:))
+write(*,*) "nElems to refine:", nElemsToRefine
+write(*,*) size(new_refine_tree), " elems"
 
-      deallocate(vardat)
-      deallocate(newVardat)
+      ! Projection from parents to child elements.
+      !
+      ! While those elements that will be refined will get a projection 
+      ! to the next level, all elements that won't be refined will get their 
+      ! integral mean value. The integral mean value is a reduction of the
+      ! polynomial degree to zero that means there is only one dof left 
+      ! in the data representation.
+
+      call ply_QPolyProjection( subsamp     = subsamp,      &
+        &                       tree        = mesh,         &
+        &                       meshData    = work_dat,     &
+        &                       nDofs       = nDofs,        &
+        &                       ndims       = ndims,        &
+        &                       nComponents = nComponents,  &
+        &                       refine_tree = new_refine_tree,  &
+        &                       newTree     = newTree,      &
+        &                       newMeshData = new_work_dat, &  
+        &                       newDofs     = newDofs       )
+
+      allocate(newnVarsDat(iVar)%dat(size(new_work_dat)))
+      newnVarsDat(iVar)%dat(:) = new_work_dat
+
+      newVardofs(iVar) = newDofs
+
       deallocate(tmp_dat)
-      deallocate(WV)
-      
-      !> Don't need to check other vars if all elements already need refinement. 
-      if (nElemsToRefine == nNewElems) EXIT varLoop
+
     end do varLoop
 
     !> Create new Subtree (refined_sub).
     !!
     allocate(map2global(nElemsToRefine))
     Refine_pos = 0
-    do iElem=1,nNewElems
-      if (refine(iElem)) then
+    do iElem=1,nElems
+      if (new_refine_tree(iElem)) then
         Refine_pos = Refine_pos + 1
         map2global(Refine_pos) = iElem
       end if
@@ -867,8 +955,6 @@ contains
       &                   map2global = map2global   )
 
     deallocate(map2global)
-    deallocate(elempos)
-    deallocate(refine)
 
   end subroutine ply_adaptive_refine_subtree
   !----------------------------------------------------------------------------!
