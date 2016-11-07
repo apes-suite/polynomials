@@ -47,11 +47,10 @@ module ply_LegPolyProjection_module
     !> Is subsampling active
     logical :: isActive = .false.
 
-    !> The number of levels to subsample.
-    integer :: nLevels = 0
+    !> The current sampling lvl.
+    integer :: sampling_lvl
 
     !> The type of projection we use to subsample the elemental data.
-    !todo check if projection type is already set!
     integer :: projectionType = ply_QLegendrePoly_prp
 
     !> Maximal Level down to which subsampling should be done.
@@ -76,9 +75,10 @@ contains
 
   !****************************************************************************!
   !> Subsampling by L2-Projection of the Q-Tensorproduct Legendre polynomials.
-  subroutine ply_QPolyProjection( subsamp, tree, meshData, nDofs,   &
-    &                             ndims, nComponents, refine_tree, newTree, & 
-    &                             newMeshData, newDofs                      )
+  subroutine ply_QPolyProjection( subsamp, tree, meshData, nDofs,        &
+    &                             ndims, nComponents, refine_tree,       & 
+    &                             new_refine_tree, newTree, newMeshData, &
+    &                             newDofs                                )
     !---------------------------------------------------------------------------
     !> Parameters for the subsampling.
     type(ply_subsample_type), intent(in) :: subsamp
@@ -98,8 +98,11 @@ contains
     !> Number of components
     integer, intent(in) :: nComponents
 
-    !> Logical array that marks elements for refinement.
+    !> Logical array that marks elements for refinement from the last sampling lvl.
     logical, intent(in) :: refine_tree(:)
+
+    !> Logical array that marks elements for refinment.
+    logical, intent(in) :: new_refine_tree(:)
 
     !> The new tree representation of the sub-smapled mesh.
     type(treelmesh_type), intent(out) :: newTree
@@ -110,7 +113,8 @@ contains
     !> The number of dofs for the subsampled dofs.
     integer, intent(out) :: newDofs
     !---------------------------------------------------------------------------
-    integer :: iLevel
+    integer :: sampling_lvl
+    integer :: nChilds
     type(ply_ProjCoeff_type) :: projection
     type(ply_ProjCoeff_type) :: projection_oneDof
     ! Working tree and working data
@@ -126,6 +130,8 @@ contains
       call tem_abort()
     end if
 
+    sampling_lvl = subsamp%sampling_lvl
+
     ! All elements in refine_tree marked with .TRUE. will get
     ! a projection to the next sampling level while all other elements
     ! will get their integral mean value ( projection till there is only
@@ -139,34 +145,40 @@ contains
       nChildDofs = 1
     end if
 
+    ! Set the correct number of Childs for the projection to reduced Dofs.
+    nChilds = 2**ndims
+
     ! init the projection coefficients for the current number of child dofs.
-    call ply_initQLegProjCoeff( subsamp%projectionType, nDofs, ndims, &
+    call ply_initQLegProjCoeff( subsamp%projectionType, nDofs, ndims, nChilds, &
       &                         nChildDofs, projection )
     
     ! init the projection coefficients for the reduction to polynomial
     ! degree of 0.
     oneDof = 1
-    call ply_initQLegProjCoeff( subsamp%projectionType, nDofs, ndims, &
+    ! Set the correct number of childs for the projection to one dof.
+    nChilds = 1
+    call ply_initQLegProjCoeff( subsamp%projectionType, nDofs, ndims, nChilds, &
       &                         oneDof, projection_oneDof )
-
     ! Check if all elements need refinement.
-    if (count(refine_tree) == tree%nElems) then
+    if (count(new_refine_tree) == tree%nElems) then
 
       ! ... build the tree for the next level
       ! todo: maybe we don't need this. Let's see....
       call ply_refineTree( tree, ndims, newTree )
 
       ! ... subsample the data
-      call ply_subsampleData( tree        = tree,        &
-        &                     meshData    = meshData,    &
-        &                     nDofs       = nDofs,       &
-        &                     nChildDofs  = nChildDofs,  &
-        &                     nComponents = nComponents, &
-        &                     projection  = projection,  &
-        &                     refine_tree = refine_tree, &
-        &                     ndims       = ndims,       &
-        &                     newTree     = newTree,     &
-        &                     newMeshData = newMeshData  )
+      call ply_subsampleData( tree            = tree,            &
+        &                     meshData        = meshData,        &
+        &                     nDofs           = nDofs,           &
+        &                     nChildDofs      = nChildDofs,      &
+        &                     nComponents     = nComponents,     &
+        &                     projection      = projection,      &
+        &                     refine_tree     = refine_tree,     &
+        &                     new_refine_tree = new_refine_tree, &
+        &                     ndims           = ndims,           &
+        &                     sampling_lvl    = sampling_lvl,    &
+        &                     newTree         = newTree,         &
+        &                     newMeshData     = newMeshData      )
 
      else
       ! There are both types, elements that will and elements that won't be
@@ -187,7 +199,9 @@ contains
         &                     projection        = projection,        &
         &                     projection_oneDof = projection_oneDof, &
         &                     refine_tree       = refine_tree,       &
+        &                     new_refine_tree   = new_refine_tree,   &
         &                     ndims             = ndims,             &
+        &                     sampling_lvl      = sampling_lvl,      &
         &                     newTree           = newTree,           &
         &                     newMeshData       = newMeshData        )
      end if
@@ -206,7 +220,7 @@ contains
   !! subsampling routine to project degrees of freedoms of a parent cell
   !! to the degrees of freedoms of a child cell if the degrees of
   !! freedoms are Q-Legendre polynomials.
-  subroutine ply_initQLegProjCoeff(doftype, nDofs, ndims, nChildDofs, &
+  subroutine ply_initQLegProjCoeff(doftype, nDofs, ndims, nChilds, nChildDofs, &
     &                              projection )  
     !--------------------------------------------------------------------------- 
     !> The type of degrees of freedom we have in our cells.
@@ -217,6 +231,9 @@ contains
    
     !> The  number of dimensions in the polynomial representation.
     integer, intent(in) :: ndims
+
+    !> The number of child cells.
+    integer, intent(in) :: nChilds
 
     !> The number of degrees of freedom for the child cells.
     integer, intent(in) :: nChildDofs
@@ -236,9 +253,7 @@ contains
     !---------------------------------------------------------------------------
     select case(dofType)
     case(ply_QLegendrePoly_prp)
-!!      write(logunit(0),*)'Creating 3D projection coeffficient for Q-Polynomials'
-  
-      allocate(projection%projCoeff(nDofs, nChildDofs, 2**ndims))
+      allocate(projection%projCoeff(nDofs, nChildDofs, nChilds))
       projection%projCoeff = 0.0_rk
   
       ! Create projection of one-dimensional Legendre polynomials for the 
@@ -249,7 +264,7 @@ contains
         &                                    nint(nChildDofs**dimexp) )
   
       ! Loop over the children of this element
-      childLoop: do iChild = 1, 2**ndims
+      childLoop: do iChild = 1, nChilds
   
         ! get the right index for the x,y,z shift of the current child with 
         ! respect to the parent cell.
@@ -564,9 +579,10 @@ contains
 
   !****************************************************************************!
   !> Routine to subsample mesh information for one refinement level.
-  subroutine ply_subsampleData( tree, meshData, nDofs, nChildDofs,  &
+  subroutine ply_subsampleData( tree, meshData, nDofs, nChildDofs,          &
     &                           nComponents, projection, projection_oneDof, &
-    &                           refine_tree, ndims, newTree, newMeshData    )
+    &                           refine_tree, new_refine_tree, ndims,        &
+    &                           sampling_lvl, newTree, newMeshData          )
     !---------------------------------------------------------------------------
     !> The tree the data is written for.
     type(treelmesh_type), intent(in) :: tree
@@ -591,11 +607,17 @@ contains
     !! degree of 0.
     type(ply_ProjCoeff_type), intent(in), optional :: projection_oneDof
 
-    !> Logical array that marks all elements for refinement.
-    logical, intent(in) :: refine_tree(:)
+    !> Logical array that marks all elements for refinement from the last sampling lvl.
+    logical, intent(in), optional :: refine_tree(:)
+
+    !> Logical array that marks all elements for refinement
+    logical, intent(in) :: new_refine_tree(:) 
 
     !> The number of dimensions in the polynomial representation.
     integer, intent(in) :: ndims
+
+    !> The current sampling lvl.
+    integer,intent(in) :: sampling_lvl
 
     !> The new tree representation of the sub-smapled mesh.
     type(treelmesh_type), intent(in) :: newTree
@@ -603,79 +625,166 @@ contains
     !> The subsampled data for newTree.
     real(kind=rk), allocatable, intent(out) :: newMeshData(:)
     !---------------------------------------------------------------------------
-    integer :: nChilds, nElems, nElemsToRefine, nElemsNotToRefine
-    integer :: iElem, iSys, iVar, iDof, iChild, childIndex, iChildDof
+    integer :: nElems, nChilds, nParentElems, nElemsToRefine, nElemsNotToRefine
+    integer :: iElem, iParentElem, iSys, iVar, iDof, iChild, childIndex, iChildDof
     integer :: lowElemIndex, upElemIndex, lowChildIndex, upChildIndex, &
       &        lowChildData, upChildData
-    integer :: oneDof, noChilds
+    integer :: oneDof, noChilds, childpos
     real(kind=rk), allocatable :: childData(:)
     !---------------------------------------------------------------------------
     nChilds = 2**ndims
     nElems = tree%nElems
-    nElemsToRefine = count(refine_tree)
+    nElemsToRefine = count(new_refine_tree)
     nElemsNotToRefine = nElems - nElemsToRefine
+    nParentElems = size(refine_tree)
 
     ! Now, we set the correct data for the newMeshData.
-    allocate(newMeshData((nElemsToRefine * nChildDofs * nChilds &
+    allocate(newMeshData((nElemsToRefine * nChilds * nChildDofs &
       &                  + nElemsNotToRefine) * nComponents))
     newMeshData = 0.0_rk
     upChildIndex = 0
-    elementLoop: do iElem = 1, nElems
-      if (refine_tree(iElem)) then
-        allocate(childData(nChildDofs*nChilds*nComponents))
-        ! Create lower and upper indices for all data of iElem in meshData.
-        lowElemIndex = 1 + (iElem - 1) * nDofs * nComponents
-        upElemIndex = (lowElemIndex-1) + nDofs * nComponents
-
-        ! Project these dofs from the coarse element to the 
-        ! finer elements.
-        call ply_projDataToChild(                              &
-          &  parentData  = meshData(lowElemIndex:upElemIndex), &
-          &  nParentDofs = nDofs,                              &
-          &  nChildDofs  = nChildDofs,                         &
-          &  nComponents = nComponents,                        &
-          &  nChilds     = nChilds,                            &
-          &  projection  = projection,                         &
-          &  childData   = childData                           )
-  
-        ! Iterate over all childDofs and set the data corectly in newMeshData
-!!        lowChildIndex = 1 + (iElem - 1) * nChilds * nChildDofs * nComponents
-        lowChildIndex = upChildIndex + 1
-        upChildIndex = (lowChildIndex-1) + nChilds * nChildDofs * nComponents
-
-        newMeshData(lowChildIndex:upChildIndex) = childData
-        deallocate(childData)
-
-      else
-        ! todo: When parentdata already have only one dof left
-        !       we just have to copy the data from meshdata.
-        allocate(childData(nComponents))
-        ! Create lower and upper indices for all data of iElem in meshData.
-        lowElemIndex = 1 + (iElem - 1) * nDofs * nComponents
-        upElemIndex = (lowElemIndex-1) + nDofs * nComponents
-
-        ! Projection from nDofs to oneDof (integral mean valuea).
-        oneDof = 1
-        noChilds = 1
-        call ply_projDataToChild(                              &
-          &  parentData  = meshData(lowElemIndex:upElemIndex), &
-          &  nParentDofs = nDofs,                              &
-          &  nChildDofs  = oneDof,                             &
-          &  nComponents = nComponents,                        &
-          &  nChilds     = noChilds,                           &
-          &  projection  = projection_oneDof,                  &
-          &  childData   = childData                           )
-  
-        ! Iterate over all childDofs and set the data corectly in newMeshData
-        lowChildIndex = upChildIndex + 1
-        upChildIndex = (lowChildIndex-1) + nComponents
+    upElemIndex = 0
+    childPos = 0
     
-        newMeshData(lowChildIndex:upChildIndex) = childData
-        deallocate(childData)
+    if (sampling_lvl > 1) then
 
-      end if
+      elementLoop: do iParentElem=1,nParentElems
+        ! Check if the parent cell was already refined...
+        if (refine_tree(iParentElem)) then
+          ! Parent cell was already refined so it contains data with nDofs
+          childLoop: do iChild=1,nChilds
+            childPos = childPos + 1
+            ! Check if the child elems will be refined...
+            if (new_refine_tree(childPos)) then
+             
+              ! Child cell will be refined.
+              !
+              ! Need to project current elem data to new childs with reduced dofs.
+              allocate(childData(nChildDofs*nChilds*nComponents))
+              ! Create lower and upper indices for all data of iElem in meshData.
+              lowElemIndex = upElemIndex + 1 
+              upElemIndex = (lowElemIndex-1) + nDofs * nComponents
 
-    end do elementLoop
+              ! Project these dofs from the coarse element to the 
+              ! finer elements.
+              call ply_projDataToChild(                              &
+                &  parentData  = meshData(lowElemIndex:upElemIndex), &
+                &  nParentDofs = nDofs,                              &
+                &  nChildDofs  = nChildDofs,                         &
+                &  nComponents = nComponents,                        &
+                &  nChilds     = nChilds,                            &
+                &  projection  = projection,                         &
+                &  childData   = childData                           )
+  
+              ! Iterate over all childDofs and set the data corectly in newMeshData
+              lowChildIndex = upChildIndex + 1
+              upChildIndex = (lowChildIndex-1) + nChilds * nChildDofs * nComponents
+
+              newMeshData(lowChildIndex:upChildIndex) = childData
+              deallocate(childData)
+            else
+              ! Child cell won't be refined.
+              !
+              ! Need projecton from current dofs to 1 dof.
+              allocate(childData(nComponents))
+              ! Create lower and upper indices for all data of iElem in meshData.
+              lowElemIndex = upElemIndex + 1
+              upElemIndex = (lowElemIndex-1) + nDofs * nComponents
+
+              ! Projection from nDofs to oneDof (integral mean valuea).
+              oneDof = 1
+              noChilds = 1
+              call ply_projDataToChild(                              &
+                &  parentData  = meshData(lowElemIndex:upElemIndex), &
+                &  nParentDofs = nDofs,                              &
+                &  nChildDofs  = oneDof,                             &
+                &  nComponents = nComponents,                        &
+                &  nChilds     = noChilds,                           &
+                &  projection  = projection_oneDof,                  &
+                &  childData   = childData                           )
+  
+              ! Iterate over all childDofs and set the data corectly in newMeshData
+              lowChildIndex = upChildIndex + 1
+              upChildIndex = (lowChildIndex-1) + nComponents
+      
+              newMeshData(lowChildIndex:upChildIndex) = childData
+              deallocate(childData)
+            end if
+          end do childLoop
+
+        else
+          ! Parent cell wasn't refined so it contains data with only one dof left.
+          allocate(childData(nComponents))
+
+          lowElemIndex = upElemIndex + 1
+          upElemIndex = (lowElemIndex-1) + nComponents
+
+          childData = meshData(lowElemIndex:upElemIndex)
+
+          lowChildIndex = upChildIndex + 1
+          upChildIndex = (lowChildIndex-1) + nComponents
+
+          newMeshData(lowChildIndex:upChildIndex) = childData
+          childpos = childpos + 1
+          deallocate(childData)
+
+        end if
+
+      end do elementLoop
+
+    else
+
+      elemLoop: do iElem=1,nElems
+        if (new_refine_tree(iElem)) then
+          allocate(childData(nChildDofs*nChilds*nComponents))
+          ! Create lower and upper indices for all data of iElem in meshData.
+          lowElemIndex = upElemIndex + 1 
+          upElemIndex = (lowElemIndex-1) + nDofs * nComponents
+
+          ! Project these dofs from the coarse element to the 
+          ! finer elements.
+          call ply_projDataToChild(                              &
+            &  parentData  = meshData(lowElemIndex:upElemIndex), &
+            &  nParentDofs = nDofs,                              &
+            &  nChildDofs  = nChildDofs,                         &
+            &  nComponents = nComponents,                        &
+            &  nChilds     = nChilds,                            &
+            &  projection  = projection,                         &
+            &  childData   = childData                           )
+  
+          ! Iterate over all childDofs and set the data corectly in newMeshData
+          lowChildIndex = upChildIndex + 1
+          upChildIndex = (lowChildIndex-1) + nChilds * nChildDofs * nComponents
+
+          newMeshData(lowChildIndex:upChildIndex) = childData
+          deallocate(childData)
+        else
+          allocate(childData(nComponents))
+          ! Create lower and upper indices for all data of iElem in meshData.
+          lowElemIndex = upElemIndex + 1
+          upElemIndex = (lowElemIndex-1) + nDofs * nComponents
+
+          ! Projection from nDofs to oneDof (integral mean valuea).
+          oneDof = 1
+          noChilds = 1
+          call ply_projDataToChild(                              &
+            &  parentData  = meshData(lowElemIndex:upElemIndex), &
+            &  nParentDofs = nDofs,                              &
+            &  nChildDofs  = oneDof,                             &
+            &  nComponents = nComponents,                        &
+            &  nChilds     = noChilds,                           &
+            &  projection  = projection_oneDof,                  &
+            &  childData   = childData                           )
+  
+          ! Iterate over all childDofs and set the data corectly in newMeshData
+          lowChildIndex = upChildIndex + 1
+          upChildIndex = (lowChildIndex-1) + nComponents
+      
+          newMeshData(lowChildIndex:upChildIndex) = childData
+          deallocate(childData)
+        end if
+      end do elemLoop
+    end if
 
   end subroutine ply_subsampleData
   !****************************************************************************!

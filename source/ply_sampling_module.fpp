@@ -256,6 +256,7 @@ contains
     integer, allocatable :: work_vardofs(:)
     integer, allocatable :: elempos(:)
     integer, allocatable :: varcomps(:)
+    integer :: maxdofs_left
     integer :: pointCoord(4)
     integer :: nOrigElems
     integer :: nVars
@@ -580,6 +581,7 @@ contains
     case('adaptive')
       iLevel = 1
       cur = 0
+      maxdofs_left = 1
 
       ! Get the data for all vars of all elements in orig_mesh.
       nVars = trackInst%varmap%varPos%nVals
@@ -647,11 +649,14 @@ contains
 
       allocate(refine_tree(nOrigElems))
       refine_tree(:) = .TRUE.
+
+      iLevel = 1
+      write(*,*) 'sampling level', iLevel
       
-      call tem_create_tree_from_sub ( inTree  = orig_mesh,         &
-        &                             subtree = trackInst%subtree, &
-        &                             newtree = initial_tree       ) 
-      call ply_adaptive_refine_subtree( mesh            = initial_tree,    &
+!!      call tem_create_tree_from_sub ( inTree  = orig_mesh,         &
+!!        &                             subtree = trackInst%subtree, &
+!!        &                             newtree = initial_tree       ) 
+      call ply_adaptive_refine_subtree( mesh            = orig_mesh,       &
         &                               nVarsDat        = nVarsDat,        &
         &                               vardofs         = vardofs,         &
         &                               sampling_lvl    = iLevel,          &
@@ -671,16 +676,33 @@ contains
         &                              new_mesh  = tmp_mesh(cur), &
         &                              new_bcs   = tmp_bcs(cur),  &
         &                              restrict_to_sub = .false.  )
-      new_mesh = tmp_mesh(cur)
+      call tem_create_subTree_of( inTree  = tmp_mesh(cur),       &
+        &                         bc_prop = tmp_bcs(cur),        &
+        &                         subtree = tmp_subtree,         &
+        &                         inShape = trackConfig%geometry )
+
+      call tem_destroy_subtree(refined_sub)
+
       samplingLoop: do iLevel=2,me%max_nLevels !>Loop to maximum level of refinement
-        write(*,*) 'sampling level', iLevel-1
+        write(*,*) 'sampling level', iLevel
         prev = mod(iLevel-2, 2)
         cur = mod(iLevel-1, 2)
         work_vardat  = newnVarsDat
         work_vardofs = newVardofs
-        deallocate(newnVarsDat)
-        write(*,*) size(new_refine_tree)
+
         refine_tree = new_refine_tree
+
+        do iVar=1,nVars
+          maxdofs_left = max(maxdofs_left, newvardofs(iVar))
+        end do
+
+        ! EXIT samplingLoop when there is only one dof left in newnVarsDat
+        if (maxdofs_left == 1) then
+          write(*,*) 'Dofs Reduced to 1!'
+          write(*,*) 'Exit SamplingLoop'
+          EXIT samplingLoop
+        end if
+
         call ply_adaptive_refine_subtree( mesh            = tmp_mesh(prev),  &
           &                               nVarsDat        = work_vardat,     &
           &                               vardofs         = work_vardofs,    &
@@ -701,10 +723,12 @@ contains
           &                             new_mesh  = tmp_mesh(cur),  &
           &                             new_bcs   = tmp_bcs(cur),   &
           &                             restrict_to_sub = .false.   )
+
         call tem_destroy_subtree(refined_sub)
         call tem_destroy_subtree(tmp_subtree)
         nullify(tmp_bcs(prev)%property)
         nullify(tmp_bcs(prev)%header)
+
         if (associated(tmp_mesh(prev)%property)) then
           do iProp=1,size(tmp_mesh(prev)%property)
             deallocate(tmp_mesh(prev)%property(iProp)%ElemID)
@@ -712,12 +736,17 @@ contains
           deallocate(tmp_mesh(prev)%property)
           deallocate(tmp_mesh(prev)%global%property)
         end if
+
         call tem_create_subTree_of( inTree  = tmp_mesh(cur),       &
           &                         bc_prop = tmp_bcs(cur),        &
           &                         subtree = tmp_subtree,         &
           &                         inShape = trackConfig%geometry )
-        ! Check if ndofs of all vars are already reduced to 1.
+
+        ! set maxdofs_left to 1 again in case there is only one var present.    
+        maxdofs_left = 1
+
       end do samplingLoop 
+
       call tem_create_tree_from_sub( intree  = tmp_mesh(cur), &
         &                            subtree = tmp_subtree,   &
         &                            newtree = new_mesh       ) 
@@ -801,7 +830,7 @@ contains
     integer, allocatable, intent(out) :: newVardofs(:)
   
     !> Subtree that marks those elements that need to be refined.
-    type(tem_subtree_type), intent(out) :: refined_sub
+    type(tem_subtree_type), intent(out), optional :: refined_sub
 
     !> The varsys for the next subsampling level.
     type(capsule_array_type), allocatable, intent(out) :: newnVarsDat(:)
@@ -860,13 +889,15 @@ contains
 
       allocate(tmp_dat(nDofs))
       refine_pos = 1
-      lowElemIndex = 1
+      upElemIndex = 0
 
       ParentElemLoop: do iParentElem=1,nParentElems
         ! Check if element is refined or not.
         ! 
         if (refine_tree(iParentElem)) then
           childLoop:  do iChild=1,nChilds
+            lowElemIndex = upElemIndex + 1
+            upElemIndex = (lowElemIndex - 1) + nDofs * nComponents
             compLoop: do iComp=1,nComponents
               !> dof_pos describes the postiions of all dofs for the current 
               !! component and element.
@@ -895,8 +926,6 @@ contains
               end if
             end do compLoop
             refine_pos = refine_pos + 1
-            upElemIndex = (lowElemIndex-1) + nDofs + nComponents
-            lowELemIndex = upElemIndex + 1
           end do childLoop
         else
           new_refine_tree(refine_pos) = .FALSE.
@@ -905,12 +934,9 @@ contains
           refine_pos = refine_pos + 1
         end if
       end do ParentElemLoop
-write(*,*) "any refinement:", any(new_refine_tree)
-write(*,*) "any NOT refinement:", any(.not.new_refine_tree)
+
       !> Number of Elements that need refinement.
       nElemsToRefine = count(new_refine_tree(:))
-write(*,*) "nElems to refine:", nElemsToRefine
-write(*,*) size(new_refine_tree), " elems"
 
       ! Projection from parents to child elements.
       !
@@ -920,16 +946,19 @@ write(*,*) size(new_refine_tree), " elems"
       ! polynomial degree to zero that means there is only one dof left 
       ! in the data representation.
 
-      call ply_QPolyProjection( subsamp     = subsamp,      &
-        &                       tree        = mesh,         &
-        &                       meshData    = work_dat,     &
-        &                       nDofs       = nDofs,        &
-        &                       ndims       = ndims,        &
-        &                       nComponents = nComponents,  &
-        &                       refine_tree = new_refine_tree,  &
-        &                       newTree     = newTree,      &
-        &                       newMeshData = new_work_dat, &  
-        &                       newDofs     = newDofs       )
+      subsamp%sampling_lvl = sampling_lvl
+
+      call ply_QPolyProjection( subsamp     = subsamp,             &
+        &                       tree        = mesh,                &
+        &                       meshData    = work_dat,            &
+        &                       nDofs       = nDofs,               &
+        &                       ndims       = ndims,               &
+        &                       nComponents = nComponents,         &
+        &                       refine_tree = refine_tree,         &
+        &                       new_refine_tree = new_refine_tree, &
+        &                       newTree     = newTree,             &
+        &                       newMeshData = new_work_dat,        &  
+        &                       newDofs     = newDofs              )
 
       allocate(newnVarsDat(iVar)%dat(size(new_work_dat)))
       newnVarsDat(iVar)%dat(:) = new_work_dat
@@ -940,21 +969,23 @@ write(*,*) size(new_refine_tree), " elems"
 
     end do varLoop
 
-    !> Create new Subtree (refined_sub).
-    !!
-    allocate(map2global(nElemsToRefine))
-    Refine_pos = 0
-    do iElem=1,nElems
-      if (new_refine_tree(iElem)) then
-        Refine_pos = Refine_pos + 1
-        map2global(Refine_pos) = iElem
-      end if
-    end do
-    refined_sub%global = newtree%global
-    call tem_subTree_from(me         = refined_sub, &
-      &                   map2global = map2global   )
+    ! Check if there are any elements that need refinement. 
+    if (.NOT. nElemsToRefine == 0) then
+      ! Create new Subtree (refined_sub).
+      allocate(map2global(nElemsToRefine))
+      Refine_pos = 0
+      do iElem=1,nElems
+        if (new_refine_tree(iElem)) then
+          Refine_pos = Refine_pos + 1
+          map2global(Refine_pos) = iElem
+        end if
+      end do
+      refined_sub%global = newtree%global
+      call tem_subTree_from(me         = refined_sub, &
+        &                   map2global = map2global   )
 
-    deallocate(map2global)
+      deallocate(map2global)
+    end if
 
   end subroutine ply_adaptive_refine_subtree
   !----------------------------------------------------------------------------!
