@@ -64,7 +64,7 @@ module ply_LegPolyProjection_module
 
     !> Factor for the reduction of the degrees of freedom in one subsampling
     !! step (per spatial direction).
-    real(kind=rk) :: dofReducFactor = 2.0_rk
+    real(kind=rk) :: dofReducFactor
   end type ply_subsample_type
   !----------------------------------------------------------------------------!
 
@@ -636,11 +636,13 @@ contains
     nElems = tree%nElems
     nElemsToRefine = count(new_refine_tree)
     nElemsNotToRefine = nElems - nElemsToRefine
+write(*,*) '1111 nElemsToRefine',nElemsToRefine
     nParentElems = size(refine_tree)
 
     ! Now, we set the correct data for the newMeshData.
     allocate(newMeshData((nElemsToRefine * nChilds * nChildDofs &
       &                  + nElemsNotToRefine) * nComponents))
+write(*,*) 'size(newMeshData=)',size(newMeshData)
     newMeshData = 0.0_rk
     upChildIndex = 0
     upElemIndex = 0
@@ -714,6 +716,7 @@ contains
 
         else
           ! Parent cell wasn't refined so it contains data with only one dof left.
+          ! Simple copying.
           allocate(childData(nComponents))
 
           lowElemIndex = upElemIndex + 1
