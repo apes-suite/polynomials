@@ -636,13 +636,11 @@ contains
     nElems = tree%nElems
     nElemsToRefine = count(new_refine_tree)
     nElemsNotToRefine = nElems - nElemsToRefine
-write(*,*) '1111 nElemsToRefine',nElemsToRefine
     nParentElems = size(refine_tree)
 
     ! Now, we set the correct data for the newMeshData.
     allocate(newMeshData((nElemsToRefine * nChilds * nChildDofs &
       &                  + nElemsNotToRefine) * nComponents))
-write(*,*) 'size(newMeshData=)',size(newMeshData)
     newMeshData = 0.0_rk
     upChildIndex = 0
     upElemIndex = 0

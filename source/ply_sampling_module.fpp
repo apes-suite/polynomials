@@ -664,7 +664,7 @@ contains
       refine_tree(:) = .TRUE.
 
       iLevel = 1
-      write(*,*) 'sampling level', iLevel
+      write(logunit(6),*) 'sampling level', iLevel
 
       subsamp%sampling_lvl = iLevel
       subsamp%dofReducFactor = me%dofReducFactor
@@ -696,8 +696,8 @@ contains
 
       call tem_destroy_subtree(refined_sub)
 
-      samplingLoop: do iLevel=2,me%max_nLevels !>Loop to maximum level of refinement
-        write(*,*) 'sampling level', iLevel
+      samplingLoop: do iLevel=2,me%max_nLevels
+        write(logunit(6),*) 'sampling level', iLevel
         subsamp%sampling_lvl = iLevel
         prev = mod(iLevel-2, 2)
         cur = mod(iLevel-1, 2)
@@ -712,8 +712,9 @@ contains
 
         ! EXIT samplingLoop when there is only one dof left in newnVarsDat
         if (maxdofs_left == 1) then
-          write(*,*) 'Dofs Reduced to 1!'
-          write(*,*) 'Exit SamplingLoop'
+          tmp_mesh(cur) = tmp_mesh(prev)
+          write(logunit(6),*) 'There is only one degree of freedom left.'
+          write(logunit(6),*) 'Sampling is done.'
           EXIT samplingLoop
         end if
 
@@ -730,8 +731,17 @@ contains
           &                               refined_sub     = refined_sub,     &
           &                               newnVarsDat     = newnVarsDat      )
 
+        if ( iLevel == me%max_nLEvels ) then
+          write(logunit(6),*) 'Reached the maximum sampling level.'
+          write(logunit(6),*) 'Sampling is done.'
+          tmp_mesh(cur) = tmp_mesh(prev)
+          EXIT samplingLoop
+        end if
+         
         nElemsToRefine = count(new_refine_tree)
         if ( nElemsToRefine == 0 ) then
+          write(logunit(6),*) 'There are no more elements to refine.'
+          write(logunit(6),*) 'Sampling is done.'
           tmp_mesh(cur) = tmp_mesh(prev)
           EXIT samplingLoop
         end if
@@ -770,7 +780,6 @@ contains
       call tem_create_tree_from_sub( intree  = tmp_mesh(cur), &
         &                            subtree = tmp_subtree,   &
         &                            newtree = new_mesh       ) 
-write(*,*) 'new_mesh%nElems',new_mesh%nElems
 
       do iVar=1,nVars
         allocate(res)
@@ -978,12 +987,6 @@ write(*,*) 'new_mesh%nElems',new_mesh%nElems
         &                       newTree         = newTree,         &
         &                       newMeshData     = new_work_dat,    &  
         &                       newDofs         = newDofs          )
-write(*,*) 'iVar=',iVar
-write(*,*) 'nDofs=',Vardofs(ivar)
-write(*,*) 'newDofs=',newDofs
-write(*,*) 'nElems',mesh%nElems
-write(*,*) 'nElemsToRefine=',nElemsToRefine
-write(*,*) 'size(new_work_dat)',size(new_work_dat)
 
       allocate(newnVarsDat(iVar)%dat(size(new_work_dat)))
       newnVarsDat(iVar)%dat(:) = new_work_dat
