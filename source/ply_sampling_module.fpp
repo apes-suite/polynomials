@@ -191,6 +191,12 @@ contains
           &                 // 'refinement by a factor of', &
           &                 me%dofReducFactor
 
+        if (me%dofReducFactor > 1.0_rk .or. me%dofReducFactor <= 0.0_rk) then
+          write(logunit(1),*) 'dof_reduction needs to be in'
+          write(logunit(1),*) '0.0 < dof_reduction <= 1.0'
+          call tem_abort()
+        end if
+
       case default
         write(logunit(1),*) 'ERROR: unknown sampling method: ', trim(me%method)
         write(logunit(1),*) '       The sampling method needs to be one of the'
@@ -305,6 +311,7 @@ contains
     integer :: bitlevel
     integer :: nElemsToRefine
     real(kind=rk) :: legval
+    real(kind=rk) :: eps_osci
     real(kind=rk) :: point_spacing, point_start
     logical, allocatable :: refine_tree(:)
     logical, allocatable :: new_refine_tree(:)
@@ -669,11 +676,12 @@ contains
       subsamp%sampling_lvl = iLevel
       subsamp%dofReducFactor = me%dofReducFactor
       subsamp%maxsub = me%max_nLevels
+      eps_osci = me%eps_osci
       
       call ply_adaptive_refine_subtree( mesh            = orig_mesh,       &
         &                               nVarsDat        = nVarsDat,        &
         &                               vardofs         = vardofs,         &
-        &                               eps_osci        = me%eps_osci,     &
+        &                               eps_osci        = eps_osci,        &
         &                               ndims           = ndims,           &
         &                               varcomps        = varcomps,        &
         &                               subsamp         = subsamp,         &
@@ -682,100 +690,115 @@ contains
         &                               newVardofs      = newVardofs,      &
         &                               refined_sub     = refined_sub,     &
         &                               newnVarsDat     = newnVarsDat      )
-      call tem_refine_global_subtree ( orig_mesh = orig_mesh,     &
-        &                              orig_bcs  = orig_bcs,      &
-        &                              subtree   = refined_sub,   &
-        &                              ndims     = ndims,         &
-        &                              new_mesh  = tmp_mesh(cur), &
-        &                              new_bcs   = tmp_bcs(cur),  &
-        &                              restrict_to_sub = .false.  )
-      call tem_create_subTree_of( inTree  = tmp_mesh(cur),       &
-        &                         bc_prop = tmp_bcs(cur),        &
-        &                         subtree = tmp_subtree,         &
-        &                         inShape = trackConfig%geometry )
-
-      call tem_destroy_subtree(refined_sub)
-
-      samplingLoop: do iLevel=2,me%max_nLevels
-        write(logunit(6),*) 'sampling level', iLevel
-        subsamp%sampling_lvl = iLevel
-        prev = mod(iLevel-2, 2)
-        cur = mod(iLevel-1, 2)
-        work_vardat  = newnVarsDat
-        work_vardofs = newVardofs
-
-        refine_tree = new_refine_tree
-
-        do iVar=1,nVars
-          maxdofs_left = max(maxdofs_left, newvardofs(iVar))
-        end do
-
-        ! EXIT samplingLoop when there is only one dof left in newnVarsDat
-        if (maxdofs_left == 1) then
-          tmp_mesh(cur) = tmp_mesh(prev)
-          write(logunit(6),*) 'There is only one degree of freedom left.'
-          write(logunit(6),*) 'Sampling is done.'
-          EXIT samplingLoop
-        end if
-
-        call ply_adaptive_refine_subtree( mesh            = tmp_mesh(prev),  &
-          &                               nVarsDat        = work_vardat,     &
-          &                               vardofs         = work_vardofs,    &
-          &                               eps_osci        = me%eps_osci,     &
-          &                               ndims           = ndims,           &
-          &                               varcomps        = varcomps,        &
-          &                               subsamp         = subsamp,         &
-          &                               refine_tree     = refine_tree,     &
-          &                               new_refine_tree = new_refine_tree, &
-          &                               newVardofs      = newVardofs,      &
-          &                               refined_sub     = refined_sub,     &
-          &                               newnVarsDat     = newnVarsDat      )
-
-        if ( iLevel == me%max_nLEvels ) then
-          write(logunit(6),*) 'Reached the maximum sampling level.'
-          write(logunit(6),*) 'Sampling is done.'
-          tmp_mesh(cur) = tmp_mesh(prev)
-          EXIT samplingLoop
-        end if
-         
-        nElemsToRefine = count(new_refine_tree)
-        if ( nElemsToRefine == 0 ) then
-          write(logunit(6),*) 'There are no more elements to refine.'
-          write(logunit(6),*) 'Sampling is done.'
-          tmp_mesh(cur) = tmp_mesh(prev)
-          EXIT samplingLoop
-        end if
-
-        call tem_refine_global_subtree( orig_mesh = tmp_mesh(prev), &
-          &                             orig_bcs  = tmp_bcs(prev),  &
-          &                             subtree   = refined_sub,    &
-          &                             ndims     = ndims,          &
-          &                             new_mesh  = tmp_mesh(cur),  &
-          &                             new_bcs   = tmp_bcs(cur),   &
-          &                             restrict_to_sub = .false.   )
-
-        call tem_destroy_subtree(refined_sub)
-        call tem_destroy_subtree(tmp_subtree)
-        nullify(tmp_bcs(prev)%property)
-        nullify(tmp_bcs(prev)%header)
-
-        if (associated(tmp_mesh(prev)%property)) then
-          do iProp=1,size(tmp_mesh(prev)%property)
-            deallocate(tmp_mesh(prev)%property(iProp)%ElemID)
-          end do
-          deallocate(tmp_mesh(prev)%property)
-          deallocate(tmp_mesh(prev)%global%property)
-        end if
+      nElemsToRefine = count(new_refine_tree)
+      if ( nElemsToRefine == 0) then
+        write(logunit(1),*) 'There are no Elements that need refinement.'
+        write(logunit(1),*) 'Maybe you need to set a lower tolerance.'
+        tmp_mesh(cur) = orig_mesh
+        tmp_bcs(cur) = orig_bcs
 
         call tem_create_subTree_of( inTree  = tmp_mesh(cur),       &
           &                         bc_prop = tmp_bcs(cur),        &
           &                         subtree = tmp_subtree,         &
           &                         inShape = trackConfig%geometry )
+      else
+        call tem_refine_global_subtree ( orig_mesh = orig_mesh,     &
+          &                              orig_bcs  = orig_bcs,      &
+          &                              subtree   = refined_sub,   &
+          &                              ndims     = ndims,         &
+          &                              new_mesh  = tmp_mesh(cur), &
+          &                              new_bcs   = tmp_bcs(cur),  &
+          &                              restrict_to_sub = .false.  )
+        call tem_create_subTree_of( inTree  = tmp_mesh(cur),       &
+          &                         bc_prop = tmp_bcs(cur),        &
+          &                         subtree = tmp_subtree,         &
+          &                         inShape = trackConfig%geometry )
 
-        ! set maxdofs_left to 1 again in case there is only one var present.    
-        maxdofs_left = 1
+        call tem_destroy_subtree(refined_sub)
+      
+        samplingLoop: do iLevel=2,me%max_nLevels
+          write(logunit(6),*) 'sampling level', iLevel
+          subsamp%sampling_lvl = iLevel
+!!          eps_osci = eps_osci*1
+          prev = mod(iLevel-2, 2)
+          cur = mod(iLevel-1, 2)
+          work_vardat  = newnVarsDat
+          work_vardofs = newVardofs
 
-      end do samplingLoop 
+          refine_tree = new_refine_tree
+
+          do iVar=1,nVars
+            maxdofs_left = max(maxdofs_left, newvardofs(iVar))
+          end do
+
+          ! EXIT samplingLoop when there is only one dof left in newnVarsDat
+          if (maxdofs_left == 1) then
+            tmp_mesh(cur) = tmp_mesh(prev)
+            write(logunit(1),*) 'There is only one degree of freedom left.'
+            write(logunit(1),*) 'Sampling is done.'
+            EXIT samplingLoop
+          end if
+
+          call ply_adaptive_refine_subtree( mesh            = tmp_mesh(prev),  &
+            &                               nVarsDat        = work_vardat,     &
+            &                               vardofs         = work_vardofs,    &
+            &                               eps_osci        = eps_osci,        &
+            &                               ndims           = ndims,           &
+            &                               varcomps        = varcomps,        &
+            &                               subsamp         = subsamp,         &
+            &                               refine_tree     = refine_tree,     &
+            &                               new_refine_tree = new_refine_tree, &
+            &                               newVardofs      = newVardofs,      &
+            &                               refined_sub     = refined_sub,     &
+            &                               newnVarsDat     = newnVarsDat      )
+
+          if ( iLevel == me%max_nLEvels ) then
+            write(logunit(1),*) 'Reached the maximum sampling level.'
+            write(logunit(1),*) 'Sampling is done.'
+            tmp_mesh(cur) = tmp_mesh(prev)
+            EXIT samplingLoop
+          end if
+
+          nElemsToRefine = count(new_refine_tree)
+          if ( nElemsToRefine == 0 ) then
+            write(logunit(1),*) 'There are no more elements to refine.'
+            write(logunit(1),*) 'Sampling is done.'
+            tmp_mesh(cur) = tmp_mesh(prev)
+            EXIT samplingLoop
+          end if
+
+          call tem_refine_global_subtree( orig_mesh = tmp_mesh(prev), &
+            &                             orig_bcs  = tmp_bcs(prev),  &
+            &                             subtree   = refined_sub,    &
+            &                             ndims     = ndims,          &
+            &                             new_mesh  = tmp_mesh(cur),  &
+            &                             new_bcs   = tmp_bcs(cur),   &
+            &                             restrict_to_sub = .false.   )
+
+          call tem_destroy_subtree(refined_sub)
+          call tem_destroy_subtree(tmp_subtree)
+          nullify(tmp_bcs(prev)%property)
+          nullify(tmp_bcs(prev)%header)
+
+          if (associated(tmp_mesh(prev)%property)) then
+            do iProp=1,size(tmp_mesh(prev)%property)
+              deallocate(tmp_mesh(prev)%property(iProp)%ElemID)
+            end do
+            deallocate(tmp_mesh(prev)%property)
+            deallocate(tmp_mesh(prev)%global%property)
+          end if
+
+          call tem_create_subTree_of( inTree  = tmp_mesh(cur),       &
+            &                         bc_prop = tmp_bcs(cur),        &
+            &                         subtree = tmp_subtree,         &
+            &                         inShape = trackConfig%geometry )
+
+          ! set maxdofs_left to 1 again in case there is only one var present.
+          maxdofs_left = 1
+
+        end do samplingLoop
+
+      end if
 
       call tem_create_tree_from_sub( intree  = tmp_mesh(cur), &
         &                            subtree = tmp_subtree,   &
