@@ -973,7 +973,7 @@ contains
                 ! current component and element.
                 !
                 ! Norms with weighted dofs will be implemented later.
-                WV = sqrt(sum(tmp_dat(1:nDofs)**2))
+                WV = sqrt(sum(tmp_dat(2:nDofs)**2))
                 ! Check for oscillation in the current element.
                 new_refine_tree(refine_pos) = (WV > eps_osci)
               end if
