@@ -68,17 +68,22 @@ module ply_LegPolyProjection_module
   end type ply_subsample_type
   !----------------------------------------------------------------------------!
 
+  type ply_array_type
+    real(kind=rk),allocatable :: dat(:)
+  end type ply_array_type
+
   public :: ply_subsample_type
   public :: ply_QPolyProjection
+  public :: ply_array_type
 
 contains
 
   !****************************************************************************!
   !> Subsampling by L2-Projection of the Q-Tensorproduct Legendre polynomials.
-  subroutine ply_QPolyProjection( subsamp, tree, meshData, nDofs,        &
+  subroutine ply_QPolyProjection( subsamp, tree, meshData, varDofs,      &
     &                             ndims, nComponents, refine_tree,       & 
     &                             new_refine_tree, newTree, newMeshData, &
-    &                             newDofs                                )
+    &                             newVarDofs                             )
     !---------------------------------------------------------------------------
     !> Parameters for the subsampling.
     type(ply_subsample_type), intent(in) :: subsamp
@@ -87,10 +92,10 @@ contains
     type(treelmesh_type), intent(in) :: tree
 
     !> The data to sub-sample.
-    real(kind=rk), intent(in) :: meshData(:)
+    type(ply_array_type), intent(in) :: meshData(:)
 
     !> The number of degrees of freedom for each scalar variable.
-    integer, intent(in) :: nDofs
+    integer, intent(in) :: varDofs(:)
 
     !> Number of dimensions in the polynomial representation.
     integer, intent(in) :: ndims
@@ -108,21 +113,22 @@ contains
     type(treelmesh_type), intent(out) :: newTree
 
     !> The subsampled data for newTree.
-    real(kind=rk), allocatable, intent(out) :: newMeshData(:)
+    type(ply_array_type), allocatable, intent(out) :: newMeshData(:)
 
     !> The number of dofs for the subsampled dofs.
-    integer, intent(out) :: newDofs
+    integer, allocatable, intent(out) :: newVarDofs(:)
     !---------------------------------------------------------------------------
     integer :: sampling_lvl
-    integer :: nChilds
+    integer :: nChilds, nVars, nDofs
+    integer :: iVar
     type(ply_ProjCoeff_type) :: projection
     type(ply_ProjCoeff_type) :: projection_oneDof
     ! Working tree and working data
     type(treelmesh_type) :: workTree
-    real(kind=rk), allocatable :: workData(:)
+    real(kind=rk), allocatable :: workDat(:)
+    real(kind=rk), allocatable :: newWorkDat(:)
     integer :: nChildDofs, nWorkDofs, nLevels, oneDof
     !---------------------------------------------------------------------------
-    allocate(workData(size(meshData)))
     if (subsamp%projectionType.ne.ply_QLegendrePoly_prp) then
       write(logunit(0),*) 'ERROR in ply_QPolyProjection: subsampling is '    &
         &                 // 'only implemented for Q-Legendre-Polynomials, ' &
@@ -132,84 +138,101 @@ contains
 
     sampling_lvl = subsamp%sampling_lvl
 
-    ! All elements in refine_tree marked with .TRUE. will get
-    ! a projection to the next sampling level while all other elements
-    ! will get their integral mean value ( projection till there is only
-    ! one dof left ) 
+    nVars = size(varDofs)
+    allocate(newVarDofs(nVars))
+    allocate(newMeshData(nVars))
 
-    ! Reduce the number of dofs per direction in each subsample
-    nChildDofs = (ceiling(nint(nDofs**(1.0_rk/real(ndims, kind=rk))) &
-      &                      * subsamp%dofReducFactor))**3
+    varLoop: do iVar=1,nVars
+      nDofs = varDofs(iVar)
 
-    if (nChildDofs < 1) then
-      nChildDofs = 1
-    end if
+      allocate(workDat(size(meshData(iVar)%dat)))
+      workDat = meshData(iVar)%dat
 
-    ! Set the correct number of Childs for the projection to reduced Dofs.
-    nChilds = 2**ndims
-
-    ! init the projection coefficients for the current number of child dofs.
-    call ply_initQLegProjCoeff( subsamp%projectionType, nDofs, ndims, nChilds, &
-      &                         nChildDofs, projection )
-    
-    ! init the projection coefficients for the reduction to polynomial
-    ! degree of 0.
-    oneDof = 1
-    ! Set the correct number of childs for the projection to one dof.
-    nChilds = 1
-    call ply_initQLegProjCoeff( subsamp%projectionType, nDofs, ndims, nChilds, &
-      &                         oneDof, projection_oneDof )
-    ! Check if all elements need refinement.
-    if (count(new_refine_tree) == tree%nElems) then
-
-      ! ... build the tree for the next level
-      ! todo: maybe we don't need this. Let's see....
-      call ply_refineTree( tree, ndims, newTree )
-
-      ! ... subsample the data
-      call ply_subsampleData( tree            = tree,            &
-        &                     meshData        = meshData,        &
-        &                     nDofs           = nDofs,           &
-        &                     nChildDofs      = nChildDofs,      &
-        &                     nComponents     = nComponents,     &
-        &                     projection      = projection,      &
-        &                     refine_tree     = refine_tree,     &
-        &                     new_refine_tree = new_refine_tree, &
-        &                     ndims           = ndims,           &
-        &                     sampling_lvl    = sampling_lvl,    &
-        &                     newTree         = newTree,         &
-        &                     newMeshData     = newMeshData      )
-
-     else
-      ! There are both types, elements that will and elements that won't be
-      ! refined. We have two different projection coefficients one for the 
-      ! projection to the next level and one for the projection to the level
-      ! were only one dof is left.
+      ! All elements in refine_tree marked with .TRUE. will get
+      ! a projection to the next sampling level while all other elements
+      ! will get their integral mean value ( projection till there is only
+      ! one dof left ) 
   
-      ! ... build the tree for the next level
-      ! todo: maybe we don't need this. Let's see....
-      call ply_refineTree( tree, ndims, newTree )
+      ! Reduce the number of dofs per direction in each subsample
+      nChildDofs = (ceiling(nint(nDofs**(1.0_rk/real(ndims, kind=rk))) &
+        &                      * subsamp%dofReducFactor))**3
+  
+      if (nChildDofs < 1) then
+        nChildDofs = 1
+      end if
+  
+      ! Set the correct number of Childs for the projection to reduced Dofs.
+      nChilds = 2**ndims
+  
+      ! init the projection coefficients for the current number of child dofs.
+      call ply_initQLegProjCoeff( subsamp%projectionType, nDofs, ndims, nChilds, &
+        &                         nChildDofs, projection )
+      
+      ! init the projection coefficients for the reduction to polynomial
+      ! degree of 0.
+      oneDof = 1
+      ! Set the correct number of childs for the projection to one dof.
+      nChilds = 1
+      call ply_initQLegProjCoeff( subsamp%projectionType, nDofs, ndims, nChilds, &
+        &                         oneDof, projection_oneDof )
+      ! Check if all elements need refinement.
+      if (count(new_refine_tree) == tree%nElems) then
+  
+        ! ... build the tree for the next level
+        ! todo: maybe we don't need this. Let's see....
+        call ply_refineTree( tree, ndims, newTree )
+  
+        ! ... subsample the data
+        call ply_subsampleData( tree            = tree,            &
+          &                     meshData        = workDat,         &
+          &                     nDofs           = nDofs,           &
+          &                     nChildDofs      = nChildDofs,      &
+          &                     nComponents     = nComponents,     &
+          &                     projection      = projection,      &
+          &                     refine_tree     = refine_tree,     &
+          &                     new_refine_tree = new_refine_tree, &
+          &                     ndims           = ndims,           &
+          &                     sampling_lvl    = sampling_lvl,    &
+          &                     newTree         = newTree,         &
+          &                     newMeshData     = newWorkDat       )
+  
+       else
+        ! There are both types, elements that will and elements that won't be
+        ! refined. We have two different projection coefficients one for the 
+        ! projection to the next level and one for the projection to the level
+        ! were only one dof is left.
+    
+        ! ... build the tree for the next level
+        ! todo: maybe we don't need this. Let's see....
+        call ply_refineTree( tree, ndims, newTree )
+  
+        ! ... subsample the data
+        call ply_subsampleData( tree              = tree,              &
+          &                     meshData          = workDat,           &
+          &                     nDofs             = nDofs,             &
+          &                     nChildDofs        = nChildDofs,        &
+          &                     nComponents       = nComponents,       & 
+          &                     projection        = projection,        &
+          &                     projection_oneDof = projection_oneDof, &
+          &                     refine_tree       = refine_tree,       &
+          &                     new_refine_tree   = new_refine_tree,   &
+          &                     ndims             = ndims,             &
+          &                     sampling_lvl      = sampling_lvl,      &
+          &                     newTree           = newTree,           &
+          &                     newMeshData       = newWorkDat         )
+       end if
 
-      ! ... subsample the data
-      call ply_subsampleData( tree              = tree,              &
-        &                     meshData          = meshData,          &
-        &                     nDofs             = nDofs,             &
-        &                     nChildDofs        = nChildDofs,        &
-        &                     nComponents       = nComponents,       & 
-        &                     projection        = projection,        &
-        &                     projection_oneDof = projection_oneDof, &
-        &                     refine_tree       = refine_tree,       &
-        &                     new_refine_tree   = new_refine_tree,   &
-        &                     ndims             = ndims,             &
-        &                     sampling_lvl      = sampling_lvl,      &
-        &                     newTree           = newTree,           &
-        &                     newMeshData       = newMeshData        )
-     end if
+      allocate(newMeshData(iVar)%dat(size(newWorkDat)))
+      newMeshData(iVar)%dat = newWorkDat
 
-    deallocate(projection%projCoeff)
-    deallocate(projection_oneDof%projCoeff)
+      newVarDofs(iVar) = nChildDofs
 
-    newDofs = nChildDofs
+      deallocate(workDat)
+      deallocate(projection%projCoeff)
+      deallocate(projection_oneDof%projCoeff)
+
+    end do varLoop
+
 
   end subroutine ply_QPolyProjection
   !****************************************************************************!
