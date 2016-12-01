@@ -233,7 +233,6 @@ contains
 
     end do varLoop
 
-
   end subroutine ply_QPolyProjection
   !****************************************************************************!
 

@@ -4,6 +4,8 @@
 !!
 !! Not to be confused with the oversample module!
 module ply_sampling_module
+  use mpi
+
   use iso_c_binding, only: c_f_pointer, c_loc
   use env_module, only: labelLen, rk, long_k
 
@@ -289,6 +291,7 @@ contains
     integer :: cur, prev
     integer :: ans(3)
     integer :: i
+    integer :: iError
     integer :: iMesh
     integer :: iLevel
     integer :: iChild
@@ -687,6 +690,8 @@ contains
         &                               refined_sub     = refined_sub,     &
         &                               newMeshData     = newMeshData      )
       nElemsToRefine = count(new_refine_tree)
+      call MPI_Allreduce(MPI_IN_PLACE, nElemsToRefine, 1, MPI_INTEGER, &
+         &               MPI_SUM, orig_mesh%global%comm, iError)
       if ( nElemsToRefine == 0) then
         write(logunit(1),*) 'There are no Elements that need refinement.'
         write(logunit(1),*) 'Maybe you need to set a lower tolerance.'
@@ -756,6 +761,8 @@ contains
           end if
 
           nElemsToRefine = count(new_refine_tree)
+          call MPI_Allreduce(MPI_IN_PLACE, nElemsToRefine, 1, MPI_INTEGER, &
+             &               MPI_SUM, orig_mesh%global%comm, iError)
           if ( nElemsToRefine == 0 ) then
             write(logunit(1),*) 'There are no more elements to refine.'
             write(logunit(1),*) 'Sampling is done.'
@@ -902,9 +909,11 @@ contains
     integer :: Refine_pos 
     integer :: nComponents
     integer :: nElemsToRefine
+    integer :: nRefineGlobal
     integer :: dof_pos
     integer :: lowElemIndex
     integer :: upElemIndex
+    integer :: iError
     !----------------------------------------------------------------------!
     !> Adaptive subsampling means the voxelization of the polynomial data
     !! based on the properties of the solution (the polynomial to subsample).
@@ -990,6 +999,8 @@ contains
 
     ! Number of Elements that need refinement.
     nElemsToRefine = count(new_refine_tree(:))
+    call MPI_Allreduce( nElemsToRefine, nRefineGlobal, 1, MPI_INTEGER, &
+      &                 MPI_SUM, mesh%global%comm, iError              )
 
     ! Projection from parents to child elements.
     !
@@ -1011,20 +1022,23 @@ contains
       &                       newMeshData     = newMeshData,     &  
       &                       newVarDofs      = newVarDofs       )
 
-    ! Check if there are any elements that need refinement. 
-    if (.NOT. nElemsToRefine == 0) then
-      ! Create new Subtree (refined_sub).
+    ! Check if there are (globally) any elements that need refinement. 
+    if (nRefineGlobal > 0) then
       allocate(map2global(nElemsToRefine))
-      Refine_pos = 0
-      do iElem=1,nElems
-        if (new_refine_tree(iElem)) then
-          Refine_pos = Refine_pos + 1
-          map2global(Refine_pos) = iElem
-        end if
-      end do
+      if (nElemsToRefine > 0) then
+        ! There are locally elements that need to be refined.
+        ! Create new Subtree (refined_sub).
+        Refine_pos = 0
+        do iElem=1,nElems
+          if (new_refine_tree(iElem)) then
+            Refine_pos = Refine_pos + 1
+            map2global(Refine_pos) = iElem
+          end if
+        end do
+      end if
       refined_sub%global = newtree%global
-      call tem_subTree_from(me         = refined_sub, &
-        &                   map2global = map2global   )
+      call tem_subTree_from( me         = refined_sub, &
+        &                    map2global = map2global   )
 
       deallocate(map2global)
     end if
