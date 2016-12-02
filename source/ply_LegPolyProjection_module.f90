@@ -155,7 +155,7 @@ contains
   
       ! Reduce the number of dofs per direction in each subsample
       nChildDofs = (ceiling(nint(nDofs**(1.0_rk/real(ndims, kind=rk))) &
-        &                      * subsamp%dofReducFactor))**3
+        &                      * subsamp%dofReducFactor))**nDims
   
       if (nChildDofs < 1) then
         nChildDofs = 1
