@@ -676,7 +676,7 @@ contains
       subsamp%dofReducFactor = me%dofReducFactor
       subsamp%maxsub = me%max_nLevels
       eps_osci = me%eps_osci
-      
+
       call ply_adaptive_refine_subtree( mesh            = orig_mesh,       &
         &                               meshData        = meshData,        &
         &                               vardofs         = vardofs,         &
@@ -817,7 +817,7 @@ contains
         call tem_varSys_append_stateVar( me          = resvars,            &
           &                              varname     = varsys%varname      &
           &                                                  %val(varpos), &
-          &                              nComponents = nComponents,        &
+          &                              nComponents = varcomps(iVar),     &
           &                              method_data = c_loc(res),         &
           &                              set_params     = set_params,     &
           &                              get_point      = get_point,      &
@@ -1015,7 +1015,7 @@ contains
       &                       meshData        = meshData,        &
       &                       varDofs         = varDofs,         &
       &                       ndims           = ndims,           &
-      &                       nComponents     = nComponents,     &
+      &                       varcomps        = varcomps,        &
       &                       refine_tree     = refine_tree,     &
       &                       new_refine_tree = new_refine_tree, &
       &                       newTree         = newTree,         &

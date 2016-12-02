@@ -81,7 +81,7 @@ contains
   !****************************************************************************!
   !> Subsampling by L2-Projection of the Q-Tensorproduct Legendre polynomials.
   subroutine ply_QPolyProjection( subsamp, tree, meshData, varDofs,      &
-    &                             ndims, nComponents, refine_tree,       & 
+    &                             ndims, varcomps, refine_tree,          & 
     &                             new_refine_tree, newTree, newMeshData, &
     &                             newVarDofs                             )
     !---------------------------------------------------------------------------
@@ -101,7 +101,7 @@ contains
     integer, intent(in) :: ndims
 
     !> Number of components
-    integer, intent(in) :: nComponents
+    integer, intent(in) :: varcomps(:)
 
     !> Logical array that marks elements for refinement from the last sampling lvl.
     logical, intent(in) :: refine_tree(:)
@@ -119,7 +119,7 @@ contains
     integer, allocatable, intent(out) :: newVarDofs(:)
     !---------------------------------------------------------------------------
     integer :: sampling_lvl
-    integer :: nChilds, nVars, nDofs
+    integer :: nChilds, nVars, nDofs, nComponents
     integer :: iVar
     type(ply_ProjCoeff_type) :: projection
     type(ply_ProjCoeff_type) :: projection_oneDof
@@ -144,6 +144,7 @@ contains
 
     varLoop: do iVar=1,nVars
       nDofs = varDofs(iVar)
+      nComponents = varcomps(iVar)
 
       allocate(workDat(size(meshData(iVar)%dat)))
       workDat = meshData(iVar)%dat
