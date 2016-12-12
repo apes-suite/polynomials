@@ -65,6 +65,9 @@ module ply_LegPolyProjection_module
     !> Factor for the reduction of the degrees of freedom in one subsampling
     !! step (per spatial direction).
     real(kind=rk) :: dofReducFactor
+
+    !> Indicator for limitation of total memory consumption
+    logical :: limitMemoryConsumption
   end type ply_subsample_type
   !----------------------------------------------------------------------------!
 
@@ -80,13 +83,15 @@ contains
 
   !****************************************************************************!
   !> Subsampling by L2-Projection of the Q-Tensorproduct Legendre polynomials.
-  subroutine ply_QPolyProjection( subsamp, tree, meshData, varDofs,      &
-    &                             ndims, varcomps, refine_tree,          & 
-    &                             new_refine_tree, newTree, newMeshData, &
-    &                             newVarDofs                             )
+  subroutine ply_QPolyProjection( subsamp, dofReduction, tree, meshData,   &
+    &                             varDofs, ndims, varcomps, refine_tree,   & 
+    &                             new_refine_tree, newMeshData, newVarDofs )
     !---------------------------------------------------------------------------
     !> Parameters for the subsampling.
     type(ply_subsample_type), intent(in) :: subsamp
+
+    !> Factor for reducion of degrees of freedom.
+    real(kind=rk), intent(in) :: dofReduction(:)
 
     !> The tree the data is written for.
     type(treelmesh_type), intent(in) :: tree
@@ -109,10 +114,7 @@ contains
     !> Logical array that marks elements for refinment.
     logical, intent(in) :: new_refine_tree(:)
 
-    !> The new tree representation of the sub-smapled mesh.
-    type(treelmesh_type), intent(out) :: newTree
-
-    !> The subsampled data for newTree.
+    !> The subsampled data.
     type(ply_array_type), allocatable, intent(out) :: newMeshData(:)
 
     !> The number of dofs for the subsampled dofs.
@@ -156,7 +158,7 @@ contains
   
       ! Reduce the number of dofs per direction in each subsample
       nChildDofs = (ceiling(nint(nDofs**(1.0_rk/real(ndims, kind=rk))) &
-        &                      * subsamp%dofReducFactor))**nDims
+        &                      * dofReduction(iVar)))**nDims
   
       if (nChildDofs < 1) then
         nChildDofs = 1
@@ -179,10 +181,6 @@ contains
       ! Check if all elements need refinement.
       if (count(new_refine_tree) == tree%nElems) then
   
-        ! ... build the tree for the next level
-        ! todo: maybe we don't need this. Let's see....
-        call ply_refineTree( tree, ndims, newTree )
-  
         ! ... subsample the data
         call ply_subsampleData( tree            = tree,            &
           &                     meshData        = workDat,         &
@@ -194,7 +192,6 @@ contains
           &                     new_refine_tree = new_refine_tree, &
           &                     ndims           = ndims,           &
           &                     sampling_lvl    = sampling_lvl,    &
-          &                     newTree         = newTree,         &
           &                     newMeshData     = newWorkDat       )
   
        else
@@ -202,11 +199,7 @@ contains
         ! refined. We have two different projection coefficients one for the 
         ! projection to the next level and one for the projection to the level
         ! were only one dof is left.
-    
-        ! ... build the tree for the next level
-        ! todo: maybe we don't need this. Let's see....
-        call ply_refineTree( tree, ndims, newTree )
-  
+      
         ! ... subsample the data
         call ply_subsampleData( tree              = tree,              &
           &                     meshData          = workDat,           &
@@ -219,7 +212,6 @@ contains
           &                     new_refine_tree   = new_refine_tree,   &
           &                     ndims             = ndims,             &
           &                     sampling_lvl      = sampling_lvl,      &
-          &                     newTree           = newTree,           &
           &                     newMeshData       = newWorkDat         )
        end if
 
@@ -536,76 +528,11 @@ contains
 
 
   !****************************************************************************!
-  !> Create a tree representation for the next level of a given tree.
-  subroutine ply_refineTree( tree, ndims, newTree )
-    !---------------------------------------------------------------------------
-    !> The tree the data is written for.
-    type(treelmesh_type), intent(in) :: tree
-  
-    !> The number of Dimensions in the polynomial representation.
-    integer, intent(in) :: ndims
-
-    !> The new tree representation of the sub-smapled mesh.
-    type(treelmesh_type), intent(out) :: newTree
-    !---------------------------------------------------------------------------
-    integer(kind=long_k) :: treeId, childTreeIds(8)
-    integer :: nChilds
-    integer :: iElem, iProc
-    !---------------------------------------------------------------------------
-
-    nChilds = 2**ndims
-    ! we copy the global data and correct the entries where necessary
-    newTree%global = tree%global
-    newTree%global%minLevel = tree%global%minLevel+1
-    newTree%global%maxLevel = tree%global%maxLevel+1
-    newTree%global%nElems =tree%global%nElems*nChilds
-
-    ! set the correct entries for the new tree
-    newTree%nElems = tree%nElems*nChilds
-    newTree%elemOffset = tree%elemOffset*nChilds
-
-    allocate( newTree%treeid(newTree%nElems) )
-    allocate( newTree%ElemPropertyBits(newTree%nElems) )
-
-    ! We iterate over the number of elements and refine each element into
-    ! its eight children.
-    elemLoop: do iElem = 1, tree%nElems
-      ! Get the current treeid and all of its children.
-      treeId = tree%treeid(iElem)
-      childTreeIds = tem_directChildren(treeId)
-
-      ! Set them in the new list of treeids of newTree
-      newTree%treeid((iElem-1)*nChilds+1:iElem*nChilds) &
-        &     = childTreeIds(1:nChilds)
-      newTree%ElemPropertyBits((iElem-1)*nChilds+1:iElem*nChilds) &
-        &      = tree%ElemPropertyBits(iElem)
-
-    end do elemLoop
-
-    ! for parallel execution we have to set first and last for the new tree.
-    allocate( newTree%part_first(size(tree%part_first)), &
-      &       newTree%part_last(size(tree%part_last))    )
-    do iProc = 1,size(tree%part_first)
-      ! ... for first 
-      treeId = tree%part_first(iProc)
-      childTreeIds = tem_directChildren(treeId)
-      newTree%part_first(iProc) = childTreeIds(1)
-      ! ... for last
-      treeId = tree%part_last(iProc)
-      childTreeIds = tem_directChildren(treeId)
-      newTree%part_last(iProc) = childTreeIds(nChilds)
-    end do
-
-  end subroutine ply_refineTree
-  !****************************************************************************!
-
-
-  !****************************************************************************!
   !> Routine to subsample mesh information for one refinement level.
   subroutine ply_subsampleData( tree, meshData, nDofs, nChildDofs,          &
     &                           nComponents, projection, projection_oneDof, &
     &                           refine_tree, new_refine_tree, ndims,        &
-    &                           sampling_lvl, newTree, newMeshData          )
+    &                           sampling_lvl, newMeshData                   )
     !---------------------------------------------------------------------------
     !> The tree the data is written for.
     type(treelmesh_type), intent(in) :: tree
@@ -642,10 +569,7 @@ contains
     !> The current sampling lvl.
     integer,intent(in) :: sampling_lvl
 
-    !> The new tree representation of the sub-smapled mesh.
-    type(treelmesh_type), intent(in) :: newTree
-
-    !> The subsampled data for newTree.
+    !> The subsampled data.
     real(kind=rk), allocatable, intent(out) :: newMeshData(:)
     !---------------------------------------------------------------------------
     integer :: nElems, nChilds, nParentElems, nElemsToRefine, nElemsNotToRefine
