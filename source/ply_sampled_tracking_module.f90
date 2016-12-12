@@ -302,7 +302,11 @@ contains
 
     call tem_time_reset(loctime)
 
-    if (present(simControl)) loctime = simControl%now
+    if (present(simControl)) then
+      loctime = simControl%now
+    else
+      loctime = time
+    end if
 
     if (me%sampling%max_nlevels == 0) then
       if (present(simControl)) then
@@ -363,7 +367,7 @@ contains
           &                   ndims       = me%ndims,                     &
           &                   trackInst   = me%tracking%instance(iTrack), &
           &                   trackConfig = me%tracking%config(iConfig),  &
-          &                   time        = time,                         &
+          &                   time        = loctime,                      &
           &                   new_mesh    = sampled_mesh,                 &
           &                   resvars     = sampled_vars                  )
 
@@ -382,23 +386,13 @@ contains
           &             globProc    = proc,                                 &
           &             solver      = solver                                )
 
-        if (present(simControl)) then
-          call hvs_output_open( out_file = me%tracking%instance(iTrack)        &
-            &                                         %output_file,            &
-            &                   use_iter = me%tracking%config(iConfig)         &
-            &                                %output_config%vtk%iter_filename, &
-            &                   mesh     = sampled_mesh,                       &
-            &                   varsys   = sampled_vars,                       &
-            &                   time     = simControl%now                      )
-        else
-          call hvs_output_open( out_file = me%tracking%instance(iTrack)        &
-            &                                         %output_file,            &
-            &                   use_iter = me%tracking%config(iConfig)         &
-            &                                %output_config%vtk%iter_filename, &
-            &                   mesh     = sampled_mesh,                       &
-            &                   varsys   = sampled_vars,                       &
-            &                   time     = time                                )
-        end if
+        call hvs_output_open( out_file = me%tracking%instance(iTrack)        &
+          &                                         %output_file,            &
+          &                   use_iter = me%tracking%config(iConfig)         &
+          &                                %output_config%vtk%iter_filename, &
+          &                   mesh     = sampled_mesh,                       &
+          &                   varsys   = sampled_vars,                       &
+          &                   time     = loctime                             )
 
         ! Fill output files with data.
         call hvs_output_write( out_file = me%tracking%instance(iTrack) &
@@ -419,29 +413,16 @@ contains
 
       else
 
-        if (present(simControl)) then
-          call hvs_output_open( out_file = me%tracking%instance(iTrack) &
-            &                                         %output_file,     &
-            &                   use_iter = me%tracking%config(iConfig)  &
-            &                                %output_config             &
-            &                                %vtk%iter_filename,        &
-            &                   mesh     = mesh,                        &
-            &                   subtree  = me%tracking%instance(iTrack) &
-            &                                         %subtree,         &
-            &                   varsys   = varSys,                      &
-            &                   time     = simControl%now               )
-        else
-          call hvs_output_open( out_file = me%tracking%instance(iTrack) &
-            &                                         %output_file,     &
-            &                   use_iter = me%tracking%config(iConfig)  &
-            &                                %output_config             &
-            &                                %vtk%iter_filename,        &
-            &                   mesh     = mesh,                        &
-            &                   subtree  = me%tracking%instance(iTrack) &
-            &                                         %subtree,         &
-            &                   varsys   = varSys,                      &
-            &                   time     = time                         )
-        end if
+        call hvs_output_open( out_file = me%tracking%instance(iTrack) &
+          &                                         %output_file,     &
+          &                   use_iter = me%tracking%config(iConfig)  &
+          &                                %output_config             &
+          &                                %vtk%iter_filename,        &
+          &                   mesh     = mesh,                        &
+          &                   subtree  = me%tracking%instance(iTrack) &
+          &                                         %subtree,         &
+          &                   varsys   = varSys,                      &
+          &                   time     = loctime                      )
 
         ! Fill output files with data.
         call hvs_output_write( out_file = me%tracking%instance(iTrack) &
