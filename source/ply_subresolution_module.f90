@@ -384,8 +384,8 @@ contains
         do
           if ( (iElem <= icol_elem) &
             &  .or. (icol_pos == p%color%property%nElems) ) EXIT
-            icol_pos = icol_pos + 1
-            icol_elem = p%color%property%elemID(icol_pos)
+          icol_pos = icol_pos + 1
+          icol_elem = p%color%property%elemID(icol_pos)
         end do
         ! Now the current colored element is either the same as the current
         ! element, further ahead or the last element in the colored elements.
@@ -403,8 +403,8 @@ contains
               do
                 if ( (iElem <= isub_elem) &
                   &  .or. (isub_pos == p%subres%subres_prop%nElems(cpos)) ) EXIT
-                  isub_pos = isub_pos + 1
-                  isub_elem = p%subres%subres_prop%elem(cpos)%ID(isub_pos)
+                isub_pos = isub_pos + 1
+                isub_elem = p%subres%subres_prop%elem(cpos)%ID(isub_pos)
               end do
               if (iElem == isub_elem) then
                 if ( btest(ichar(p%subres%subres_prop &
