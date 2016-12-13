@@ -62,12 +62,19 @@ module ply_LegPolyProjection_module
     !> Maximal subsampling depth:
     integer :: maxsub = 0
 
+    !> Maximum allowed oscillation of the solution.
+    !! For adaptive subsampling only.
+    real(kind=rk) :: eps_osci
+
     !> Factor for the reduction of the degrees of freedom in one subsampling
     !! step (per spatial direction).
     real(kind=rk) :: dofReducFactor
 
     !> Indicator for limitation of total memory consumption
-    logical :: limitMemoryConsumption
+    logical :: adaptiveDofReduction
+
+    !> Absolute upper bound level to refine to.
+    integer :: AbsUpperBoundLevel
   end type ply_subsample_type
   !----------------------------------------------------------------------------!
 
@@ -160,7 +167,9 @@ contains
       nChildDofs = (ceiling(nint(nDofs**(1.0_rk/real(ndims, kind=rk))) &
         &                      * dofReduction(iVar)))**nDims
   
-      if (nChildDofs < 1) then
+      if (nChildDofs > nDofs) then
+        nChildDofs = nDofs
+      elseif (nChildDofs < 1) then
         nChildDofs = 1
       end if
   
