@@ -127,7 +127,6 @@ contains
     !> The number of dofs for the subsampled dofs.
     integer, allocatable, intent(out) :: newVarDofs(:)
     !---------------------------------------------------------------------------
-    integer :: sampling_lvl
     integer :: nChilds, nVars, nDofs, nComponents
     integer :: iVar
     type(ply_ProjCoeff_type) :: projection
@@ -144,8 +143,6 @@ contains
         &                 // 'stopping...'
       call tem_abort()
     end if
-
-    sampling_lvl = subsamp%sampling_lvl
 
     nVars = size(varDofs)
     allocate(newVarDofs(nVars))
@@ -172,6 +169,10 @@ contains
       elseif (nChildDofs < 1) then
         nChildDofs = 1
       end if
+
+      if (subsamp%sampling_lvl == subsamp%maxsub) then
+        nChildDofs = 1
+      end if
   
       ! Set the correct number of Childs for the projection to reduced Dofs.
       nChilds = 2**ndims
@@ -187,42 +188,20 @@ contains
       nChilds = 1
       call ply_initQLegProjCoeff( subsamp%projectionType, nDofs, ndims, nChilds, &
         &                         oneDof, projection_oneDof )
-      ! Check if all elements need refinement.
-      if (count(new_refine_tree) == tree%nElems) then
-  
-        ! ... subsample the data
-        call ply_subsampleData( tree            = tree,            &
-          &                     meshData        = workDat,         &
-          &                     nDofs           = nDofs,           &
-          &                     nChildDofs      = nChildDofs,      &
-          &                     nComponents     = nComponents,     &
-          &                     projection      = projection,      &
-          &                     refine_tree     = refine_tree,     &
-          &                     new_refine_tree = new_refine_tree, &
-          &                     ndims           = ndims,           &
-          &                     sampling_lvl    = sampling_lvl,    &
-          &                     newMeshData     = newWorkDat       )
-  
-       else
-        ! There are both types, elements that will and elements that won't be
-        ! refined. We have two different projection coefficients one for the 
-        ! projection to the next level and one for the projection to the level
-        ! were only one dof is left.
       
-        ! ... subsample the data
-        call ply_subsampleData( tree              = tree,              &
-          &                     meshData          = workDat,           &
-          &                     nDofs             = nDofs,             &
-          &                     nChildDofs        = nChildDofs,        &
-          &                     nComponents       = nComponents,       & 
-          &                     projection        = projection,        &
-          &                     projection_oneDof = projection_oneDof, &
-          &                     refine_tree       = refine_tree,       &
-          &                     new_refine_tree   = new_refine_tree,   &
-          &                     ndims             = ndims,             &
-          &                     sampling_lvl      = sampling_lvl,      &
-          &                     newMeshData       = newWorkDat         )
-       end if
+      ! ... subsample the data
+      call ply_subsampleData( tree              = tree,              &
+        &                     meshData          = workDat,           &
+        &                     nDofs             = nDofs,             &
+        &                     nChildDofs        = nChildDofs,        &
+        &                     nComponents       = nComponents,       & 
+        &                     projection        = projection,        &
+        &                     projection_oneDof = projection_oneDof, &
+        &                     refine_tree       = refine_tree,       &
+        &                     new_refine_tree   = new_refine_tree,   &
+        &                     ndims             = ndims,             &
+        &                     subsamp           = subsamp,           &
+        &                     newMeshData       = newWorkDat         )
 
       allocate(newMeshData(iVar)%dat(size(newWorkDat)))
       newMeshData(iVar)%dat = newWorkDat
@@ -541,7 +520,7 @@ contains
   subroutine ply_subsampleData( tree, meshData, nDofs, nChildDofs,          &
     &                           nComponents, projection, projection_oneDof, &
     &                           refine_tree, new_refine_tree, ndims,        &
-    &                           sampling_lvl, newMeshData                   )
+    &                           subsamp, newMeshData                        )
     !---------------------------------------------------------------------------
     !> The tree the data is written for.
     type(treelmesh_type), intent(in) :: tree
@@ -575,8 +554,8 @@ contains
     !> The number of dimensions in the polynomial representation.
     integer, intent(in) :: ndims
 
-    !> The current sampling lvl.
-    integer,intent(in) :: sampling_lvl
+    !> Parameters for the subsampling.
+    type(ply_subsample_type), intent(in) :: subsamp
 
     !> The subsampled data.
     real(kind=rk), allocatable, intent(out) :: newMeshData(:)
@@ -602,7 +581,7 @@ contains
     upElemIndex = 0
     childPos = 0
     
-    if (sampling_lvl > 1) then
+    if (subsamp%sampling_lvl > 1) then
 
       elementLoop: do iParentElem=1,nParentElems
         ! Check if the parent cell was already refined...

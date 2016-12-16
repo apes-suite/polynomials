@@ -998,10 +998,6 @@ contains
       upElemIndex = 0
 
       ParentElemLoop: do iParentElem=1,nParentElems
-        ! Check if the maximum sampling level is reached.
-        ! There will be no more refinement.   
-        if (subsamp%sampling_lvl == subsamp%maxsub) EXIT ParentElemLoop
-
         if (refine_tree(iParentElem)) then
           do iChild=1,nChilds
             if (subsamp%AbsUpperBoundLevel > 0) then
