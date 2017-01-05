@@ -232,9 +232,6 @@ contains
     iEdge = 0
     do jj = 1, nQuadPointsPerDir
       do ii = 1, nQuadPointsPerDir     
-    write(dbgUnit(1),*) 'loop incide ii: ', ii
-    write(dbgUnit(1),*) 'loop incide jj: ', jj
-
         ! define the vertical edges and give them an ID
         if (ii <= nQuadPointsPerDir .and. jj <= nQuadPointsPerDir-1) then
           iEdge = iEdge + 1
@@ -259,7 +256,6 @@ contains
           edgeID_3 = iEdge
           ! creat two triangles per quad, each of them needs three edges
           iTriangle = iTriangle + 2
-          write(dbgUnit(1),*) 'initial Triangle: ', iTriangle
           triangles(iTriangle-1, 1) = edgeID_3
           triangles(iTriangle-1, 2) = edgeID_1
           if (jj == nQuadPointsPerDir-1) then
