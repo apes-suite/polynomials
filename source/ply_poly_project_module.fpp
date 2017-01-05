@@ -87,11 +87,6 @@ module ply_poly_project_module
     ! set the oversampling factor < 1
     integer                    :: min_dofs
 
-    integer :: nEdges
-    integer, allocatable :: edges(:,:)
-    integer :: nTriangles
-    integer, allocatable :: triangles(:,:)
-
   end type ply_prj_body_type
 
 
@@ -138,6 +133,11 @@ module ply_poly_project_module
     type(ply_prj_body_type)   :: body_1d
     type(ply_prj_body_type)   :: body_2d
     type(ply_prj_body_type)   :: body_3d
+
+    integer :: nEdges
+    integer, allocatable :: edges(:,:)
+    integer :: nTriangles
+    integer, allocatable :: triangles(:,:)
 
   end type ply_poly_project_type
 
@@ -219,6 +219,7 @@ contains
     integer :: iTriangle !initial triangle
     integer :: edgeID_1, edgeID_2, edgeID_3 !local edgeID created per point
     integer :: nEdgesPerDir !number of edges per direction
+    integer :: offset
     !--------------------------------------------------------------------------!
     nTriangles = 2*(nQuadPointsPerDir-1)**2
     nEdges = ( (nQuadPointsPerDir-1)*nQuadPointsPerDir ) * 2 &
@@ -233,21 +234,22 @@ contains
       do ii = 1, nQuadPointsPerDir     
     write(dbgUnit(1),*) 'loop incide ii: ', ii
     write(dbgUnit(1),*) 'loop incide jj: ', jj
-        ! define the horizantal edges and give them an ID
-        if (jj <= nQuadPointsPerDir .and. ii <= nQuadPointsPerDir-1) then 
-          iEdge = iEdge + 1
-          edges(iEdge,1) = (jj-1)*nQuadPointsPerDir+ii
-          edges(iEdge,2) = (jj-1)*nQuadPointsPerDir+ii+1
-          edgeID_1 = iEdge
-        end if  
 
         ! define the vertical edges and give them an ID
         if (ii <= nQuadPointsPerDir .and. jj <= nQuadPointsPerDir-1) then
           iEdge = iEdge + 1
           edges(iEdge,1) = (jj-1)*nQuadPointsPerDir+ii
           edges(iEdge,2) = jj*nQuadPointsPerDir+ii
-          edgeID_2 = iEdge
+          edgeID_1 = iEdge
         end if 
+
+        ! define the horizantal edges and give them an ID
+        if (jj <= nQuadPointsPerDir .and. ii <= nQuadPointsPerDir-1) then 
+          iEdge = iEdge + 1
+          edges(iEdge,1) = (jj-1)*nQuadPointsPerDir+ii
+          edges(iEdge,2) = (jj-1)*nQuadPointsPerDir+ii+1
+          edgeID_2 = iEdge
+        end if  
 
         ! creat diagonal edges, which are needed for the triangels 
         if (ii <= nQuadPointsPerDir-1 .and. jj <= nQuadPointsPerDir-1) then
@@ -258,12 +260,21 @@ contains
           ! creat two triangles per quad, each of them needs three edges
           iTriangle = iTriangle + 2
           write(dbgUnit(1),*) 'initial Triangle: ', iTriangle
-          triangles(iTriangle-1, 1) = edgeID_1
-          triangles(iTriangle-1, 2) = edgeID_3
-          triangles(iTriangle-1, 3) = edgeID_1 + 4
-          triangles(iTriangle, 1) = edgeID_2
-          triangles(iTriangle, 2) = edgeID_1 + nEdgesPerDir
-          triangles(iTriangle, 3) = edgeID_3
+          triangles(iTriangle-1, 1) = edgeID_3
+          triangles(iTriangle-1, 2) = edgeID_1
+          if (jj == nQuadPointsPerDir-1) then
+            if (ii == 1) then
+              offset = 1
+            else
+              offset = offset + 2
+            end if
+            triangles(iTriangle-1, 3) = edgeID_2 + nEdgesPerDir - offset
+          else
+            triangles(iTriangle-1, 3) = edgeID_2 + nEdgesPerDir
+          end if
+          triangles(iTriangle, 1) = edgeID_3
+          triangles(iTriangle, 2) = edgeID_1 + 3
+          triangles(iTriangle, 3) = edgeID_2
         end if  
       end do
     end do
@@ -511,9 +522,10 @@ contains
           &    nQuadPointsPerDir = me%nQuadPointsPerDir       )
 
         !KM: Implament a routine to build up list of edges  
-        call build_faceNodes_edges_2D( edges             = me%body_2d%edges,    &
-          &                            nEdges            = me%body_2d%nEdges,   &
-          &                            nQuadPointsPerDir = me%nQuadPointsPerDir )
+        call build_faceNodes_edges_2D(               &
+          & edges             = me%edges,            &
+          & nEdges            = me%nEdges,           &
+          & nQuadPointsPerDir = me%nQuadPointsPerDir )
       end if
 
       if (scheme_dim >= 3) then
@@ -533,12 +545,12 @@ contains
           &    nQuadPointsPerDir = me%nQuadPointsPerDir       )
 
         !KM: Implament a routine to build up list of edges and triangles 
-        call build_faceNodes_triangles_3D(              &
-          & triangles         = me%body_3d%triangles,   &
-          & nTriangles        = me%body_3d%nTriangles,  &
-          & edges             = me%body_3d%edges,       &
-          & nEdges            = me%body_3d%nEdges,      &
-          & nQuadPointsPerDir = me%nQuadPointsPerDir    )
+        call build_faceNodes_triangles_3D(           &
+          & triangles         = me%triangles,        &
+          & nTriangles        = me%nTriangles,       &
+          & edges             = me%edges,            &
+          & nEdges            = me%nEdges,           &
+          & nQuadPointsPerDir = me%nQuadPointsPerDir )
       end if
 
     case('l2p')
