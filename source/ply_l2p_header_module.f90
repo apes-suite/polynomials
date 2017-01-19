@@ -3,7 +3,7 @@
 
 module ply_l2p_header_module
 
-  use env_module,         only: rk, labelLen
+  use env_module,         only: rk, labelLen, eps
   use fftw_wrap,          only: fftw_available
   use aotus_module,       only: flu_State, aot_get_val
   use aot_out_module,     only: aot_out_type, aot_out_val
@@ -183,7 +183,7 @@ contains
     !---------------------------------------------------------------------------
 
     equality = ( left%nodes_header == right%nodes_header ) &
-      &         .and. ( left%factor == right%factor ) 
+      &         .and. (abs( left%factor - right%factor ) < eps)
 
   end function isEqual
   !****************************************************************************!
@@ -205,7 +205,7 @@ contains
     !---------------------------------------------------------------------------
 
     unequality = ( left%nodes_header /= right%nodes_header ) &
-      &         .or. ( left%factor /= right%factor)
+      &         .or. (abs( left%factor - right%factor) > eps)
 
   end function isUnequal
   !****************************************************************************!
