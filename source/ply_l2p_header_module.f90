@@ -3,13 +3,14 @@
 
 module ply_l2p_header_module
 
-  use env_module,         only: rk, labelLen, eps
+  use env_module,         only: rk, labelLen
   use fftw_wrap,          only: fftw_available
   use aotus_module,       only: flu_State, aot_get_val
   use aot_out_module,     only: aot_out_type, aot_out_val
 
   use tem_aux_module,     only: tem_abort
   use tem_logging_module, only: logUnit
+  use tem_float_module,   only: operator(.feq.), operator(.fne.)
 
   use ply_nodes_header_module, only: ply_nodes_header_type,      &
     &                                assignment(=),              &
@@ -183,7 +184,7 @@ contains
     !---------------------------------------------------------------------------
 
     equality = ( left%nodes_header == right%nodes_header ) &
-      &         .and. (abs( left%factor - right%factor ) < eps)
+      &         .and. ( left%factor .feq. right%factor )
 
   end function isEqual
   !****************************************************************************!
@@ -205,7 +206,7 @@ contains
     !---------------------------------------------------------------------------
 
     unequality = ( left%nodes_header /= right%nodes_header ) &
-      &         .or. (abs( left%factor - right%factor) > eps)
+      &         .or. ( left%factor .fne. right%factor )
 
   end function isUnequal
   !****************************************************************************!

@@ -4,13 +4,14 @@
 
 module ply_fpt_header_module
 
-  use env_module,              only: rk, labelLen, eps
+  use env_module,              only: rk, labelLen
   use aotus_module,            only: flu_State, aot_get_val
   use aot_out_module,          only: aot_out_type, aot_out_val
 
   use tem_aux_module,          only: tem_abort
   use tem_logging_module,      only: logUnit
   use tem_compileconf_module,  only: vlen
+  use tem_float_module,        only: operator(.feq.), operator(.fne.)
 
   use ply_nodes_header_module, only: ply_nodes_header_type,     &
                                &     assignment(=),             &
@@ -320,7 +321,7 @@ module ply_fpt_header_module
     !---------------------------------------------------------------------------
 
     equality = ( left%nodes_header == right%nodes_header )                  &
-      &         .and. ( abs( left%factor - right%factor ) < eps)            &   
+      &         .and. ( left%factor .feq. right%factor )                    &   
       &         .and. ( left%blocksize == right%blocksize )                 &
       &         .and. ( left%approx_terms == right%approx_terms )           &
       &         .and. ( left%striplen == right%striplen)                    &
@@ -347,7 +348,7 @@ module ply_fpt_header_module
     !---------------------------------------------------------------------------
 
     unequality = ( left%nodes_header /= right%nodes_header )                &
-      &         .or. ( abs( left%factor - right%factor ) > eps )            &
+      &         .or. ( left%factor .fne. right%factor )                     &
       &         .or. ( left%blocksize /= right%blocksize )                  &
       &         .or. ( left%approx_terms /= right%approx_terms )            &
       &         .or. ( left%striplen /= right%striplen)                     &
@@ -395,7 +396,7 @@ module ply_fpt_header_module
         if (left%factor < right%factor) then
           small = .true.
         else
-          if (abs(left%factor - right%factor) < eps) then
+          if (left%factor .feq. right%factor) then
             if (left%blocksize < right%blocksize) then
               small = .true.
             else
@@ -467,7 +468,7 @@ module ply_fpt_header_module
         if (left%factor < right%factor) then
           small = .true.
         else
-          if (abs(left%factor - right%factor) < eps) then  
+          if (left%factor .feq. right%factor) then  
             if (left%blocksize < right%blocksize) then
               small = .true.
             else
@@ -539,7 +540,7 @@ module ply_fpt_header_module
         if (left%factor > right%factor) then
           great = .true.
         else
-          if (abs(left%factor - right%factor) < eps) then
+          if (left%factor .feq. right%factor) then
             if (left%blocksize > right%blocksize) then
               great = .true.
             else
@@ -611,7 +612,7 @@ module ply_fpt_header_module
         if (left%factor > right%factor) then
           great = .true.
         else
-          if (abs(left%factor - right%factor) < eps) then
+          if (left%factor .feq. right%factor) then
             if (left%blocksize > right%blocksize) then
               great = .true.
             else
