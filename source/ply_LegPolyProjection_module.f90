@@ -132,10 +132,9 @@ contains
     type(ply_ProjCoeff_type) :: projection
     type(ply_ProjCoeff_type) :: projection_oneDof
     ! Working tree and working data
-    type(treelmesh_type) :: workTree
     real(kind=rk), allocatable :: workDat(:)
     real(kind=rk), allocatable :: newWorkDat(:)
-    integer :: nChildDofs, nWorkDofs, nLevels, oneDof
+    integer :: nChildDofs, oneDof
     !---------------------------------------------------------------------------
     if (subsamp%projectionType.ne.ply_QLegendrePoly_prp) then
       write(logunit(0),*) 'ERROR in ply_QPolyProjection: subsampling is '    &
@@ -561,9 +560,8 @@ contains
     real(kind=rk), allocatable, intent(out) :: newMeshData(:)
     !---------------------------------------------------------------------------
     integer :: nElems, nChilds, nParentElems, nElemsToRefine, nElemsNotToRefine
-    integer :: iElem, iParentElem, iSys, iVar, iDof, iChild, childIndex, iChildDof
-    integer :: lowElemIndex, upElemIndex, lowChildIndex, upChildIndex, &
-      &        lowChildData, upChildData
+    integer :: iElem, iParentElem, iChild
+    integer :: lowElemIndex, upElemIndex, lowChildIndex, upChildIndex
     integer :: oneDof, noChilds, childpos
     real(kind=rk), allocatable :: childData(:)
     !---------------------------------------------------------------------------
