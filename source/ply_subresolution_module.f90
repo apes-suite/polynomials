@@ -178,14 +178,17 @@ contains
 
       ! Figure out the target polynomial representation.
       select case(target_space)
-      case (Q_Space)
-        target_dofs = (target_degree+1)**target_dim
+        case (Q_Space)
+          target_dofs = (target_degree+1)**target_dim
 
-      case (P_Space)
-        target_dofs = target_degree+1
-        do pdim=2,target_dim
-          target_dofs = (target_dofs * (target_degree+pdim) ) / pdim
-        end do
+        case (P_Space)
+          target_dofs = target_degree+1
+          do pdim=2,target_dim
+            target_dofs = (target_dofs * (target_degree+pdim) ) / pdim
+          end do
+
+        case default
+          call tem_abort('Wrong target_space! Select Q_Space or P_Space.')
 
       end select
 
@@ -194,22 +197,25 @@ contains
 
       ! Figure out input polynomial representation.
       select case(me%basistype)
-      case (Q_Space)
-        in_dofs = (me%polydegree+1)**3
+        case (Q_Space)
+          in_dofs = (me%polydegree+1)**3
 
-        if (target_dim < in_dim) then
-          read_dofs = (me%polydegree+1)**target_dim
-          recs_per_elem = (me%polydegree+1)**(in_dim-target_dim)
-        else
+          if (target_dim < in_dim) then
+            read_dofs = (me%polydegree+1)**target_dim
+            recs_per_elem = (me%polydegree+1)**(in_dim-target_dim)
+          else
+            read_dofs = in_dofs
+          end if
+
+        case (P_Space)
+          in_dofs = me%polydegree+1
+          do pdim=2,in_dim
+            in_dofs = (in_dofs * (me%polydegree+pdim) ) / pdim
+          end do
           read_dofs = in_dofs
-        end if
 
-      case (P_Space)
-        in_dofs = me%polydegree+1
-        do pdim=2,in_dim
-          in_dofs = (in_dofs * (me%polydegree+pdim) ) / pdim
-        end do
-        read_dofs = in_dofs
+        case default
+          call tem_abort('Wrong basistype! Select Q_Space or P_Space.')
 
       end select
 
