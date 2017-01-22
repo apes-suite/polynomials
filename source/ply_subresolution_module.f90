@@ -341,12 +341,6 @@ contains
 
     has_subres = (size(p%subresdat) > 0)
 
-    if (has_subres) then
-      isub_pos = 1
-      isub_elem = p%subres%subres_prop%elem(cpos)%ID(isub_pos)
-      minsubdofs = min(nDofs, p%nSubdofs)
-    end if
-
     ! Byte and bit to probe for this color
     colchar = 1 + (cpos-1) / colors_per_char
     colbit = mod((cpos-1), colors_per_char)
@@ -389,6 +383,9 @@ contains
             ! If there is subresolution data: Check wether this element is
             ! subresolved for this color.
             if (has_subres) then
+              isub_pos = 1
+              isub_elem = p%subres%subres_prop%elem(cpos)%ID(isub_pos)
+              minsubdofs = min(nDofs, p%nSubdofs)
 
               do
                 if ( (iElem <= isub_elem) &
