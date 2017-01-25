@@ -659,61 +659,60 @@ contains
     real(kind=rk), intent(in) :: val
     real(kind=rk) :: funcVal
     !---------------------------------------------------------------------------
+    real(kind=rk), parameter :: lb_poly = 1.0_rk/0.067_rk
+    real(kind=rk), parameter :: inter1 = 0.058_rk
+    real(kind=rk), parameter :: inter2 = 0.04_rk
+    real(kind=rk), parameter :: invbound = 0.02_rk
     real(kind=rk) :: invVal, a0, a1, a2, a3, a4, a5
     !---------------------------------------------------------------------------
 
     !>\todo: as we use a relation of gamma, it might be better to use the
     !!       gammln function provided by the numerical recipes, and just
     !!       use the difference in an exponential function.
-    if (val .fne. 0.0_rk) then
+    if (val <= lb_poly) then
+
+      funcVal = Gamma(val+0.5_rk) / Gamma(val+1.0_rk)
+
+    else
+
       invVal = 1.0_rk/val
 
-      if ((invVal.le.0) .or. (invVal.ge.0.067_rk)) then
-        funcVal = Gamma(val+0.5_rk) / Gamma(val+1.0_rk)
-        return
-      elseif ( 0.058_rk .le. invVal .and. invVal .lt. 0.067_rk  ) then
+      if (invVal >= inter1) then
         a0 =  0.99999999996378690_rk
         a1 = -0.12499999657282661_rk
         a2 =  0.78123659464717666e-02_rk
         a3 =  0.48855685911602214e-02_rk
         a4 = -0.67176366234107532e-03_rk
         a5 = -0.13533949520771154e-02_rk
-      elseif ( 0.04_rk .le. invVal .and. invVal .lt. 0.058_rk  ) then
+      elseif (invVal >= inter2) then
         a0 =  0.99999999999298844_rk
         a1 = -0.12499999914033463_rk
         a2 =  0.78124565447111342e-02_rk
         a3 =  0.48839648427432678e-02_rk
         a4 = -0.65752249058053233e-03_rk
         a5 = -0.14041419931494052e-02_rk
-      elseif ( 0.02_rk .le. invVal .and. invVal .lt. 0.04_rk  ) then
+      elseif (invVal >= invbound) then
         a0 =  0.99999999999974725_rk
         a1 = -0.12499999994706490_rk
         a2 =  0.78124954632722315e-02_rk
         a3 =  0.48830152125039076e-02_rk
         a4 = -0.64579205161159155e-03_rk
         a5 = -0.14628616278637035e-02_rk
-      elseif ( 0.00_rk .lt. invVal .and. invVal .lt. 0.02_rk  ) then
+      else
         a0 =  0.99999999999999999_rk
         a1 = -0.12499999999996888_rk
         a2 =  0.78124999819509772e-02_rk
         a3 =  0.48828163023526451e-02_rk
         a4 = -0.64122689844951054e-03_rk
         a5 = -0.15070098356496836e-02_rk
-      !HK:   deactivated to allow declaration as elemental function
-      !HK!      else
-      !HK!        write(logUnit(1),*) 'Not able to calc gamma function for this parameter range, stopping ...', invVal
-      !HK!        call tem_abort()
       end if
 
-      !!      funcVal = sqrt(invVal) * ( a0 + a1*invVal + a2*(invVal**2) + a3*(invVal**3) &
-      !!        &                           + a4*(invVal**4) + a5*(invVal**5) )
       funcVal = (((((a5*invVal + a4)*invVal &
         &                      + a3)*invVal &
         &                      + a2)*invVal &
         &                      + a1)*invVal &
         &                      + a0)*sqrt(invVal)
-    else
-      funcVal = Gamma(val+0.5_rk) / Gamma(val+1.0_rk)
+
     end if
 
   end function ply_lambda
