@@ -775,6 +775,7 @@ contains
     integer :: m_blocking
     !---------------------------------------------------------------------------
     iDiag_next = 1
+    m = 1 ! default value for the index of the line loop
 
 ?? IF (unroll >= 8) THEN
     ! Loop over all diagonals with a stride for unrolling. Stop when no more
