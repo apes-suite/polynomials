@@ -140,6 +140,7 @@ module ply_polyBaseExc_module
   public :: ply_fpt_exec_striped
   public :: ply_trafo_params_type
   public :: ply_legToCheb_param, ply_chebToLeg_param
+  public :: ply_lambda
   public :: assignment(=)
 
 
