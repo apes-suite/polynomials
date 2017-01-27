@@ -237,7 +237,8 @@ contains
     integer :: strip_ub
     integer :: nDofs
     integer :: orig_off
-    real(kind=rk) :: res(vlen)
+    ! real(kind=rk) :: res(vlen)
+    real(kind=rk) :: res
     !--------------------------------------------------------------------------!
 
     nDofs = size(matrix,1)
@@ -253,18 +254,21 @@ contains
         ! Naive dense matrix vector multiply here.
         ! Maybe use DGEMV from BLAS here instead (though not straight forward
         ! with the memory layout used here).
+        ! real :: original(nDofs, nIndeps)
+        ! real :: matrix(nCols, nRows)
+        ! real :: projected(nIndeps, nDofs)
         do iDof=1,nDofs
           do i=1,strip_ub
             indep = iStrip + i
             orig_off = nDofs*(indep-1)
-            res(i) = matrix(1,iDof) * original(orig_off+1)
-            do iOrig=2,nDofs-1
-              res(i) = res(i) &
-                &      + matrix(iOrig,iDof) * original(orig_off+iOrig)
+
+            ! calculate sum( matrix(1:nCols,iRow) * original(1:nDofs,indep) )
+            res = 0.0_rk
+            do iOrig = 1, nDofs
+              res = res + matrix(iOrig,iDof) * original(orig_off+iOrig)
             end do
-            projected(indep + nIndeps*(iDof-1)) = res(i) &
-              &                                 + matrix(nDofs,iDof) &
-              &                                   * original(orig_Off+nDofs)
+            projected(indep + nIndeps*(iDof-1)) = res
+
           end do
         end do
 
