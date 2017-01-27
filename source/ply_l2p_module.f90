@@ -237,8 +237,8 @@ contains
     integer :: strip_ub
     integer :: nDofs
     integer :: orig_off
-    ! real(kind=rk) :: res(vlen)
-    real(kind=rk) :: res
+    real(kind=rk) :: res(vlen), m_ij
+    ! real(kind=rk) :: res
     !--------------------------------------------------------------------------!
 
     nDofs = size(matrix,1)
@@ -257,22 +257,50 @@ contains
         ! real :: original(nDofs, nIndeps)
         ! real :: matrix(nCols, nRows)
         ! real :: projected(nIndeps, nDofs)
-        do iDof=1,nDofs
-          do i=1,strip_ub
-            indep = iStrip + i
-            orig_off = nDofs*(indep-1)
+        ! do iDof=1,nDofs
+        !   do i=1,strip_ub
+        !     indep = iStrip + i
+        !     orig_off = nDofs*(indep-1)
 
-            ! calculate sum( matrix(1:nCols,iRow) * original(1:nDofs,indep) )
-            res = 0.0_rk
-            do iOrig = 1, nDofs
-              res = res + matrix(iOrig,iDof) * original(orig_off+iOrig)
-            end do
-            projected(indep + nIndeps*(iDof-1)) = res
+        !     ! calculate sum( matrix(1:nCols,iRow) * original(1:nDofs,indep) )
+        !     res = 0.0_rk
+        !     do iOrig = 1, nDofs
+        !       res = res + matrix(iOrig,iDof) * original(orig_off+iOrig)
+        !     end do
+        !     projected(indep + nIndeps*(iDof-1)) = res
 
-          end do
+        !   end do
+        ! end do
+
+        do i = 1, strip_ub
+          res(i) = 0.0_rk
         end do
 
-      end do
+        do iDof=1,nDofs
+
+          ! calculate sum( matrix(1:nCols,iRow) * original(1:nDofs,indep) )
+          ! this loop can be unroll
+          do iOrig = 1, nDofs
+            m_ij = matrix(iOrig,iDof)
+            do i = 1, strip_ub
+              indep = iStrip + i
+              orig_off = nDofs*(indep-1)
+
+              res(i) = res(i) + m_ij * original(orig_off+iOrig)
+
+            end do
+          end do ! iOrig, i.e. cols of matrix
+
+          do i = 1, strip_ub
+            indep = iStrip + i
+            orig_off = nDofs*(indep-1)
+            projected(indep + nIndeps*(iDof-1)) = res(i)
+            res(i) = 0.0_rk
+          end do
+
+        end do ! iDof, i.e. row of matrix
+
+      end do ! iStrip = 0, nIndeps-1, vlen
       !$OMP END DO
 
     else
