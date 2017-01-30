@@ -237,7 +237,7 @@ contains
     integer :: strip_ub
     integer :: nDofs
     integer :: orig_off
-    real(kind=rk) :: res
+    real(kind=rk) :: res(vlen)
     !--------------------------------------------------------------------------!
 
     ! for NEC SX-ACE ---------------------------
@@ -281,16 +281,20 @@ contains
         ! real :: matrix(nCols, nRows)
         ! real :: projected(nIndeps, nDofs)
         do iDof=1,nDofs
+          ! On SX-ACE, compiler can do loop exchange, i.e. making i loop inner most
+          ! this results in a vector ratio about 95%
+          ! longer strip length gives better performance
+          !CDIR NODEP
           do i=1,strip_ub
             indep = iStrip + i
             orig_off = nDofs*(indep-1)
 
             ! calculate sum( matrix(1:nCols,iRow) * original(1:nDofs,indep) )
-            res = 0.0_rk
-            do iOrig = 1, nDofs
-              res = res + matrix(iOrig,iDof) * original(orig_off+iOrig)
+            res(i) = matrix(1,iDof) * original(orig_off+1)
+            do iOrig = 2, nDofs
+              res(i) = res(i) + matrix(iOrig,iDof) * original(orig_off+iOrig)
             end do
-            projected(indep + nIndeps*(iDof-1)) = res
+            projected(indep + nIndeps*(iDof-1)) = res(i)
 
           end do
         end do
