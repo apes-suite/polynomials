@@ -938,13 +938,11 @@ contains
     !> The varsys for the next subsampling level.
     type(ply_array_type), allocatable, intent(out) :: newMeshData(:)
     !----------------------------------------------------------------------!
-    type(treelmesh_type) :: newtree
     real(kind=rk), allocatable :: tmp_dat(:)
     real(kind=rk), allocatable :: work_dat(:)
     real(kind=rk), allocatable :: dofReduction(:)
     real(kind=rk) :: WV
     integer, allocatable :: map2global(:)
-    integer :: pointCoord(4)
     integer :: iVar
     integer :: iDof
     integer :: iComp
