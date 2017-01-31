@@ -1,8 +1,5 @@
 module ply_l2p_module
-  use env_module,                only: rk, labelLen
-
-  use aotus_module,              only: flu_State, aot_get_val
-  use aot_table_module,          only: aot_table_open, aot_table_close
+  use env_module,                only: rk
 
   use tem_compileconf_module,    only: vlen
 
@@ -12,9 +9,7 @@ module ply_l2p_module
     &                                    ply_create_surface_gauss_points_cube_1d, &
     &                                    ply_gaussLegPoints
   use ply_modg_basis_module,     only: legendre_1D
-  use ply_l2p_header_module,     only: ply_l2p_header_type
-  use ply_nodes_module,          only: init_gauss_nodes, ply_faceNodes_type, &
-    &                                  init_gauss_nodes_2d, init_gauss_nodes_1d
+  use ply_nodes_module,          only: ply_faceNodes_type
 
   implicit none
 
@@ -26,7 +21,6 @@ module ply_l2p_module
     real(kind=rk), allocatable :: leg2node(:,:)
     real(kind=rk), allocatable :: node2leg(:,:)
   end type ply_l2p_type
- 
 
   interface assignment(=)
     module procedure Copy_ply_l2p
@@ -205,8 +199,11 @@ contains
   !! The actual direction of the operation depends on the passed matrix.
   !! matrix = l2p%leg2node will do the modal to nodal transformation
   !! matrix = l2p%node2leg will do the nodal to modal transformation
-  subroutine ply_l2_projection(nIndeps, projected, original, matrix)
+  subroutine ply_l2_projection(nDofs, nIndeps, projected, original, matrix)
     !--------------------------------------------------------------------------!
+    !> Number of degree of freedoms
+    integer, intent(in) :: nDofs
+
     !> Number of values that can be computed independently.
     integer, intent(in) :: nIndeps
 
@@ -215,56 +212,26 @@ contains
     !! Size has to be nIndeps*size(matrix,1), and the layout is changed here
     !! when compared to the original array, as the projected direction moves
     !! to the end.
-    real(kind=rk), intent(out) :: projected(:)
+    real(kind=rk), intent(out) :: projected(nIndeps, nDofs)
 
     !> Original data.
     !!
     !! Size has to be size(matrix,1) and the direction to be projected has to
     !! be the fastest running one.
-    real(kind=rk), intent(in) :: original(:)
+    real(kind=rk), intent(in) :: original(nDofs, nIndeps)
 
     !> Matrix to apply in this operation.
     !!
     !! The matrix defines wether this is a modal to nodal transformation or the
     !! other way around.
-    real(kind=rk), intent(in) :: matrix(:,:)
+    real(kind=rk), intent(in) :: matrix(nDofs,nDofs)
     !--------------------------------------------------------------------------!
-    integer :: i
-    integer :: iStrip
-    integer :: indep
-    integer :: iDof
-    integer :: iOrig
-    integer :: strip_ub
-    integer :: nDofs
-    integer :: orig_off
-    real(kind=rk) :: res(vlen)
+    integer :: iRow, iCol, iCell, iStrip, strip_ub
+    real(kind=rk) :: mval
+    ! JQ: on SX-ACE, vlen=nIndeps gives the best performance
+    !     on    x86, vlen=256     gives the best performance
+    ! integer, parameter :: vlen = nIndeps
     !--------------------------------------------------------------------------!
-
-    ! for NEC SX-ACE ---------------------------
-    ! integer :: nRows, nCols, nCells, iRow, iCol, iCell
-    ! real(kind=rk) :: res(nIndeps), mval
-
-    ! nDofs = size(matrix,1)
-    ! nRows = nDofs
-    ! nCols = nDofs
-    ! nCells = nIndeps
-
-    ! do iRow = 1, nRows
-    !   res(1:nCells) = 0.0_rk
-    !   do iCol = 1, nCols
-    !     mval =  matrix(iCol,iRow)
-    !     do iCell = 1, nCells
-    !       res(iCell) = res(iCell) + mval * original(iCol+(iCell-1)*nCols)
-    !     end do
-    !   end do ! iCol = 1, nCols
-
-    !   do iCell = 1, nCells
-    !     projected((iRow-1)*nCells + iCell) = res(iCell)
-    !   end do
-    ! end do ! iRow = 1, nRows
-    ! for NEC SX-ACE ---------------------------
-
-    nDofs = size(matrix,1)
 
     if (nDofs > 1) then
 
@@ -274,32 +241,23 @@ contains
         ! Calculate the upper bound of the current strip
         strip_ub = min(iStrip + vlen, nIndeps) - iStrip
 
-        ! Naive dense matrix vector multiply here.
-        ! Maybe use DGEMV from BLAS here instead (though not straight forward
-        ! with the memory layout used here).
-        ! real :: original(nDofs, nIndeps)
-        ! real :: matrix(nCols, nRows)
-        ! real :: projected(nIndeps, nDofs)
-        do iDof=1,nDofs
-          ! On SX-ACE, compiler can do loop exchange, i.e. making i loop inner most
-          ! this results in a vector ratio about 95%
-          ! longer strip length gives better performance
-          !CDIR NODEP
-          do i=1,strip_ub
-            indep = iStrip + i
-            orig_off = nDofs*(indep-1)
+        do iRow = 1, nDofs
 
-            ! calculate sum( matrix(1:nCols,iRow) * original(1:nDofs,indep) )
-            res(i) = matrix(1,iDof) * original(orig_off+1)
-            do iOrig = 2, nDofs
-              res(i) = res(i) + matrix(iOrig,iDof) * original(orig_off+iOrig)
-            end do
-            projected(indep + nIndeps*(iDof-1)) = res(i)
-
+          do iCell = iStrip+1, iStrip+strip_ub
+            projected(iCell, iRow) = 0.0_rk
           end do
-        end do
+          do iCol = 1, nDofs
+            mval =  matrix(iCol,iRow)
+            do iCell = iStrip+1, iStrip+strip_ub
+              ! on SX-ACE, this can be identified as matrix multiplication
+              ! which results in VERY HIGH performance
+              projected(iCell, iRow) = projected(iCell, iRow) &
+                &                   + mval * original(iCol, iCell)
+            end do ! iCell
+          end do ! iCol = 1, nCols
 
-      end do ! iStrip = 0, nIndeps-1, vlen
+        end do ! iRow = 1, nRows
+      end do ! iStrip
       !$OMP END DO
 
     else
@@ -333,6 +291,7 @@ contains
     !--------------------------------------------------------------------------!
 
     call ply_l2_projection( nIndeps   = 1,         &
+      &                     nDofs     = size(trafo,1), &
       &                     projected = projected, &
       &                     original  = original,  &
       &                     matrix    = trafo      )
@@ -364,12 +323,14 @@ contains
 
     ! Transformation in X direction
     call ply_l2_projection( nIndeps   = nDofs,     &
+      &                     nDofs     = nDofs,     &
       &                     projected = projected, &
       &                     original  = original,  &
       &                     matrix    = trafo      )
 
     ! Transformation in Y direction
     call ply_l2_projection( nIndeps   = nDofs,     &
+      &                     nDofs     = nDofs,     &
       &                     projected = original,  &
       &                     original  = projected, &
       &                     matrix    = trafo      )
@@ -410,18 +371,21 @@ contains
 
     ! Transformation in X direction
     call ply_l2_projection( nIndeps   = nDofs_square, &
+      &                     nDofs     = nDofs,     &
       &                     projected = projected,    &
       &                     original  = original,     &
       &                     matrix    = trafo         )
 
     ! Transformation in Y direction
     call ply_l2_projection( nIndeps   = nDofs_square, &
+      &                     nDofs     = nDofs,     &
       &                     projected = original,     &
       &                     original  = projected,    &
       &                     matrix    = trafo         )
 
     ! Transformation in Z direction
     call ply_l2_projection( nIndeps   = nDofs_square, &
+      &                     nDofs     = nDofs,     &
       &                     projected = projected,    &
       &                     original  = original,     &
       &                     matrix    = trafo         )
