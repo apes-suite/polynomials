@@ -989,6 +989,7 @@ contains
     varLoop: do iVar=1,nVars
       nDofs = vardofs(iVar)
       nComponents = varcomps(iVar)
+      allocate(work_dat(size(MeshData(iVar)%dat)))
       work_dat = MeshData(iVar)%dat(:)
 
       allocate(tmp_dat(nDofs))
@@ -1073,6 +1074,7 @@ contains
       end do ParentElemLoop
 
       deallocate(tmp_dat)
+      deallocate(work_dat)
     end do varLoop
 
     ! Number of Elements that need refinement.
