@@ -200,6 +200,9 @@ contains
   !! matrix = l2p%leg2node will do the modal to nodal transformation
   !! matrix = l2p%node2leg will do the nodal to modal transformation
   subroutine ply_l2_projection(nDofs, nIndeps, projected, original, matrix)
+    !ICE! Directive for Cray compiler to prevent inlining of this routine,
+    !ICE! what causes the compiler to fail.
+    !dir$ inlinenever ply_l2_projection
     !--------------------------------------------------------------------------!
     !> Number of degree of freedoms
     integer, intent(in) :: nDofs
