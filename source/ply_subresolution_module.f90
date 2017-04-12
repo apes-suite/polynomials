@@ -300,18 +300,29 @@ contains
   !! This routine provides the get_element for the variable definition.
   !! It returns the coloring value for the elements in elempos with the given
   !! number of degrees of freedom.
-  subroutine ply_subres_get_elemcolor( fun, elempos, n, nDofs, res )
+  !!
+  !! The header of this subroutine must be same as tem_varSys_proc_element
+  subroutine ply_subres_get_elemcolor( fun, varSys, elempos, time, tree, nElems, nDofs, res )
     ! --------------------------------------------------------------------------
     !> Description of the method to obtain the variables, here some preset
     !! values might be stored, like the space time function to use or the
     !! required variables.
     class(tem_varSys_op_type), intent(in) :: fun
 
+    !> The variable system to obtain the variable from.
+    type(tem_varSys_type), intent(in) :: varSys
+
     !> TreeID of the element to get the variable for.
     integer, intent(in) :: elempos(:)
 
+    !> Point in time at which to evaluate the variable.
+    type(tem_time_type), intent(in)  :: time
+
+    !> global treelm mesh info
+    type(treelmesh_type), intent(in) :: tree
+
     !> Number of elements to obtain for this variable (vectorized access).
-    integer, intent(in) :: n
+    integer, intent(in) :: nElems
 
     !> Number of degrees of freedom within an element.
     integer, intent(in) :: nDofs
@@ -357,7 +368,7 @@ contains
     void = p%color%color_void(cpos)
     fill = p%color%color_fill(cpos)
 
-    do iPos = 1,n
+    do iPos = 1, nElems
 
       iElem = elempos(ipos)
       ! iElem is smaller than the first colored element's ID icol_elem and thus
