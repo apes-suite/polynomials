@@ -337,25 +337,49 @@ contains
       else
         do iTrack=1,me%tracking%control%nActive
           iConfig = me%tracking%instance(iTrack)%pntConfig
-          call hvs_output_open( out_file   = me%tracking%instance(iTrack) &
-            &                                           %output_file,     &
-            &                   use_iter   = me%tracking%config(iConfig)  &
-            &                                  %output_config%vtk         &
-            &                                  %iter_filename,            &
-            &                   mesh       = mesh,                        &
-            &                   varsys     = varsys,                      &
-            &                   time       = time                         )
+          if ( me%tracking%instance(iTrack)%subTree%useGlobalMesh ) then
+            call hvs_output_open( out_file   = me%tracking%instance(iTrack) &
+              &                                           %output_file,     &
+              &                   use_iter   = me%tracking%config(iConfig)  &
+              &                                  %output_config%vtk         &
+              &                                  %iter_filename,            &
+              &                   mesh       = mesh,                        &
+              &                   varsys     = varsys,                      &
+              &                   time       = time                         )
 
-          call hvs_output_write( out_file = me%tracking%instance(iTrack) &
-            &                                          %output_file,     &
-            &                    varsys   = varsys,                      &
-            &                    mesh     = mesh                         )
+            call hvs_output_write( out_file = me%tracking%instance(iTrack) &
+              &                                          %output_file,     &
+              &                    varsys   = varsys,                      &
+              &                    mesh     = mesh                         )
 
-          call hvs_output_close( out_file = me%tracking%instance(iTrack) &
-            &                                          %output_file,     &
-            &                    varSys   = varsys,                      &
-            &                    mesh     = mesh                         )
-        end do
+            call hvs_output_close( out_file = me%tracking%instance(iTrack) &
+              &                                          %output_file,     &
+              &                    varSys   = varsys,                      &
+              &                    mesh     = mesh                         )
+          else ! use subtree
+            call hvs_output_open( out_file   = me%tracking%instance(iTrack) &
+              &                                           %output_file,     &
+              &                   use_iter   = me%tracking%config(iConfig)  &
+              &                                  %output_config%vtk         &
+              &                                  %iter_filename,            &
+              &                   mesh       = mesh,                        &
+              &                   varsys     = varsys,                      &
+              &                   subTree  = me%tracking%instance(iTrack)%subTree,&
+              &                   time       = time                         )
+
+            call hvs_output_write( out_file = me%tracking%instance(iTrack) &
+              &                                          %output_file,     &
+              &                    varsys   = varsys,                      &
+              &                   subTree  = me%tracking%instance(iTrack)%subTree,&
+              &                    mesh     = mesh                         )
+
+            call hvs_output_close( out_file = me%tracking%instance(iTrack) &
+              &                                          %output_file,     &
+              &                    varSys   = varsys,                      &
+              &                   subTree  = me%tracking%instance(iTrack)%subTree,&
+              &                    mesh     = mesh                         )
+          end if ! useGlobalMesh
+        end do ! iTrack=1,me%tracking%control%nActive
       end if
       RETURN
     end if
