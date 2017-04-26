@@ -256,8 +256,11 @@ contains
           edgeID_3 = iEdge
           ! creat two triangles per quad, each of them needs three edges
           iTriangle = iTriangle + 2
+          write(logUnit(5),*) 'iTriangle ', iTriangle
           triangles(iTriangle-1, 1) = edgeID_3
+          write(logUnit(5),*) 'edgeID_3 ', edgeID_3
           triangles(iTriangle-1, 2) = edgeID_1
+          write(logUnit(5),*) 'edgeID_1 ', edgeID_1
           if (jj == nQuadPointsPerDir-1) then
             if (ii == 1) then
               offset = 1
@@ -516,12 +519,6 @@ contains
           &    nodes = me%body_2d%nodes,                      &
           &    faces = me%body_2d%faces,                      &
           &    nQuadPointsPerDir = me%nQuadPointsPerDir       )
-
-        !KM: Implament a routine to build up list of edges  
-        call build_faceNodes_edges_2D(               &
-          & edges             = me%edges,            &
-          & nEdges            = me%nEdges,           &
-          & nQuadPointsPerDir = me%nQuadPointsPerDir )
       end if
 
       if (scheme_dim >= 3) then
@@ -540,14 +537,7 @@ contains
           &    faces = me%body_3d%faces,                      &
           &    nQuadPointsPerDir = me%nQuadPointsPerDir       )
 
-        !KM: Implament a routine to build up list of edges and triangles 
-        call build_faceNodes_triangles_3D(           &
-          & triangles         = me%triangles,        &
-          & nTriangles        = me%nTriangles,       &
-          & edges             = me%edges,            &
-          & nEdges            = me%nEdges,           &
-          & nQuadPointsPerDir = me%nQuadPointsPerDir )
-      end if
+             end if
 
     case('l2p')
       !> Fill the L2 projection datatype
@@ -568,11 +558,11 @@ contains
           &               faces  = me%body_2d%faces             )
       end if
 
-      call ply_init_l2p(l2p    = me%body_1d%l2p,              &
-        &               degree = me%oversamp_degree,          &
-        &               nDims  = 1,                           &
-        &               nodes  = me%body_1d%nodes,            &
-        &               faces  = me%body_1d%faces             )
+        call ply_init_l2p(l2p    = me%body_1d%l2p,              &
+          &               degree = me%oversamp_degree,          &
+          &               nDims  = 1,                           &
+          &               nodes  = me%body_1d%nodes,            &
+          &               faces  = me%body_1d%faces             )
 
     case ('fxt')
       !> Fill the fxt Legendre Polynomial datatype
@@ -609,7 +599,22 @@ contains
       call tem_abort()
 
     end select
-
+       ! Routine to build up list of edges  
+      if (scheme_dim >= 2) then
+        call build_faceNodes_edges_2D(               &
+          & edges             = me%edges,            &
+          & nEdges            = me%nEdges,           &
+          & nQuadPointsPerDir = me%nQuadPointsPerDir )
+      end if
+      if (scheme_dim >= 3) then
+        !Routine to build up list of edges and triangles 
+        call build_faceNodes_triangles_3D(           &
+          & triangles         = me%triangles,        &
+          & nTriangles        = me%nTriangles,       &
+          & edges             = me%edges,            &
+          & nEdges            = me%nEdges,           &
+          & nQuadPointsPerDir = me%nQuadPointsPerDir )
+      end if
   end subroutine ply_poly_project_fillbody
   !****************************************************************************!
 
