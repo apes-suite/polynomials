@@ -50,6 +50,7 @@ module ply_poly_project_module
     &                       ply_fxt_m2n_1D,ply_fxt_m2n_3D, ply_fxt_m2n_2D, &
     &                       ply_fxt_n2m_1D,ply_fxt_n2m_3D, ply_fxt_n2m_2D, &
     &                       ply_fxt_type
+  use tem_precice_module, only: precice_available
 
   implicit none
 
@@ -599,6 +600,10 @@ contains
       call tem_abort()
 
     end select
+
+    ! Only build meshes for precice, if precice is available.
+    if (precice_available) then
+
        ! Routine to build up list of edges  
       if (scheme_dim >= 2) then
         call build_faceNodes_edges_2D(               &
@@ -615,6 +620,9 @@ contains
           & nEdges            = me%nEdges,           &
           & nQuadPointsPerDir = me%nQuadPointsPerDir )
       end if
+
+    end if
+
   end subroutine ply_poly_project_fillbody
   !****************************************************************************!
 
