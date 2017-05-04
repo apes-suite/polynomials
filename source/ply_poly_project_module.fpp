@@ -256,11 +256,8 @@ contains
           edgeID_3 = iEdge
           ! creat two triangles per quad, each of them needs three edges
           iTriangle = iTriangle + 2
-          write(logUnit(5),*) 'iTriangle ', iTriangle
           triangles(iTriangle-1, 1) = edgeID_3
-          write(logUnit(5),*) 'edgeID_3 ', edgeID_3
           triangles(iTriangle-1, 2) = edgeID_1
-          write(logUnit(5),*) 'edgeID_1 ', edgeID_1
           if (jj == nQuadPointsPerDir-1) then
             if (ii == 1) then
               offset = 1
