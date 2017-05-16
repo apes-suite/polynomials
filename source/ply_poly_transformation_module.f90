@@ -61,49 +61,40 @@ contains
     ! -------------------------------------------------------------------- !
     real(kind=rk), allocatable :: workData(:)
     real(kind=rk), allocatable :: newWorkData(:)
-    real(kind=rk), allocatable :: transform_matrix(:,:) 
     integer :: nVars, nDofs, nComponents, nChildDofs, nChilds
     integer :: iVar, max_modes
     ! -------------------------------------------------------------------- !
+
     nVars = size(varDofs)
     allocate(newVarDofs(nVars))
     allocate(newMeshData(nVars))
 
     varLoop: do iVar = 1, nVars
-      nDofs = varDofs(iVar)
       nComponents = varComps(iVar)
+      nDofs = vardofs(iVar)
 
       allocate(workData(size(meshData(iVar)%dat)))
       workData = meshData(iVar)%dat
 
-      nChildDofs = (ceiling(nint(nDofs**(1.0_rk/real(ndims, kind=rk))) &
-        &                        * dofReduction(iVar)))**ndims
-
-      if (nChildDofs > nDofs) then
-        nChildDofs = nDofs
-      elseif (nChildDofs < 1) then
+      if(subsamp%sampling_lvl .eq. subsamp%maxsub) then
         nChildDofs = 1
+      else
+        nChildDofs = (ceiling(nint(nDofs**(1.0_rk/real(ndims, kind=rk))) &
+          &                        * dofReduction(iVar)))**ndims
+
+        if (nChildDofs > nDofs) then
+          nChildDofs = nDofs
+        elseif (nChildDofs<1) then
+          nChildDofs = 1
+        end if
+       
       end if
-
-      if(subsamp%sampling_lvl == subsamp%maxsub) then
-        nChildDofs = 1
-      end if
-
-      max_modes = nint(real(nDofs, kind=rk)**(1.0_rk/real(nDims, kind=rk)))
-
-      ! Get the transformation matrix for the maximal polynomial degree.
-      allocate(transform_matrix(max_modes, max_modes))
-      call ply_transform_matrix( max_modes = max_modes,       &
-        &                        v         = transform_matrix )
-!!write(*,*) 'max_modes',max_modes
-!!write(*,*) 'transform_matrix',transform_matrix
 
       call ply_subsampleData( mesh             = mesh,             &
         &                     meshData         = workData,         &
         &                     nDofs            = nDofs,            &
         &                     nChildDofs       = nChildDofs,       &
         &                     nComponents      = nComponents,      &
-        &                     transform_matrix = transform_matrix, &
         &                     refine_tree      = refine_tree,      &
         &                     new_refine_tree  = new_refine_tree,  &
         &                     ndims            = ndims,            &
@@ -116,7 +107,6 @@ contains
       newVarDofs(iVar) = nChildDofs
 
       deallocate(workData)
-      deallocate(transform_matrix)
 
     end do varLoop
  
@@ -124,79 +114,12 @@ contains
   ! ************************************************************************ !
 
   ! ************************************************************************ !
-  !> Coefficients from the recursive formulation of legendre polynomials.
-  !! L_n = alpha * x * L_n-1 + beta * L_n-2
+  !>
   !!
-  subroutine ply_transform_matrix(max_modes, v)
-    ! -------------------------------------------------------------------- !
-    !> The number of modes in a single spatial direction.
-    !!
-    integer, intent(in) :: max_modes
-
-    !> The transformation matrix.
-    !!
-    !! Upper triangular matrix is created for shifting and lower triangular
-    !! for (-1) * shifting.
-    real(kind=rk), allocatable, intent(out) :: v(:,:)
-    ! -------------------------------------------------------------------- !
-    integer :: m, orig
-    real(kind=rk) :: shifting, scaling
-    ! -------------------------------------------------------------------- !
-    allocate(v(max_modes,max_modes))
-    v(:,:) = 0.0
-
-    scaling = 0.5
-    shifting = 0.5
-
-    !! Set the first entries of v manually.
-    v(1,1) = 1.0
-    if (max_modes > 1) then
-      v(1,2) = shifting
-      v(2,2) = scaling
-
-      if (max_modes > 2) then
-        do orig = 3,max_modes
-          v(1,orig) = ply_beta(orig-1) * v(1,orig-2)                    &
-            &       + ply_alpha(orig-1) * shifting * v(1,orig-1)        &
-            &       - scaling * ply_alpha_beta(2,orig-1) * v(2, orig-1)
-          do m = 2,orig
-            if (m < max_modes) then
-              v(m,orig) = ply_beta(orig-1) * v(m,orig-2)                        &
-                &       + ply_alpha(orig-1) * shifting * v(m,orig-1)            &
-                &       - scaling * ply_alpha_beta(m+1,orig-1) * v(m+1, orig-1) & 
-                &       + scaling * ply_alpha_frac(m-1,orig-1) * v(m-1,orig-1)  
-            else
-              !! Need to skip one summand for v(max_modes,max_modes).
-              v(m,orig) = scaling * ply_alpha_frac(m-1,orig-1) * v(m-1,orig-1)
-            end if
-          end do
-        end do
-      end if
-      !! Fill the lower triangular matrix with help of the entries in upper
-      !! triangular matrix.
-      do m = 1 , max_modes 
-        do orig = 1, m-1
-          !! 
-          if (mod((m+orig),2) /= 0) then
-            v(m ,orig) = - v(orig,m)
-          else
-            v(m ,orig) = v(orig,m)
-          end if
-        end do
-      end do
-    end if
-
-  end subroutine ply_transform_matrix
-  ! ************************************************************************ !
-
-  ! ************************************************************************ !
-  !> Coefficients from the recursive formulation of legendre polynomials.
-  !! L_n = alpha * x * L_n-1 + beta * L_n-2
   !!
-  subroutine ply_subsampleData(mesh, meshData, nDofs, nChildDofs,   &
-    &                          nComponents, transform_matrix,       &
-    &                          refine_tree, new_refine_tree, nDims, &
-    &                          subsamp, newMeshData                 )
+  subroutine ply_subsampleData(mesh, meshData, nDofs, nChildDofs,         &
+    &                          nComponents, refine_tree, new_refine_tree, &
+    &                          nDims, subsamp, newMeshData                )
     ! -------------------------------------------------------------------- !
     !> The mesh for the data.
     type(treelmesh_type), intent(in) :: mesh
@@ -212,9 +135,6 @@ contains
 
     !> Number of Components.
     integer, intent(in) :: nComponents
-
-    !> The transformation matrix for the linear transformation z=ax+b
-    real(kind=rk), allocatable, intent(in) :: transform_matrix(:,:)
 
     !> Logical array that marks all elements for refinement for the previous
     !! sampling level.
@@ -236,10 +156,19 @@ contains
     integer :: nChilds, nElems, nElemsToRefine, nElemsNotToRefine
     integer :: nParentElems, childPos, lowElemIndex, upElemIndex
     integer :: iParentElem, iChild, iElem, upChildIndex, lowChildIndex
-    integer :: oneDof, noChilds
+    integer :: oneDof, noChilds, max_modes
+    real(kind=rk), allocatable :: transform_matrix(:,:) 
     real(kind=rk), allocatable :: childData(:)
     ! -------------------------------------------------------------------- !
     nChilds = 2**nDims
+
+    max_modes = nint(real(nDofs, kind=rk)**(1.0_rk/real(nDims, kind=rk)))
+
+    ! Get the transformation matrix for the maximal polynomial degree.
+    allocate(transform_matrix(max_modes, max_modes))
+    call ply_transform_matrix( max_modes = max_modes,       &
+      &                        v         = transform_matrix )
+
     nElems = mesh%nElems
     nElemsToRefine = count(new_refine_tree)
     nElemsNotToRefine = nElems - nElemsToRefine
@@ -307,7 +236,7 @@ contains
               noChilds = 1
               call ply_projDataToChild(                                   &
                 &  parentData       = meshData(lowElemIndex:upElemIndex), &
-                &  nParentDofs      = nDofs,                              &
+                &  nParentDofs      = oneDof,                              &
                 &  nChildDofs       = oneDof,                             &
                 &  nComponents      = nComponents,                        &
                 &  nDimensions      = nDims,                              &
@@ -382,7 +311,7 @@ contains
           noChilds = 1
           call ply_projDataToChild(                                   &
             &  parentData       = meshData(lowElemIndex:upElemIndex), &
-            &  nParentDofs      = nDofs,                              &
+            &  nParentDofs      = oneDof,                              &
             &  nChildDofs       = oneDof,                             &
             &  nComponents      = nComponents,                        &
             &  nDimensions      = nDims,                              &
@@ -399,6 +328,8 @@ contains
         end if
       end do elemLoop
     end if
+
+    deallocate(transform_matrix)
 
 
   end subroutine ply_subsampleData
@@ -449,27 +380,11 @@ contains
 
     child_modes = nint(real(nChildDofs,kind=rk)         &
       &                **(1/real(nDimensions,kind=rk)))
-!!write(*,*) 'nChildDofs=',nChildDofs
-!!write(*,*) 'child_modes=',child_modes
-write(*,*) '///////////////////////////////////////////////////////////////////'
-write(*,*) 'nChilds=',nChilds
-parent_modes = 4
-child_modes = 1
 
-    ! transformation matrix looks like this:
-    ! [1.0  --  --     shift=0.5   ]
-    ! | |  0.5  --                 |
-    ! | |   |  0.25             ...|
-    ! |             0.125          |
-    ! | shift=-0.5        0.0625   |
-    ! [    :                    ...]
-
-    allocate(temp_Data(child_modes))
-    
+    allocate(temp_Data(parent_modes))
+ 
     do iDimension = 1,nDimensions
-write(*,*) ''
-write(*,*) '-------------------------------------------------------------------'
-write(*,*) 'iDimension=',iDimension
+
       if (nChilds > 1) then
         nSubElems = 2
         nChildElems_cur = 2**(iDimension)
@@ -481,7 +396,6 @@ write(*,*) 'iDimension=',iDimension
       end if
 
       stride = child_modes**(iDimension-1) * nComponents
-write(*,*) 'stride=',stride
 
       if (iDimension .eq. 1) then
 
@@ -489,61 +403,48 @@ write(*,*) 'stride=',stride
 
         ! Allocate memory for two childs and set it to zero
         if (iDimension .eq. nDimensions) then
-          allocate(childData(nChildElems_cur * parent_modes**(nDimensions-1) * &
-            &                child_modes**(nDimensions-2) * nComponents))
+          allocate(childData(nChildElems_cur * child_modes**nDimensions &
+            &                * nComponents))
           childData = 0.0_rk
         else
-          allocate(temp_childData(nChildElems_cur * parent_modes**(nDimensions-1) * &
+          allocate(temp_childData(nChildElems_cur *                         &
+            &                     parent_modes**(nDimensions-1) *           &
             &                     child_modes**(nDimensions-2) * nComponents))
           temp_childData = 0.0_rk
         end if
-
-        childElem = 0
   
         do iChildElem_prev = 1, nChildElems_prev
-write(*,*) '///////////////////////////////'
-write(*,*) 'iChildElem_prev',iChildElem_prev
           do iSubElem = 1, nSubElems
-            childElem = childElem + 1
-write(*,*) '*******************************'
-write(*,*) 'ChildElem=',ChildElem
+            childElem = iSubElem
             do iComponent = 1, nComponents
-write(*,*) '-------------------------------'
-write(*,*) 'iComponent=',iComponent
               do iIndep = 1, nIndeps
-write(*,*) '+++++++++++++++++++++++++++++++'
-write(*,*) 'iIndep=',iIndep
 
                 lower_bound = iComponent + &
                   &           (iIndep - 1) * parent_modes * nComponents
-write(*,*) 'lower_bound=',lower_bound
                 upper_bound = iIndep * parent_modes * nComponents
-write(*,*) 'upper_bound=',upper_bound
 
-                temp_data(:) = parentData(lower_bound:upper_bound:stride)
+                temp_data = parentData(lower_bound:upper_bound:stride)
 
                 do iMode = 1, child_modes
-                  do jMode = iMode, parent_modes
-  
                     child_dofPos = iComponent +                               &
                       &            (iMode-1) * nComponents +                  &
                       &            (iIndep - 1) * child_modes * nComponents + &
-                      &            (childElem-1) * nComponents * &
-                      &            child_modes**(nDimensions-2) * &
+                      &            (childElem-1) * nComponents *              &
+                      &            child_modes**(nDimensions-2) *             &
                       &            parent_modes**(nDimensions-1) 
-write(*,*) 'child_dofPos=',child_dofPos
-  
+
+                  do jMode = iMode, parent_modes
+ 
                     if (iSubElem .eq. 1) then
                       ! upper part of transform_matrix
-                      j = iMode
-                      i = jMode
-                    else
-                      ! lower part of transform_matrix
                       j = jMode
                       i = iMode
+                    else
+                      ! lower part of transform_matrix
+                      j = iMode
+                      i = jMode
                     end if
-write(*,*) 'j=',j
-write(*,*) 'i=',i
+
                     if (iDimension .eq. nDimensions) then
                       childData(child_dofpos) = childData(child_dofpos) + &
                         &                       temp_Data(jMode) *        &
@@ -561,7 +462,6 @@ write(*,*) 'i=',i
             end do
           end do
         end do
-!!call tem_abort()
 
       elseif (iDimension .eq. 2) then
 
@@ -573,74 +473,67 @@ write(*,*) 'i=',i
 
         ! Allocate memory for the four childs in y-direction
         if (iDimension .eq. nDimensions) then
-          allocate(childData(nChildElems_cur * parent_modes**(nDimensions-2) * &
-            &                child_modes**(nDimensions-1) * nComponents) )
+          allocate(childData(nChildElems_cur * child_modes**nDimensions &
+            &                * nComponents) )
           childData = 0.0_rk
         else
 
-          allocate(temp_childData(nChildElems_cur * parent_modes**(nDimensions-2) * &
+          allocate(temp_childData(nChildElems_cur *                         &
+            &                     parent_modes**(nDimensions-2) *           &
             &                     child_modes**(nDimensions-1) * nComponents))
           temp_childData = 0.0_rk
         end if
 
-        childElem = 0
-
         do iChildElem_prev = 1, nChildElems_prev
-write(*,*) '///////////////////////////////'
-write(*,*) 'iChildElem_prev=',iChildElem_prev
           do iSubElem = 1, nSubElems
-            childElem = childElem + 1
-write(*,*) '*******************************'
-write(*,*) 'ChildElem=',ChildElem
+            if(iSubElem .eq. 1) then
+              childElem = iChildElem_prev
+            else 
+              childElem = iChildElem_prev + iSubElem
+            end if
             do iComponent = 1, nComponents
               iIndep = 0
-write(*,*) '-------------------------------'
-write(*,*) 'iComponent=',iComponent
               do kMode = 1, parent_modes
                 do lMode = 1, child_modes
                   iIndep = iIndep + 1
-write(*,*) '+++++++++++++++++++++++++++++++'
-write(*,*) 'iIndep=',iIndep
 
-                  lower_bound = iComponent + (lMode-1) * nComponents +     &
-                    &           (kMode-1) * child_modes*parent_modes * nComponents + &
-                    &           (iChildElem_prev-1) * nComponents *               &
-                    &           child_modes**(nDimensions-2) * &
+                  lower_bound = iComponent + (lMode-1) * nComponents + &
+                    &           (kMode-1) * child_modes*parent_modes * &
+                    &           nComponents +                          &
+                    &           (iChildElem_prev-1) * nComponents *    &
+                    &           child_modes**(nDimensions-2) *         &
                     &           parent_modes**(nDimensions-1)
-write(*,*) 'lower_bound=',lower_bound
-                  upper_bound = kMode * parent_modes*child_modes * nComponents + &
+
+                  upper_bound = kMode * parent_modes*child_modes *  &
+                    &           nComponents +                       &
                     &           (iChildElem_prev-1) * nComponents * &
-                    &           child_modes**(nDimensions-2) * &
+                    &           child_modes**(nDimensions-2) *      &
                     &           parent_modes**(nDimensions-1)
-write(*,*) 'upper_bound=',upper_bound
 
-                  temp_data(:) = temp_childData_prev &
+                  temp_data = temp_childData_prev &
                     &            (lower_bound:upper_bound:stride)
 
                   do iMode = 1, child_modes
-                    do jMode = iMode, parent_modes
-
-                      child_dofPos = iComponent +                                &
-                        &            (iMode-1) * child_modes * nComponents +     &
-                        &            (lMode-1) * nComponents + &
-                        &            (kMode-1) * nComponents * child_modes**2 +  &
-                        &            (childElem-1) * nComponents * &
-                        &            child_modes**(nDimensions-1) * &
+                      child_dofPos = iComponent +                            &
+                        &            (iMode-1) * child_modes * nComponents + &
+                        &            (lMode-1) * nComponents +               &
+                        &            (kMode-1) * nComponents *               &
+                        &            child_modes**2 +                        &
+                        &            (childElem-1) * nComponents *           &
+                        &            child_modes**(nDimensions-1) *          &
                         &            parent_modes**(nDimensions-2)
 
-write(*,*) 'child_dofPos=',child_dofPos
-  
+                    do jMode = iMode, parent_modes
+ 
                       if (iSubElem .eq. 1) then
                         ! upper part of transform_matrix
-                        j = iMode
-                        i = jMode
-                      else
-                        ! lower part of transform_matrix
                         j = jMode
                         i = iMode
+                      else
+                        ! lower part of transform_matrix
+                        j = iMode
+                        i = jMode
                       end if
-write(*,*) 'j=',j
-write(*,*) 'i=',i
 
                       if (iDimension .eq. nDimensions) then
                         childData(child_dofpos) = childData(child_dofpos) + &
@@ -660,9 +553,10 @@ write(*,*) 'i=',i
             end do
           end do
         end do
-!!call tem_abort()
+
 
       else
+
         deallocate(temp_childData_prev)
         allocate(temp_childData_prev(size(temp_childData)))
         temp_childData_prev = temp_childData
@@ -672,61 +566,55 @@ write(*,*) 'i=',i
           &                 * nComponents))
         childData = 0.0_rk
 
-        childElem = 0
-
         do iChildElem_prev = 1, nChildElems_prev
-write(*,*) '///////////////////////////////'
-write(*,*) 'iChildElem_prev=',iChildElem_prev
           do iSubElem = 1, nSubElems
-            childElem = childElem + 1
-write(*,*) '*******************************'
-write(*,*) 'ChildElem=',ChildElem
+            if(iSubElem .eq. 1) then
+              childElem = iChildElem_prev
+            else 
+              childElem = iChildElem_prev + iSubElem + 2
+            end if
+            
             do iComponent = 1, nComponents
               iIndep = 0
-write(*,*) '*******************************'
-write(*,*) 'iComponent=',iComponent
               do kMode = 1,child_modes
                 do lMode = 1,child_modes
                   iIndep = iIndep + 1
-write(*,*) '-------------------------------'
-write(*,*) 'iIndep=',iIndep
 
                   lower_bound = iComponent + (iIndep - 1) * nComponents + &
                     &           (iChildElem_prev-1) * nComponents * &
                     &           child_modes**(nDimensions-1) * &
                     &           parent_modes**(nDimensions-2)
-write(*,*) 'lower_bound=',lower_bound
-                  upper_bound = parent_modes * child_modes**(nDimensions-1) * nComponents - &
-                    &           (nComponents - iComponent) + &
-                    &           (iChildElem_prev-1) * nComponents * &
-                    &           child_modes**(nDimensions-1) * &
-                    &           parent_modes**(nDimensions-2)
-write(*,*) 'upper_bound=',upper_bound
 
-                  temp_data(:) = temp_childData_prev(lower_bound:upper_bound:stride)
+                  upper_bound = parent_modes * child_modes**(nDimensions-1) &
+                    &           * nComponents -                             &
+                    &           (nComponents - iComponent) +                &
+                    &           (iChildElem_prev-1) * nComponents *         &
+                    &           child_modes**(nDimensions-1) *              &
+                    &           parent_modes**(nDimensions-2)
+
+                  temp_data(:) = temp_childData_prev &
+                    &            (lower_bound:upper_bound:stride)
 
                   do iMode = 1, child_modes
-                    do jMode = iMode, parent_modes
-  
-                      child_dofPos = iComponent +                                  &
-                        &            (iMode-1) * child_modes**2 * nComponents +    &
-                        &            (lMode - 1) * nComponents +                   &
-                        &            (kMode - 1) * child_modes * nComponents +  &
-                        &            (childElem - 1) * nComponents * &
+                      child_dofPos = iComponent +                              &
+                        &            (iMode-1) * child_modes**2 *              &
+                        &            nComponents +                             &
+                        &            (lMode - 1) * nComponents +               &
+                        &            (kMode - 1) * child_modes * nComponents + &
+                        &            (childElem - 1) * nComponents *           &
                         &            child_modes**nDimensions 
-write(*,*) 'child_dofPos=',child_dofPos
-  
+
+                    do jMode = iMode, parent_modes
+ 
                       if (iSubElem .eq. 1) then
                         ! upper part of transform_matrix
-                        j = iMode
-                        i = jMode
-                      else
-                        ! lower part of transform_matrix
                         j = jMode
                         i = iMode
+                      else
+                        ! lower part of transform_matrix
+                        j = iMode
+                        i = jMode
                       end if
-write(*,*) 'j=',j
-write(*,*) 'i=',i
 
                       childData(child_dofpos) = childData(child_dofpos) + &
                         &                       temp_Data(jMode) *        &
@@ -742,14 +630,86 @@ write(*,*) 'i=',i
       end if
     end do
 
-
     deallocate(temp_childData)
     deallocate(temp_childData_prev)
-    deallocate(temp_data)
-call tem_abort()
-    
+    deallocate(temp_Data)
 
   end subroutine ply_projDataToChild
+  ! ************************************************************************ !
+
+  ! ************************************************************************ !
+  !> 
+  !! 
+  !!
+  subroutine ply_transform_matrix(max_modes, v)
+    ! -------------------------------------------------------------------- !
+    !> The number of modes in a single spatial direction.
+    !!
+    integer, intent(in) :: max_modes
+
+    !> The transformation matrix.
+    !!
+    !! Upper triangular matrix is created for shifting and lower triangular
+    !! for (-1) * shifting.
+    real(kind=rk), allocatable, intent(out) :: v(:,:)
+    ! -------------------------------------------------------------------- !
+    integer :: m, orig
+    real(kind=rk) :: shifting, scaling
+    ! -------------------------------------------------------------------- !
+
+    ! transformation matrix looks like this:
+    ! [1.0  --  --     shift=0.5   ]
+    ! | |  0.5  --                 |
+    ! | |   |  0.25             ...|
+    ! |             0.125          |
+    ! | shift=-0.5        0.0625   |
+    ! [    :                    ...]
+
+    allocate(v(max_modes,max_modes))
+    v(:,:) = 0.0
+
+    scaling = 0.5
+    shifting = 0.5
+
+    !! Set the first entries of v manually.
+    v(1,1) = 1.0
+    if (max_modes > 1) then
+      v(1,2) = shifting
+      v(2,2) = scaling
+
+      if (max_modes > 2) then
+        do orig = 3,max_modes
+          v(1,orig) = ply_beta(orig-1) * v(1,orig-2)                    &
+            &       + ply_alpha(orig-1) * shifting * v(1,orig-1)        &
+            &       - scaling * ply_alpha_beta(2,orig-1) * v(2, orig-1)
+          do m = 2,orig
+            if (m < max_modes) then
+              v(m,orig) = ply_beta(orig-1) * v(m,orig-2)                        &
+                &       + ply_alpha(orig-1) * shifting * v(m,orig-1)            &
+                &       - scaling * ply_alpha_beta(m+1,orig-1) * v(m+1, orig-1) & 
+                &       + scaling * ply_alpha_frac(m-1,orig-1) * v(m-1,orig-1)  
+            else
+              !! Need to skip one summand for v(max_modes,max_modes).
+              v(m,orig) = scaling * ply_alpha_frac(m-1,orig-1) * v(m-1,orig-1)
+            end if
+          end do
+        end do
+      end if
+      !! Fill the lower triangular matrix with help of the entries in upper
+      !! triangular matrix.
+      do m = 1 , max_modes 
+        do orig = 1, m-1
+          !! 
+          if (mod((m+orig),2) /= 0) then
+            v(m ,orig) = - v(orig,m)
+          else
+            v(m ,orig) = v(orig,m)
+          end if
+        end do
+      end do
+    end if
+
+  end subroutine ply_transform_matrix
   ! ************************************************************************ !
 
   ! ************************************************************************ !

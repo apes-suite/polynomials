@@ -48,6 +48,8 @@ module ply_sampling_module
     &                                     ply_subsample_type,  &
     &                                     ply_array_type
 
+  use ply_poly_transformation_module, only: ply_Poly_Transformation
+
   implicit none
 
   private
@@ -211,14 +213,10 @@ contains
           &               ErrCode = iError,                  &
           &               default = .FALSE.                  )
 
-        if (me%dofReducFactor > 1.0_rk .or. me%dofReducFactor <= 0.0_rk) then
-          write(logunit(1),*) 'dof_reduction needs to be in'
-          write(logunit(1),*) '0.0 < dof_reduction <= 1.0'
-          call tem_abort()
-        end if
-
         if (me%adaptiveDofReduction) then
-          write(logunit(1),*) 'Reducing the degrees of freedom adaptively.'
+          write(logunit(1),*) 'Reducing the degrees of freedom adaptively ' &
+            &                 // 'with a minimum factor of', &
+            &                 me%dofReducFactor
         else
           if (me%dofReducFactor > 1.0_rk .or. me%dofReducFactor <= 0.0_rk) then
             write(logunit(1),*) 'dof_reduction needs to be in'
@@ -984,7 +982,7 @@ contains
     allocate(newVardofs(nVars))
     allocate(dofReduction(nVars))
     allocate(new_refine_tree(mesh%nElems))
-    new_refine_tree(:) = .FALSE.
+    new_refine_tree = .FALSE.
 
     varLoop: do iVar=1,nVars
       nDofs = vardofs(iVar)
@@ -1083,7 +1081,7 @@ contains
     call MPI_Allreduce( nElemsToRefine, nRefineGlobal, 1, MPI_INTEGER, &
       &                 MPI_SUM, mesh%global%comm, iError              )
 
-    ! Check for limitMemoryConsumption
+    ! Check if adaptiveDofReduction is true
     if (subsamp%adaptiveDofReduction .AND. nElemsToRefine > 0) then
       nElemsNotToRefine = mesh%nElems - nElemsToRefine
       do iVar = 1, nVars
@@ -1091,9 +1089,18 @@ contains
           &                  varcomps(iVar), kind=rk) ) /          &
           &                  ( real(nElemsToRefine * 2**ndims * vardofs(iVar) * &
           &                 varcomps(iVar), kind=rk) ))**(1.0_rk/real(ndims, kind=rk))
+
+        ! Check if the calculated dofReducFactor is smaller than the minimum
+        ! dofReducFactor.
+        if (dofReduction(iVar) < subsamp%dofReducFactor) then
+          dofReduction(iVar) = subsamp%dofReducFactor
+        end if
+
+        ! dofReducFactor can't be bigger than 1
         if (dofReduction(iVar) > 1.0_rk) then
           dofReduction(iVar) = 1.0_rk
         end if
+
       end do
     else
       dofReduction(:) = subsamp%dofReducFactor
@@ -1107,17 +1114,29 @@ contains
     ! polynomial degree to zero that means there is only one dof left 
     ! in the data representation.
 
-    call ply_QPolyProjection( subsamp         = subsamp,         &
-      &                       dofReduction    = dofReduction,    &
-      &                       tree            = mesh,            &
-      &                       meshData        = meshData,        &
-      &                       varDofs         = varDofs,         &
-      &                       ndims           = ndims,           &
-      &                       varcomps        = varcomps,        &
-      &                       refine_tree     = refine_tree,     &
-      &                       new_refine_tree = new_refine_tree, &
-      &                       newMeshData     = newMeshData,     &  
-      &                       newVarDofs      = newVarDofs       )
+    call ply_Poly_Transformation( subsamp         = subsamp,         &
+      &                           dofReduction    = dofReduction,    &
+      &                           mesh            = mesh,            &
+      &                           meshData        = meshData,        &
+      &                           varDofs         = varDofs,         &
+      &                           varComps        = varcomps,        &
+      &                           ndims           = ndims,           &
+      &                           refine_tree     = refine_tree,     &
+      &                           new_refine_tree = new_refine_tree, &
+      &                           newMeshData     = newMeshData,     &  
+      &                           newVarDofs      = newVarDofs       )
+
+!!    call ply_QPolyProjection( subsamp         = subsamp,         &
+!!      &                       dofReduction    = dofReduction,    &
+!!      &                       tree            = mesh,            &
+!!      &                       meshData        = meshData,        &
+!!      &                       varDofs         = varDofs,         &
+!!      &                       ndims           = ndims,           &
+!!      &                       varcomps        = varcomps,        &
+!!      &                       refine_tree     = refine_tree,     &
+!!      &                       new_refine_tree = new_refine_tree, &
+!!      &                       newMeshData     = newMeshData,     &  
+!!      &                       newVarDofs      = newVarDofs       )
 
     deallocate(dofReduction)
 
