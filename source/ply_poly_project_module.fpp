@@ -548,7 +548,7 @@ contains
           &                   legCoeffs = modal_data,     &
           &                   nVars     = nVars           )
       case (2)
-        call ply_LegToPnt_3D( fpt       = me%body_2d%fpt, &
+        call ply_LegToPnt_2D( fpt       = me%body_2d%fpt, &
           &                   pntVal    = nodal_data,     &
           &                   legCoeffs = modal_data,     &
           &                   nVars     = nVars           )
