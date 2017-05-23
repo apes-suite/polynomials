@@ -20,7 +20,8 @@ module ply_sampling_module
   use tem_time_module, only: tem_time_type
   use tem_tools_module, only: upper_to_lower
   use tem_topology_module, only: tem_coordofid
-  use tem_tracking_module, only: tem_tracking_type
+  use tem_tracking_module, only: tem_tracking_instance_type, &
+    &                            tem_tracking_config_type
   use tem_varsys_module, only: tem_varSys_proc_element, tem_varSys_proc_point, &
     &                          tem_varSys_proc_getParams, &
     &                          tem_varSys_proc_setParams, &
@@ -175,9 +176,9 @@ contains
   !> Sampling polynomial data from a given array and mesh to a new mesh with
   !! a new data array, where just a single degree of freedom per element is
   !! used.
-  subroutine ply_sample_data( me, orig_mesh, orig_bcs, varsys, var_degree, &
-    &                         var_space, ndims, tracking, time, new_mesh,  &
-    &                         resvars                                      )
+  subroutine ply_sample_data( me, orig_mesh, orig_bcs, varsys, var_degree,    &
+    &                         var_space, ndims, trackInst, trackConfig, time, &
+    &                         new_mesh, resvars                               )
     !> A ply_sampling_type to describe the sampling method.
     type(ply_sampling_type), intent(in) :: me
 
@@ -205,7 +206,9 @@ contains
     !> Number of dimensions in the polynomial representation.
     integer, intent(in) :: ndims
 
-    type(tem_tracking_type), intent(in) :: tracking
+    type(tem_tracking_instance_type), intent(in) :: trackInst
+
+    type(tem_tracking_config_type), intent(in) :: trackConfig
 
     type(tem_time_type), intent(in) :: time
 
@@ -273,17 +276,17 @@ contains
     select case(trim(me%method))
     case('fixed')
       cur = 0
-      call tem_refine_global_subtree( orig_mesh = orig_mesh,        &
-        &                             orig_bcs  = orig_bcs,         &
-        &                             subtree   = tracking%subtree, &
-        &                             ndims     = ndims,            &
-        &                             new_mesh  = tmp_mesh(cur),    &
-        &                             new_bcs   =  tmp_bcs(cur),    &
-        &                             restrict_to_sub = .true.      )
-      call tem_create_subTree_of( inTree  = tmp_mesh(0),             &
-        &                         bc_prop = tmp_bcs(0),              &
-        &                         subtree = tmp_subtree,             &
-        &                         inShape = tracking%header%geometry )
+      call tem_refine_global_subtree( orig_mesh = orig_mesh,         &
+        &                             orig_bcs  = orig_bcs,          &
+        &                             subtree   = trackInst%subtree, &
+        &                             ndims     = ndims,             &
+        &                             new_mesh  = tmp_mesh(cur),     &
+        &                             new_bcs   = tmp_bcs(cur),      &
+        &                             restrict_to_sub = .true.       )
+      call tem_create_subTree_of( inTree  = tmp_mesh(0),         &
+        &                         bc_prop = tmp_bcs(0),          &
+        &                         subtree = tmp_subtree,         &
+        &                         inShape = trackConfig%geometry )
       do iLevel=2,me%max_nLevels
         write(logunit(6),*) 'sampling level ', iLevel
         prev = mod(iLevel-2, 2)
@@ -305,10 +308,10 @@ contains
           deallocate(tmp_mesh(prev)%property)
           deallocate(tmp_mesh(prev)%global%property)
         end if
-        call tem_create_subTree_of( inTree  = tmp_mesh(cur),           &
-          &                         bc_prop = tmp_bcs(cur),            &
-          &                         subtree = tmp_subtree,             &
-          &                         inShape = tracking%header%geometry )
+        call tem_create_subTree_of( inTree  = tmp_mesh(cur),       &
+          &                         bc_prop = tmp_bcs(cur),        &
+          &                         subtree = tmp_subtree,         &
+          &                         inShape = trackConfig%geometry )
       end do
 
       call tem_create_tree_from_sub( intree  = tmp_mesh(cur), &
@@ -320,14 +323,14 @@ contains
       end do
 
       maxdofs = 0
-      nVars = tracking%varmap%varPos%nVals
+      nVars = trackInst%varmap%varPos%nVals
       call tem_varSys_init( me         = resvars,       &
         &                   systemName = 'sampledVars', &
         &                   length     = nVars          )
 
       allocate(vardofs(nVars))
-      do ivar=1,tracking%varmap%varPos%nVals
-        varpos = tracking%varmap%varPos%val(iVar)
+      do ivar=1,trackInst%varmap%varPos%nVals
+        varpos = trackInst%varmap%varPos%val(iVar)
         select case(var_space(varpos))
         case (q_space)
           select case(ndims)
@@ -354,16 +357,16 @@ contains
         end select
       end do
 
-      if (tracking%subtree%useGlobalMesh) then
+      if (trackInst%subtree%useGlobalMesh) then
         ! All elements are refined...
         nOrigElems = orig_mesh%nElems
         allocate( elempos(nOrigElems) )
         elempos = [ (i, i=1,nOrigElems) ]
 
       else
-        nOrigElems = tracking%subtree%nElems
+        nOrigElems = trackInst%subtree%nElems
         allocate( elempos(nOrigElems) )
-        elempos = tracking%subtree%map2global
+        elempos = trackInst%subtree%map2global
 
       end if
 
@@ -385,14 +388,14 @@ contains
         points(iChild) = point_start + ((iChild-1) * point_spacing)
       end do
 
-      varpos = tracking%varmap%varPos%val(1)
+      varpos = trackInst%varmap%varPos%val(1)
       allocate(pointval(var_degree(varpos)+1, n1D_childs))
       pointval = legendre_1D(points = points, degree = var_degree(varpos))
       lastdegree = var_degree(varpos)
 
-      do ivar=1,tracking%varmap%varPos%nVals
+      do ivar=1,trackInst%varmap%varPos%nVals
 
-        varpos = tracking%varmap%varPos%val(iVar)
+        varpos = trackInst%varmap%varPos%val(iVar)
         nComponents = varsys%method%val(varpos)%nComponents
 
         if (var_degree(varpos) /= lastdegree) then
@@ -411,7 +414,7 @@ contains
           &                      nDofs   = vardofs(iVar), &
           &                      res     = vardat         )
 
-        if (tracking%subtree%useGlobalMesh) then
+        if (trackInst%subtree%useGlobalMesh) then
 
           nChilds = (2**ndims)**me%max_nLevels
           allocate(res)
