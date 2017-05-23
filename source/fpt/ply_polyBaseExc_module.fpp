@@ -945,9 +945,7 @@ contains
 
     remainder = n - s*(params%nBlocks-1)
     ! Set the output to zero
-    !$OMP WORKSHARE
     gam = 0.0_rk
-    !$OMP END WORKSHARE
     ! Loop over all strips
 !'    do iStrip = 0,nIndeps-1,striplen
 !'      ! Calculate the upper bound of the current strip

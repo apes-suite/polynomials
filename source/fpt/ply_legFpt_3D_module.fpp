@@ -50,7 +50,6 @@ contains
    !---------------------------------------------------------------------------
    integer :: iFuncX, iFuncY, iFuncZ, funcIndex
    integer :: iFunc, iDof
-
    integer :: n, n_squared, n_cubed
    integer :: nIndeps
    ! The normfactor has to be positive for odd sum of exponents and negative
@@ -77,14 +76,6 @@ contains
    type(tem_timer_type), save :: legToPnt3dTimer
    integer :: timerHandle
    !---------------------------------------------------------------------------
-   timerHandle = tem_getNTimers(legToPnt3dTimer) 
-   if ( timerHandle == 0 ) then
-     write(*,*)     'add timer'
-     call tem_addTimer( me          = legToPnt3dTimer,  &
-       &                timerHandle = timerHandle,      &
-       &                timerName   = 'legToPnt3dTimer' )
-   end if
-   call tem_startTimer(me = legToPnt3dTimer, timerHandle = timerHandle)
 
    striplen = fpt%legToChebParams%striplen
    n = fpt%legToChebParams%n
@@ -94,31 +85,13 @@ contains
    ! number of strips to execute the fpt on in one call
    ! (usually n_squared, but a smaller value might be assigned at the end of 
    ! the array)
-   nIndeps = n_squared !'
+   nIndeps = n_squared
 
    allocate(alph(min(striplen,n_squared)*n))
    allocate(gam(min(striplen,n_squared)*n))
-   ! Dimension-by-dimension transform Legendre expansion to Chebyshev expansion
-   ! ... transformation in X direction (Leg->Cheb)
-!'   call ply_fpt_exec_striped( nIndeps = n_squared,          &
-!'     &                        alph    = legCoeffs,          &
-!'     &                        gam     = pntVal,             &
-!'     &                        params  = fpt%legToChebParams )
-!'   ! ... transformation in Y direction (Leg->Cheb)
-!'   call ply_fpt_exec_striped( nIndeps = n_squared,          &
-!'     &                        alph    = pntVal,             &
-!'     &                        gam     = legCoeffs,          &
-!'     &                        params  = fpt%legToChebParams )
-!'   ! ... transformation in Z direction (Leg->Cheb)
-!'   call ply_fpt_exec_striped( nIndeps = n_squared,          &
-!'     &                        alph    = legCoeffs,          &
-!'     &                        gam     = pntVal,             &
-!'     &                        params  = fpt%legToChebParams )
 
-! stride for reading
 
   ! z-direction
-!   stride = n_squared    
      ! original layout (n = 3):
      !  1  2  3   10 11 12   19 20 21
      !  4  5  6   13 14 15   22 23 24
@@ -150,9 +123,9 @@ contains
    zStripLoop: do iStrip = 1, n_squared, striplen
      ! iAlph is the index of the first element in a line for the transformation in 
      ! z-direction. 
-     do iAlph = iStrip, min(iStrip+striplen-1, n_squared)  !z_Trafo
+     do iAlph = iStrip, min(iStrip+striplen-1, n_squared)
        alph((iAlph-iStrip)*n+1:(iAlph-iStrip+1)*n) = &
-           & legCoeffs(iAlph::n_squared) !ztrafo
+           & legCoeffs(iAlph::n_squared)
      end do
 
      ! At the end of the array the number of computed strips might be smaller
@@ -163,44 +136,16 @@ contains
        &                legCoeffs = alph,    &
        &                pntVal    = gam      )
  
-!     if (.not. lobattoPoints) then
-!!       alph(1:n**3:n) = gam(1:n**3:n)
-!       do iDof = 1, nIndeps*n, n
-!         gam(iDof+1:iDof+n-1:2) = -0.5 * gam(iDof+1:iDof+n-1:2)
-!         gam(iDof+2:iDof+n-1:2) = 0.5 * gam(iDof+2:iDof+n-1:2)
-!       end do
-!
-!     else
-!
-!      do iFunc = 2, n-1
-!        gam(iFunc::n) = 0.5_rk *  gam(iFunc::n) 
-!      end do
-!      gam(1::n) = gam(1::n)
-!      gam(n::n) = gam(n::n)
-!!      gam = alph / (2.0_rk*(n-1))
-!
-!     end if
-!
-!write(*,*)'after z normalisation gam', gam
-!
-!     do iDof = 1,n**3, n
-!       call fftw_execute_r2r( fpt%planChebToPnt, gam(iDof:iDof+n-1), alph(iDof:iDof+n-1))
-!     end do 
-
-!    pntVal((iStrip-1)*n+1:min((iStrip+striplen-1)*n, n_cubed))  = gam(:)
-     pntVal((iStrip-1)*n+1 : (iStrip+nIndeps-1)*n)  = gam(1:nIndeps*n)
-
-     ! todo: fft on temp
-     ! temp -> pntVal (stride-1 writing)
+     pntVal((iStrip-1)*n+1 : (iStrip+nIndeps-1)*n) = gam(1:nIndeps*n)
 
    end do zStripLoop
 
   ! y-direction
 
    yStripLoop: do iStrip = 1,n_squared,striplen
-     do iAlph = iStrip, min(iStrip+striplen-1, n_squared)  !z_Trafo
+     do iAlph = iStrip, min(iStrip+striplen-1, n_squared)
        alph((iAlph-iStrip)*n+1:(iAlph-iStrip+1)*n) = &
-           & pntVal(iAlph::n_squared) !ztrafo
+           & pntVal(iAlph::n_squared)
      end do
 
      ! At the end of the array the number of computed strips might be smaller
@@ -211,48 +156,15 @@ contains
        &                legCoeffs = alph,    &
        &                pntVal    = gam      )
 
-!write(*,*)'after y exec gam', gam
-!
-!     if (.not. lobattoPoints) then
-!!       alph(1:n**3:n) = gam(1:n**3:n)
-!!      do iDof = 1, n**2
-!       do iDof = 1, nIndeps*n, n
-!         gam(iDof+1:iDof+n-1:2) = -0.5 * gam(iDof+1:iDof+n-1:2)
-!         gam(iDof+2:iDof+n-1:2) = 0.5 * gam(iDof+2:iDof+n-1:2)
-!       end do
-!
-!     else
-!
-!       do iFunc = 2, n-1
-!         gam(iFunc::n) = 0.5_rk *  gam(iFunc::n)
-!       end do
-!       gam(1::n) = gam(1::n)
-!       gam(n::n) = gam(n::n)
-!
-!     end if
-! 
-!write(*,*)'after y normalisation gam', gam
-!
-!     do iDof = 1,n**3, n
-!       call fftw_execute_r2r( fpt%planChebToPnt, gam(iDof:iDof+n-1), alph(iDof:iDof+n-1))
-!     end do 
-!
-!write(*,*)'after y fft alph', alph
-
-       ! todo: fft on temp
-       ! temp -> pntVal (stride-1 writing)
-     ! legCoeffs((iStrip-1)*n+1 : min((iStrip-1+striplen)*n, n_cubed)) &
-     !   &        = gam(:)
-     legCoeffs((iStrip-1)*n+1 : (iStrip+nIndeps-1)*n)  = gam(1:nIndeps*n)
-
+     legCoeffs((iStrip-1)*n+1 : (iStrip+nIndeps-1)*n) = gam(1:nIndeps*n)
 
    end do yStripLoop ! iStrip
 
   ! x-direction
    xStripLoop: do iStrip = 1,n_squared,striplen
-     do iAlph = iStrip, min(iStrip+striplen-1, n_squared)  !z_Trafo
+     do iAlph = iStrip, min(iStrip+striplen-1, n_squared)
        alph((iAlph-iStrip)*n+1:(iAlph-iStrip+1)*n) = &
-           & legCoeffs(iAlph::n_squared) !ztrafo
+           & legCoeffs(iAlph::n_squared)
      end do
 
      ! At the end of the array the number of computed strips might be smaller
@@ -263,174 +175,9 @@ contains
        &                legCoeffs = alph,    &
        &                pntVal    = gam      )
 
-!     if (.not. lobattoPoints) then
-!!       alph(1:n**3:n) = gam(1:n**3:n)
-!!      do iDof = 1, n**2
-!       do iDof = 1, n**3, n
-!         gam(iDof+1:iDof+n-1:2) = -0.5 * gam(iDof+1:iDof+n-1:2)
-!         gam(iDof+2:iDof+n-1:2) = 0.5 * gam(iDof+2:iDof+n-1:2)
-!       end do
-!
-!     else
-!
-!       do iFunc = 2, n-1
-!         gam(iFunc::n) = 0.5_rk * gam(iFunc::n) 
-!       end do
-!       gam(1::n) = gam(1::n)
-!       gam(n::n) = gam(n::n)
-!     end if
-!
-!write(*,*)'after x normalization gam', gam
-!
-!     do iDof = 1,nIndeps*n, n
-!       call fftw_execute_r2r( fpt%planChebToPnt, gam(iDof:iDof+n-1), alph(iDof:iDof+n-1))
-!     end do 
-
-     ! todo: fft on temp
-     ! temp -> pntVal (stride-1 writing)
-
-     ! pntVal((iStrip-1)*n+1:min((iStrip+striplen-1)*n, n_cubed))  = gam(:)
-
-     pntVal((iStrip-1)*n+1 : (iStrip+nIndeps-1)*n)  = gam(1:nIndeps*n)
+     pntVal((iStrip-1)*n+1 : (iStrip+nIndeps-1)*n) = gam(1:nIndeps*n)
 
    end do xStripLoop
-
-!   if (.not. lobattoPoints) then
-!
-!     ! Normalize the coefficients of the Chebyshev polynomials due
-!     ! to the unnormalized version of DCT-III in the FFTW.
-!     !$OMP DO
-!     do funcIndex = 1, n_cubed
-!       iFuncZ = (funcIndex-1)/n_squared + 1
-!       iDof = funcIndex - (iFuncZ-1)*n_squared
-!       iFuncY = (iDof-1)/fpt%legToChebParams%n + 1
-!       iFuncX = mod(iDof-1, fpt%legToChebParams%n) + 1
-!       legCoeffs(funcIndex) = normFactor(mod(iFuncX+iFuncY+iFuncZ,2)) &
-!         &                    * pntVal(funcIndex)
-!     end do
-!     !$OMP END DO
-!     !$OMP DO
-!     do FuncIndex = 1, n_squared
-!       legCoeffs(funcIndex) = legCoeffs(funcIndex)*2.0_rk
-!     end do
-!     !$OMP END DO
-!     !$OMP DO
-!     do iFunc = 1, n_squared
-!       iFuncZ = (iFunc-1)/fpt%legToChebParams%n + 1
-!       iFuncX = mod(iFunc-1, fpt%legToChebParams%n) + 1
-!       funcIndex = iFuncX + (iFuncZ-1) * n_squared
-!       legCoeffs(funcIndex) = legCoeffs(funcIndex)*2.0_rk
-!     end do
-!     !$OMP END DO
-!     !$OMP DO
-!     do iFunc = 1, n_squared
-!       funcIndex = 1 + (iFunc-1)*fpt%legToChebParams%n
-!       legCoeffs(funcIndex) = legCoeffs(funcIndex)*2.0_rk
-!     end do
-!     !$OMP END DO
-!  
-!     ! Transform Chebyshev expansion to point values at Chebyshev nodes
-!     ! by DCT III
-!     !$OMP SINGLE
-!     call fftw_execute_r2r( fpt%planChebToPnt, legCoeffs(:), pntVal(:) )
-!     !$OMP END SINGLE
-!   
-!   else
-!     legCoeffs(1) = pntVal(1)
-!     iFunc = fpt%legToChebParams%n
-!     legCoeffs(iFunc) = pntVal(iFunc)
-!
-!     iFunc = 1 + (fpt%legToChebParams%n-1)*fpt%legToChebParams%n
-!     legCoeffs(iFunc) = pntVal(iFunc)
-!
-!     iFunc = n_squared
-!     legCoeffs(iFunc) = pntVal(iFunc)
-!
-!     iFunc = 1 + (fpt%legToChebParams%n-1)*n_squared
-!     legCoeffs(iFunc) = pntVal(iFunc)
-!     iFunc = fpt%legToChebParams%n + (fpt%legToChebParams%n-1)*n_squared
-!     legCoeffs(iFunc) = pntVal(iFunc)
-!
-!     iFunc = 1 + (fpt%legToChebParams%n-1)*(fpt%legToChebParams%n &
-!       &                                    + n_squared)
-!     legCoeffs(iFunc) = pntVal(iFunc)
-!
-!     iFunc = n_cubed
-!     legCoeffs(iFunc) = pntVal(iFunc)
-!
-!     ! Normalize the coefficients of the Chebyshev polynomials 
-!     !$OMP DO
-!     do iFunc = 1, (fpt%legToChebParams%n-2)**3
-!       iFuncZ = (iFunc-1)/((fpt%legToChebParams%n-2)**2) + 2
-!       iDof = iFunc - (iFuncZ-2) * (fpt%legToChebParams%n-2)**2
-!       iFuncY = (iDof-1)/(fpt%legToChebParams%n-2) + 2
-!       iFuncX = mod(iDof-1, fpt%legToChebParams%n-2) + 2
-!?? copy :: posOfModgCoeffQTens(iFuncX, iFuncY, iFuncZ, fpt%legToChebParams%n-1, funcIndex)
-!       legCoeffs(funcIndex) = pntVal(funcIndex) * 0.125_rk
-!     end do
-!     !$OMP END DO
-!     !$OMP DO
-!     do iFunc = 1, (fpt%legToChebParams%n-2)**2
-!       iFuncY = (iFunc-1)/(fpt%legToChebParams%n-2) + 2
-!       iFuncX = mod(iFunc-1, fpt%legToChebParams%n-2) + 2
-!       ! first combination ...
-!?? copy :: posOfModgCoeffQTens(iFuncX, iFuncY, 1, fpt%legToChebParams%n-1, funcIndex)
-!       legCoeffs(funcIndex) = pntVal(funcIndex) * 0.25_rk
-!?? copy :: posOfModgCoeffQTens(iFuncX, iFuncY, fpt%legToChebParams%n, fpt%legToChebParams%n-1, funcIndex)
-!       legCoeffs(funcIndex) = pntVal(funcIndex) * 0.25_rk
-!       ! second combination ...
-!?? copy :: posOfModgCoeffQTens(iFuncX, 1, iFuncY, fpt%legToChebParams%n-1, funcIndex)
-!       legCoeffs(funcIndex) = pntVal(funcIndex) * 0.25_rk
-!?? copy :: posOfModgCoeffQTens(iFuncX, fpt%legToChebParams%n, iFuncY, fpt%legToChebParams%n-1, funcIndex)
-!       legCoeffs(funcIndex) = pntVal(funcIndex) * 0.25_rk
-!       ! third combination ...
-!?? copy :: posOfModgCoeffQTens(1, iFuncX, iFuncY, fpt%legToChebParams%n-1, funcIndex)
-!       legCoeffs(funcIndex) = pntVal(funcIndex) * 0.25_rk
-!?? copy :: posOfModgCoeffQTens(fpt%legToChebParams%n, iFuncX, iFuncY, fpt%legToChebParams%n-1, funcIndex)
-!       legCoeffs(funcIndex) = pntVal(funcIndex) * 0.25_rk
-!     end do
-!     !$OMP END DO
-!     !$OMP DO
-!     do iFuncX = 2, fpt%legToChebParams%n-1
-!       ! first combination ...
-!?? copy :: posOfModgCoeffQTens(iFuncX, 1, 1, fpt%legToChebParams%n-1, funcIndex)
-!       legCoeffs(funcIndex) = pntVal(funcIndex) * 0.5_rk
-!?? copy :: posOfModgCoeffQTens(iFuncX, 1, fpt%legToChebParams%n, fpt%legToChebParams%n-1, funcIndex)
-!       legCoeffs(funcIndex) = pntVal(funcIndex) * 0.5_rk
-!?? copy :: posOfModgCoeffQTens(iFuncX, fpt%legToChebParams%n, 1, fpt%legToChebParams%n-1, funcIndex)
-!       legCoeffs(funcIndex) = pntVal(funcIndex) * 0.5_rk
-!?? copy :: posOfModgCoeffQTens(iFuncX, fpt%legToChebParams%n, fpt%legToChebParams%n, fpt%legToChebParams%n-1, funcIndex)
-!       legCoeffs(funcIndex) = pntVal(funcIndex) * 0.5_rk
-!       ! second combination ...
-!?? copy :: posOfModgCoeffQTens(1, iFuncX, 1, fpt%legToChebParams%n-1, funcIndex)
-!       legCoeffs(funcIndex) = pntVal(funcIndex) * 0.5_rk
-!?? copy :: posOfModgCoeffQTens(1, iFuncX, fpt%legToChebParams%n, fpt%legToChebParams%n-1, funcIndex)
-!       legCoeffs(funcIndex) = pntVal(funcIndex) * 0.5_rk
-!?? copy :: posOfModgCoeffQTens(fpt%legToChebParams%n, iFuncX, 1, fpt%legToChebParams%n-1, funcIndex)
-!       legCoeffs(funcIndex) = pntVal(funcIndex) * 0.5_rk
-!?? copy :: posOfModgCoeffQTens(fpt%legToChebParams%n, iFuncX, fpt%legToChebParams%n, fpt%legToChebParams%n-1, funcIndex)
-!       legCoeffs(funcIndex) = pntVal(funcIndex) * 0.5_rk
-!       ! third combination ...
-!?? copy :: posOfModgCoeffQTens(1, 1, iFuncX, fpt%legToChebParams%n-1, funcIndex)
-!       legCoeffs(funcIndex) = pntVal(funcIndex) * 0.5_rk
-!?? copy :: posOfModgCoeffQTens(1, fpt%legToChebParams%n, iFuncX, fpt%legToChebParams%n-1, funcIndex)
-!       legCoeffs(funcIndex) = pntVal(funcIndex) * 0.5_rk
-!?? copy :: posOfModgCoeffQTens(fpt%legToChebParams%n, 1, iFuncX, fpt%legToChebParams%n-1, funcIndex)
-!       legCoeffs(funcIndex) = pntVal(funcIndex) * 0.5_rk
-!?? copy :: posOfModgCoeffQTens(fpt%legToChebParams%n, fpt%legToChebParams%n, iFuncX, fpt%legToChebParams%n-1, funcIndex)
-!       legCoeffs(funcIndex) = pntVal(funcIndex) * 0.5_rk
-!     end do
-!     !$OMP END DO
-!
-!     ! Transform Chebyshev expansion to point values at Chebyshev nodes by DCT I
-!     !$OMP SINGLE
-!     call fftw_execute_r2r( fpt%planChebToPnt, legCoeffs, pntVal )
-!     !$OMP END SINGLE
-! 
-!   end if
-
-  call tem_stopTimer(me= legToPnt3dTimer, timerHandle = timerHandle)
-  call tem_writeTimer(me = legToPnt3dTimer, timerHandle = timerHandle)
 
   end subroutine ply_legToPnt_3D_singVar
   !****************************************************************************
