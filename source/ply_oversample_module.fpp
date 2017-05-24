@@ -118,6 +118,8 @@ contains
     real(kind=rk), intent(inout) :: modalCoeffs(:,:)
     !--------------------------------------------------------------------------
     integer :: oversamp_degree
+    integer :: nScalars
+    integer :: iVar
     integer :: mpd1, mpd1_square, mpd1_cube
     integer :: iDegX, iDegY, iDegZ, idof, dof, dofOverSamp
     !--------------------------------------------------------------------------
@@ -126,21 +128,24 @@ contains
     mpd1 = poly_proj%min_degree + 1
     mpd1_square = mpd1**2
     mpd1_cube = mpd1**3
+    nScalars = size(modalCoeffs,2)
 
     !$OMP WORKSHARE
-    modalCoeffs(:,:) = 0.0_rk
+    modalCoeffs = 0.0_rk
     !$OMP END WORKSHARE
 
     if (poly_proj%basisType == Q_Space) then
       !$OMP DO
-      do dof = 1, mpd1_cube
-        iDegZ = (dof-1)/mpd1_square + 1
-        iDegY = (dof-1-(iDegZ-1)*mpd1_square)/mpd1+1
-        iDegX = mod(dof-1,mpd1)+1
-        dofOverSamp = iDegX + ( iDegY-1  &
-          &                     + (iDegZ-1)*(oversamp_degree+1) &
-          &                   ) * (oversamp_degree+1)
-        modalCoeffs(dofOverSamp,:) = state(dof,:)
+      do iVar=1,nScalars
+        do dof = 1, mpd1_cube
+          iDegZ = (dof-1)/mpd1_square + 1
+          iDegY = (dof-1-(iDegZ-1)*mpd1_square)/mpd1+1
+          iDegX = mod(dof-1,mpd1)+1
+          dofOverSamp = iDegX + ( iDegY-1  &
+            &                     + (iDegZ-1)*(oversamp_degree+1) &
+            &                   ) * (oversamp_degree+1)
+          modalCoeffs(dofOverSamp,iVar) = state(dof,iVar)
+        end do
       end do
       !$OMP END DO
 
@@ -184,6 +189,8 @@ contains
     real(kind=rk), intent(out) :: state(:,:)
     !--------------------------------------------------------------------------
     integer :: oversamp_degree
+    integer :: nScalars
+    integer :: iVar
     integer :: mpd1, mpd1_square, mpd1_cube
     integer :: iDegX, iDegY, iDegZ, idof, dof, dofOverSamp
     !--------------------------------------------------------------------------
@@ -193,17 +200,20 @@ contains
     mpd1 = poly_proj%min_degree + 1
     mpd1_square = mpd1**2
     mpd1_cube = mpd1**3
+    nScalars = size(modalCoeffs,2)
 
     if (poly_proj%basisType == Q_Space) then
       !$OMP DO
-      do dof = 1, mpd1_cube
-        iDegZ = (dof-1)/mpd1_square + 1
-        iDegY = (dof-1-(iDegZ-1)*mpd1_square)/mpd1+1
-        iDegX = mod(dof-1,mpd1)+1
-        dofOverSamp = iDegX + ( iDegY-1  &
-          &                     + (iDegZ-1)*(oversamp_degree+1) &
-          &                   ) * (oversamp_degree+1)
-        state(dof,:) = modalCoeffs(dofOverSamp,:)
+      do iVar=1,nScalars
+        do dof = 1, mpd1_cube
+          iDegZ = (dof-1)/mpd1_square + 1
+          iDegY = (dof-1-(iDegZ-1)*mpd1_square)/mpd1+1
+          iDegX = mod(dof-1,mpd1)+1
+          dofOverSamp = iDegX + ( iDegY-1  &
+            &                     + (iDegZ-1)*(oversamp_degree+1) &
+            &                   ) * (oversamp_degree+1)
+          state(dof,iVar) = modalCoeffs(dofOverSamp,iVar)
+        end do
       end do
       !$OMP END DO
 

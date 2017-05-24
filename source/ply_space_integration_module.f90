@@ -465,39 +465,6 @@ contains
   end subroutine ply_create_gauss_points_1d
 
 
-  !> \brief subroutine to create a linearized unique array of surface
-  !! integration points with all possible x coordinates for any surface
-  !! integration point.
-  subroutine create_linearized_line_points( num_intp_per_direction, points, &
-    &                                       refElemMin, refElemMax )
-    !--------------------------------------------------------------------------
-    integer, intent(in) :: num_intp_per_direction
-    real(kind=rk), allocatable, intent(out) :: points(:)
-    !> Left bound of the one-dimensional reference element.
-    real(kind=rk), intent(in) :: refElemMin
-    !> Right bound of the one-dimensional reference element.
-    real(kind=rk), intent(in) :: refElemMax
-    !--------------------------------------------------------------------------
-    real(kind=rk), allocatable :: gaussp1D(:)
-    real(kind=rk), allocatable :: weights1D(:)
-    !--------------------------------------------------------------------------
-
-    allocate(points(num_intp_per_direction + 2 ))
-    allocate(gaussp1D(num_intp_per_direction))
-    allocate(weights1D(num_intp_per_direction))
-
-    ! create the one dimensional gauss points first
-    call ply_gaussLegPoints( x1 = refElemMin, x2 = refElemMax, x = gaussp1D, &
-      &          w = weights1D, nIntP = num_intp_per_direction   )
-    ! first, copy the one dimensional integration points...
-    points(1:num_intp_per_direction) = gaussp1D(:)
-    ! second, append the default position on the y-z surface
-    points(num_intp_per_direction+1) = refElemMin
-    points(num_intp_per_direction+2) = refElemMax
-
-  end subroutine create_linearized_line_points
-
-
   !> subroutine to create gauss points and weights for one-dimensional
   !! integration on the interval [x1,x2].
   subroutine ply_gaussLegPoints(x1, x2, x, w, nIntP)

@@ -48,6 +48,7 @@ module ply_poly_project_module
     &                       ply_fxt_m2n_1D,ply_fxt_m2n_3D, ply_fxt_m2n_2D, &
     &                       ply_fxt_n2m_1D,ply_fxt_n2m_3D, ply_fxt_n2m_2D, &
     &                       ply_fxt_type
+  use tem_precice_module, only: precice_available
 
   implicit none
 
@@ -520,12 +521,6 @@ contains
           &    nodes = me%body_2d%nodes,                      &
           &    faces = me%body_2d%faces,                      &
           &    nQuadPointsPerDir = me%nQuadPointsPerDir       )
-
-        !KM: Implament a routine to build up list of edges  
-        call build_faceNodes_edges_2D(               &
-          & edges             = me%edges,            &
-          & nEdges            = me%nEdges,           &
-          & nQuadPointsPerDir = me%nQuadPointsPerDir )
       end if
 
       if (scheme_dim >= 3) then
@@ -544,14 +539,7 @@ contains
           &    faces = me%body_3d%faces,                      &
           &    nQuadPointsPerDir = me%nQuadPointsPerDir       )
 
-        !KM: Implament a routine to build up list of edges and triangles 
-        call build_faceNodes_triangles_3D(           &
-          & triangles         = me%triangles,        &
-          & nTriangles        = me%nTriangles,       &
-          & edges             = me%edges,            &
-          & nEdges            = me%nEdges,           &
-          & nQuadPointsPerDir = me%nQuadPointsPerDir )
-      end if
+             end if
 
     case('l2p')
       !> Fill the L2 projection datatype
@@ -572,11 +560,11 @@ contains
           &               faces  = me%body_2d%faces             )
       end if
 
-      call ply_init_l2p(l2p    = me%body_1d%l2p,              &
-        &               degree = me%oversamp_degree,          &
-        &               nDims  = 1,                           &
-        &               nodes  = me%body_1d%nodes,            &
-        &               faces  = me%body_1d%faces             )
+        call ply_init_l2p(l2p    = me%body_1d%l2p,              &
+          &               degree = me%oversamp_degree,          &
+          &               nDims  = 1,                           &
+          &               nodes  = me%body_1d%nodes,            &
+          &               faces  = me%body_1d%faces             )
 
     case ('fxt')
       !> Fill the fxt Legendre Polynomial datatype
@@ -613,6 +601,28 @@ contains
       call tem_abort()
 
     end select
+
+    ! Only build meshes for precice, if precice is available.
+    if (precice_available) then
+
+       ! Routine to build up list of edges  
+      if (scheme_dim >= 2) then
+        call build_faceNodes_edges_2D(               &
+          & edges             = me%edges,            &
+          & nEdges            = me%nEdges,           &
+          & nQuadPointsPerDir = me%nQuadPointsPerDir )
+      end if
+      if (scheme_dim >= 3) then
+        !Routine to build up list of edges and triangles 
+        call build_faceNodes_triangles_3D(           &
+          & triangles         = me%triangles,        &
+          & nTriangles        = me%nTriangles,       &
+          & edges             = me%edges,            &
+          & nEdges            = me%nEdges,           &
+          & nQuadPointsPerDir = me%nQuadPointsPerDir )
+      end if
+
+    end if
 
   end subroutine ply_poly_project_fillbody
   !****************************************************************************!
