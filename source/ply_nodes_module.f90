@@ -47,9 +47,8 @@ module ply_nodes_module
 
   !****************************************************************************!
   !> routine to intilize quadrature points, 3d
-  subroutine init_gauss_nodes(me, nodes, faces, weights, nQuadPointsPerDir)
+  subroutine init_gauss_nodes(nodes, faces, weights, nQuadPointsPerDir)
     !--------------------------------------------------------------------------!
-    type(ply_nodes_header_type), intent(in)     :: me
     real(kind=rk), allocatable, intent (inout)  :: nodes(:,:)
     type(ply_faceNodes_type), allocatable, intent (inout)  :: faces(:,:)
     integer, intent (in)           :: nQuadPointsPerDir
@@ -135,9 +134,8 @@ subroutine init_cheb_nodes(me, nodes, faces, nQuadPointsPerDir )
 
 
   !****************************************************************************!
-  subroutine init_gauss_nodes_2d(me, nodes, faces, weights, nQuadPointsPerDir)
+  subroutine init_gauss_nodes_2d(nodes, faces, weights, nQuadPointsPerDir)
     !--------------------------------------------------------------------------!
-    type(ply_nodes_header_type), intent(in)     :: me
     real(kind=rk), allocatable, intent (inout)  :: nodes(:,:)
     type(ply_faceNodes_type), allocatable, intent (inout)  :: faces(:,:)
     integer, intent (in)           :: nQuadPointsPerDir
@@ -226,9 +224,8 @@ subroutine init_cheb_nodes(me, nodes, faces, nQuadPointsPerDir )
 
 
   !****************************************************************************!
-  subroutine init_gauss_nodes_1d(me, nodes, faces, weights, nQuadPointsPerDir)
+  subroutine init_gauss_nodes_1d(nodes, faces, weights, nQuadPointsPerDir)
     !--------------------------------------------------------------------------!
-    type(ply_nodes_header_type), intent(in)     :: me
     real(kind=rk), allocatable, intent (inout)  :: nodes(:,:)
     real(kind=rk), allocatable, intent (inout)  :: weights(:)
     type(ply_faceNodes_type), allocatable, intent (inout)  :: faces(:,:)

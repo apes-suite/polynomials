@@ -35,7 +35,7 @@ module ply_space_integration_module
     real(kind=rk), allocatable :: integration_points_volume(:, :)
 
     !> Weights used for quadrature formula of volume integration.
-    !> The dimensions is numVolumePoints.
+    !! The dimensions is numVolumePoints.
     real(kind=rk), allocatable :: integration_weights_volume(:)
 
     !> The integration points to evaluate a surface integral over the
@@ -45,7 +45,7 @@ module ply_space_integration_module
     real(kind=rk), allocatable :: integration_points_surface(:,:)
 
     !> Weights used for quadrature formula of surface integration.
-    !> The dimensions is numSurfacePoints.
+    !! The dimensions is numSurfacePoints.
     real(kind=rk), allocatable :: integration_weights_surface(:)
 
     !> This vector holds all gauss point coordinates for a one dimensional
@@ -107,7 +107,7 @@ contains
     !> Right bound of the one-dimensional reference element.
     real(kind=rk), intent(in) :: refElemMax
     !---------------------------------------------------------------------------
-    integer :: i, j, k !> loop indices
+    integer :: i, j, k ! loop indices
     integer :: pointNumber
     real(kind=rk), allocatable :: gaussp1D(:)
     real(kind=rk), allocatable :: weights1D(:)
@@ -154,7 +154,7 @@ contains
     !> Right bound of the one-dimensional reference element.
     real(kind=rk), intent(in) :: refElemMax
     !---------------------------------------------------------------------------
-    integer :: i, j !> loop indices
+    integer :: i, j ! loop indices
     integer :: pointNumber
     real(kind=rk), allocatable :: gaussp1D(:)
     real(kind=rk), allocatable :: weights1D(:)
@@ -245,7 +245,7 @@ contains
     !> Left or right face of the reference element
     integer :: align
     !---------------------------------------------------------------------------
-    integer :: i, j!> loop indices
+    integer :: i, j ! loop indices
     integer :: pointNumber
     real(kind=rk), allocatable :: gaussp1D(:)
     real(kind=rk), allocatable :: weights1D(:)
@@ -439,7 +439,7 @@ contains
     !> Right bound of the one-dimensional reference element.
     real(kind=rk), intent(in) :: refElemMax
     !---------------------------------------------------------------------------
-    integer :: j!> loop indices
+    integer :: j ! loop indices
     integer :: pointNumber
     real(kind=rk), allocatable :: gaussp1D(:)
     real(kind=rk), allocatable :: weights1D(:)

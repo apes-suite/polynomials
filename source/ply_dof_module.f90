@@ -116,15 +116,13 @@ contains
   end subroutine nextModgCoeffPTens
 
 
-  !> The x, y and z ansatz degrees are turned into the degrees of the next
+  !> The x and y ansatz degrees are turned into the degrees of the next
   !! ansatz function in the linearized Q tensor
-  pure subroutine nextModgCoeffQTens2D(ansFuncX, ansFuncY, ansFuncZ, maxdegree)
+  pure subroutine nextModgCoeffQTens2D(ansFuncX, ansFuncY, maxdegree)
     !> Ansatz function index in x direction. First ansatz function has index 1.
     integer, intent(inout) :: ansFuncX
     !> Ansatz function index in y direction. First ansatz function has index 1.
     integer, intent(inout) :: ansFuncY
-    !> Ansatz function index in z direction. First ansatz function has index 1.
-    integer, intent(inout) :: ansFuncZ
     !> Maximal polynomial degree
     integer, intent(in) :: maxdegree
 
@@ -143,17 +141,13 @@ contains
   end subroutine nextModgCoeffQTens2D
 
 
-  !> The x, y and z ansatz degrees are turned into the degrees of the next
+  !> The x and y ansatz degrees are turned into the degrees of the next
   !! ansatz function in the layered P list
-  pure subroutine nextModgCoeffPTens2D(ansFuncX, ansFuncY, ansFuncZ, maxdegree)
+  pure subroutine nextModgCoeffPTens2D(ansFuncX, ansFuncY)
     !> Ansatz function index in x direction. First ansatz function has index 1.
     integer, intent(inout) :: ansFuncX
     !> Ansatz function index in y direction. First ansatz function has index 1.
     integer, intent(inout) :: ansFuncY
-    !> Ansatz function index in z direction. First ansatz function has index 1.
-    integer, intent(inout) :: ansFuncZ
-    ! Maximal polynomial degree
-    integer, intent(in) :: maxDegree
 
     ! - ansatz indices are arranged in layers. Within each layer, the total
     !   degree remains constant.
@@ -175,34 +169,22 @@ contains
   end subroutine nextModgCoeffPTens2D
 
 
-  !> The x, y and z ansatz degrees are turned into the degrees of the next
+  !> The x ansatz degree is turned into the degree of the next
   !! ansatz function in the linearized Q tensor
-  pure subroutine nextModgCoeffQTens1D(ansFuncX, ansFuncY, ansFuncZ, maxdegree)
+  pure subroutine nextModgCoeffQTens1D(ansFuncX)
     !> Ansatz function index in x direction. First ansatz function has index 1.
     integer, intent(inout) :: ansFuncX
-    !> Ansatz function index in y direction. First ansatz function has index 1.
-    integer, intent(inout) :: ansFuncY
-    !> Ansatz function index in z direction. First ansatz function has index 1.
-    integer, intent(inout) :: ansFuncZ
-    !> Maximal polynomial degree
-    integer, intent(in) :: maxdegree
 
     ansFuncX = ansFuncX +1
 
   end subroutine nextModgCoeffQTens1D
 
 
-  !> The x, y and z ansatz degrees are turned into the degrees of the next
+  !> The x ansatz degree is turned into the degree of the next
   !! ansatz function in the layered P list
-  pure subroutine nextModgCoeffPTens1D(ansFuncX, ansFuncY, ansFuncZ, maxdegree)
+  pure subroutine nextModgCoeffPTens1D(ansFuncX)
     !> Ansatz function index in x direction. First ansatz function has index 1.
     integer, intent(inout) :: ansFuncX
-    !> Ansatz function index in y direction. First ansatz function has index 1.
-    integer, intent(inout) :: ansFuncY
-    !> Ansatz function index in z direction. First ansatz function has index 1.
-    integer, intent(inout) :: ansFuncZ
-    ! Maximal polynomial degree
-    integer, intent(in) :: maxDegree
 
     ansFuncX = ansFuncX +1
 

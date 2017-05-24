@@ -211,11 +211,8 @@ contains
 
   !***************************************************************************!
   !> Fill ups the bodys accroding to the DA.
-  subroutine ply_fill_project_list( minLevel, maxLevel, proj_list, &
-    &                               dyn_projectArray, scheme_dim   )
+  subroutine ply_fill_project_list( proj_list, dyn_projectArray, scheme_dim )
   !---------------------------------------------------------------------------!
-    integer, intent(in)           :: minLevel
-    integer, intent(in)           :: maxLevel
     type(ply_poly_project_type), intent(inout), allocatable :: proj_list(:)
     type(dyn_ProjectionArray_type), intent(in) :: dyn_projectArray
     integer, intent(in) :: scheme_dim
@@ -431,7 +428,6 @@ contains
       !! no lobatto points for gauss nodes implemented
       if (scheme_dim >= 3) then
         call ply_init_l2p(l2p    = me%body_3d%l2p,              &
-          &               header = proj_init%header%l2p_header, &
           &               degree = me%oversamp_degree,          &
           &               nDims  = 3,                           &
           &               nodes  = me%body_3d%nodes,            &
@@ -440,7 +436,6 @@ contains
 
       if (scheme_dim >= 2) then
         call ply_init_l2p(l2p    = me%body_2d%l2p,              &
-          &               header = proj_init%header%l2p_header, &
           &               degree = me%oversamp_degree,          &
           &               nDims  = 2,                           &
           &               nodes  = me%body_2d%nodes,            &
@@ -448,7 +443,6 @@ contains
       end if
 
       call ply_init_l2p(l2p    = me%body_1d%l2p,              &
-        &               header = proj_init%header%l2p_header, &
         &               degree = me%oversamp_degree,          &
         &               nDims  = 1,                           &
         &               nodes  = me%body_1d%nodes,            &
@@ -580,10 +574,9 @@ contains
 
       case (1)
         do iVar = 1,nVars
-          call ply_fxt_m2n_1D( fxt = me%body_1d%fxt,             &
-            &               modal_data = modal_data(:,iVar),     &
-            &               nodal_data = nodal_data(:,iVar),     &
-            &              oversamp_degree = me%oversamp_degree  )
+          call ply_fxt_m2n_1D( fxt = me%body_1d%fxt,         &
+            &               modal_data = modal_data(:,iVar), &
+            &               nodal_data = nodal_data(:,iVar)  )
         end do
       end select
     end select
@@ -674,11 +667,10 @@ contains
 
       case (1)
         do iVar = 1, nVars 
-          call ply_fxt_n2m_1D(                                  &
-            &         fxt              = me%body_1d%fxt,        &
-            &         nodal_data       = nodal_data(:,iVar),    &
-            &         modal_data       = modal_data(:,iVar),    &
-            &         oversamp_degree  = me%oversamp_degree     )
+          call ply_fxt_n2m_1D(                               &
+            &         fxt              = me%body_1d%fxt,     &
+            &         nodal_data       = nodal_data(:,iVar), &
+            &         modal_data       = modal_data(:,iVar)  )
         end do
       end select
 

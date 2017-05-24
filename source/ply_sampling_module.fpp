@@ -81,6 +81,7 @@ module ply_sampling_module
     real(kind=rk), allocatable :: dat(:)
   end type capsule_array_type
 
+
 contains
 
 
@@ -231,6 +232,7 @@ contains
     integer :: pointCoord(4)
     integer :: nOrigElems
     integer :: nVars
+    integer :: nDofs
     integer :: nComponents
     integer :: nChilds
     integer :: cur, prev
@@ -397,6 +399,7 @@ contains
 
         varpos = trackInst%varmap%varPos%val(iVar)
         nComponents = varsys%method%val(varpos)%nComponents
+        nDofs = nComponents*vardofs(iVar)
 
         if (var_degree(varpos) /= lastdegree) then
           deallocate(pointval)
@@ -405,14 +408,14 @@ contains
           lastdegree = var_degree(varpos)
         end if
 
-        call varSys%method%val(varpos)                    &
-          &        %get_element( varSys  = varSys,        &
-          &                      elempos = elempos,       &
-          &                      time    = time,          &
-          &                      tree    = orig_mesh,     &
-          &                      nElems  = nOrigElems,    &
-          &                      nDofs   = vardofs(iVar), &
-          &                      res     = vardat         )
+        call varSys%method%val(varpos)                               &
+          &        %get_element( varSys  = varSys,                   &
+          &                      elempos = elempos,                  &
+          &                      time    = time,                     &
+          &                      tree    = orig_mesh,                &
+          &                      nElems  = nOrigElems,               &
+          &                      nDofs   = vardofs(iVar),            &
+          &                      res     = vardat(:ndofs*nOrigElems) )
 
         if (trackInst%subtree%useGlobalMesh) then
 
@@ -456,7 +459,7 @@ contains
             end do
 
             do iElem=1,nOrigElems
-              parentpos = (iElem-1)*vardofs(iVar)*nComponents
+              parentpos = (iElem-1)*nDofs
               childpos = (iElem - 1)*nChilds*nComponents &
                 &      + (iChild - 1)*nComponents
               do iComp=1,nComponents
@@ -475,13 +478,9 @@ contains
                 case (2)
                   call nextModgCoeffQTens2D( ansFuncX  = ans(1),            &
                     &                        ansFuncY  = ans(2),            &
-                    &                        ansFuncZ  = ans(3),            &
                     &                        maxdegree = var_degree(varpos) )
                 case (1)
-                  call nextModgCoeffQTens1D( ansFuncX  = ans(1),            &
-                    &                        ansFuncY  = ans(2),            &
-                    &                        ansFuncZ  = ans(3),            &
-                    &                        maxdegree = var_degree(varpos) )
+                  call nextModgCoeffQTens1D( ansFuncX  = ans(1) )
                 end select
               else
                 select case(ndims)
@@ -491,15 +490,10 @@ contains
                     &                      ansFuncZ  = ans(3),            &
                     &                      maxdegree = var_degree(varpos) )
                 case (2)
-                  call nextModgCoeffPTens2D( ansFuncX  = ans(1),            &
-                    &                        ansFuncY  = ans(2),            &
-                    &                        ansFuncZ  = ans(3),            &
-                    &                        maxdegree = var_degree(varpos) )
+                  call nextModgCoeffPTens2D( ansFuncX  = ans(1), &
+                    &                        ansFuncY  = ans(2)  )
                 case (1)
-                  call nextModgCoeffPTens1D( ansFuncX  = ans(1),            &
-                    &                        ansFuncY  = ans(2),            &
-                    &                        ansFuncZ  = ans(3),            &
-                    &                        maxdegree = var_degree(varpos) )
+                  call nextModgCoeffPTens1D( ansFuncX  = ans(1) )
                 end select
               end if
               legval = pointval(ans(1), pointCoord(1))
@@ -507,7 +501,7 @@ contains
                 legval = legval * pointval(ans(ii), pointCoord(ii))
               end do
               do iElem=1,nOrigElems
-                parentpos = (iElem-1)*vardofs(iVar)*nComponents &
+                parentpos = (iElem-1)*nDofs &
                   &       + (iDof-1)*nComponents
                 childpos = (iElem - 1)*nChilds*nComponents &
                   &      + (iChild - 1)*nComponents

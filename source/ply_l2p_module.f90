@@ -59,10 +59,9 @@ contains
 
   !****************************************************************************!
   !> Initialize the transformations via L2 projections.
-  subroutine ply_init_l2p(l2p, header, degree, nDims, nodes, faces)
+  subroutine ply_init_l2p(l2p, degree, nDims, nodes, faces)
     !--------------------------------------------------------------------------!
     type(ply_l2p_type), intent(out)       :: l2p
-    type(ply_l2p_header_type), intent(in)     :: header
     integer, intent(in)                       :: degree
     integer, intent(in)                       :: nDims
     real(kind=rk), intent(out), allocatable   :: nodes(:,:)
@@ -137,6 +136,7 @@ contains
         nodes(lb:ub,1) = gaussP1D
         nodes(lb:ub,2) = gaussP1D(iPoint)
       end do
+      nodes(:,3) = 0.0_rk
 
       allocate( faces(2,2) )
       do iDir = 1,2
