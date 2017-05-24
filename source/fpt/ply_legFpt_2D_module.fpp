@@ -8,15 +8,12 @@ module ply_legFpt_2D_module
   use env_module, only: rk
   use tem_aux_module, only: tem_abort
   use tem_logging_module, only: logUnit
-  use ply_polyBaseExc_module, only: ply_trafo_params_type, &
-                                  & ply_fpt_init, &
-                                  & ply_fpt_exec_striped, &
-                                  & ply_legToCheb_param, ply_chebToLeg_param, &
-                                  & assignment(=)
   use ply_nodes_module,       only: ply_faceNodes_type
   use fftw_wrap
   use ply_legFpt_module,      only: ply_legFpt_type, &
-                                  & assignment(=)
+    &                               ply_legToPnt, &
+    &                               ply_pntToLeg, &
+    &                               assignment(=)
 
   implicit none
 
@@ -32,124 +29,16 @@ module ply_legFpt_2D_module
     module procedure ply_pntToLeg_2D_multVar
   end interface ply_pntToLeg_2D
 
-  public :: ply_init_legFpt_2D, ply_legToPnt_2D, ply_pntToLeg_2D
+  public :: ply_legToPnt_2D, ply_pntToLeg_2D
 
 
 contains
 
 
   !****************************************************************************
-  !> Subroutine to initialize the fast polynomial transformation
-  !! for Legendre expansion.
-  !! VK: change maxPolyDegree to number of quadpoints to include the dealising factor
-  subroutine ply_init_legFpt_2D( maxPolyDegree, nVars, fpt, blocksize, &
-    &                            lobattoPoints, subblockingWidth )
-    !---------------------------------------------------------------------------
-    integer, intent(in) :: maxPolyDegree
-    integer, intent(in) :: nVars
-    type(ply_legFpt_type), intent(inout) :: fpt
-    !> The blocksize of the underlying fast Legendre to Chebyshev transformation.
-    integer, intent(in), optional :: blocksize
-    !> Use Chebyshev-Lobtatto Points (true) or simple Chebyshev points (false)
-    logical, intent(in), optional :: lobattoPoints
-    !> The width of the subblocks used during the unrolled base exchange to
-    !! ensure a better cache usage.
-    integer, optional, intent(in) :: subblockingWidth
-    !---------------------------------------------------------------------------
-    integer :: n
-    real(kind=rk), allocatable :: tmpOut(:,:), tmpIn(:,:)
-    logical :: lob
-    !$ integer :: fftwMultThread
-    !---------------------------------------------------------------------------
-
-    lob = .false.
-    if(present(lobattoPoints)) then
-      if (lobattoPoints) then
-        lob = .true.
-      end if
-    end if
-
-    ! init the fast Legendre to Chebyshev transformation.
-    call ply_fpt_init( n                = maxPolyDegree + 1,   &
-      &                params           = fpt%legToChebParams, &
-      &                trafo            = ply_legToCheb_param, &
-      &                blocksize        = blocksize,           &
-      &                subblockingWidth = subblockingWidth     )
-    call ply_fpt_init( n                = maxPolyDegree + 1,   &
-      &                params           = fpt%chebToLegParams, &
-      &                trafo            = ply_chebToLeg_param, &
-      &                blocksize        = blocksize,           &
-      &                subblockingWidth = subblockingWidth     )
-
-    ! Create the buffers for the intermediate arrays
-    n = fpt%legToChebParams%n**2
-
-    ! Temprorary arrays to initialize FFTW real->real transformations
-    allocate( tmpIn(n, nVars) )
-    allocate( tmpOut(n, nVars) )
-
-    ! If we have OpenMP parallelism, we have to init FFTW with the
-    ! corrseponding function call
-    !$ fftwMultThread = fftw_init_threads()
-    !$ if(fftwMultThread.eq.0) then
-    !$   write(logUnit(1),*) 'ERROR in ply_init_legFpt_2D: Not able to init OpenMP parallel FFTW, stopping...'
-    !$   call tem_abort()
-    !$ end if
-
-    ! Tell FFTW how many threads at max we want to use: at max
-    ! we use the number of OMP threads in the current team.
-    !$ call fftw_plan_with_nthreads( omp_get_max_threads() )
-
-    if(.not.lob) then
-      ! Init the DCT III ( Leg -> Point values )
-      fpt%planChebToPnt = fftw_plan_r2r_2d( n0 = fpt%legToChebParams%n,&
-                                          & n1 = fpt%legToChebParams%n, &
-                                          & in = tmpIn, &!legCoeffs, &
-                                          & out = tmpOut, &!fpt%pntVal, &
-                                          & kind0 = FFTW_REDFT01, &
-                                          & kind1 = FFTW_REDFT01, &
-                                          & flags = FFTW_ESTIMATE )
-
-      ! Init the DCT II ( Point values -> Leg )
-      fpt%planPntToCheb = fftw_plan_r2r_2d( n0 = fpt%legToChebParams%n, &
-                                          & n1 = fpt%legToChebParams%n, &
-                                          & in = tmpIn, & !fpt%pntVal,&
-                                          & out = tmpOut, & !legCoeffs, &
-                                          & kind0 = FFTW_REDFT10, &
-                                          & kind1 = FFTW_REDFT10, &
-                                          & flags = FFTW_ESTIMATE )
-
-      deallocate( tmpIn, tmpOut )
-    else
-      ! Init the DCT I  (Leg -> nodal): To be used with a normalization factor for trafo ...
-      fpt%planChebToPnt = fftw_plan_r2r_2d( n0 = fpt%legToChebParams%n,&
-                                          & n1 = fpt%legToChebParams%n, &
-                                          & in = tmpIn, &!legCoeffs, &
-                                          & out = tmpOut, &!fpt%pntVal, &
-                                          & kind0 = FFTW_REDFT00, &
-                                          & kind1 = FFTW_REDFT00, &
-                                          & flags = FFTW_ESTIMATE )
-
-      ! Init the DCT I  (nodal -> Leg): To be used with a normalization factor for trafo ...
-      fpt%planPntToCheb = fftw_plan_r2r_2d( n0 = fpt%legToChebParams%n, &
-                                          & n1 = fpt%legToChebParams%n, &
-                                          & in = tmpIn, & !fpt%pntVal,&
-                                          & out = tmpOut, & !legCoeffs, &
-                                          & kind0 = FFTW_REDFT00, &
-                                          & kind1 = FFTW_REDFT00, &
-                                          & flags = FFTW_ESTIMATE )
-
-      deallocate( tmpIn, tmpOut )
-    end if
-
-  end subroutine ply_init_legFpt_2D
-  !****************************************************************************
-
-
-  !****************************************************************************
   !> Subroutine to transform Legendre expansion to point values
   !! at Chebyshev nodes.
-  subroutine ply_legToPnt_2D_singVar( fpt, legCoeffs, pntVal, lobattoPoints )
+  subroutine ply_legToPnt_2D_singVar( fpt, legCoeffs, pntVal )
    !---------------------------------------------------------------------------
    !> The FPT parameters.
    type(ply_legFpt_type), intent(inout) :: fpt
@@ -161,82 +50,68 @@ contains
    real(kind=rk), intent(inout) :: legCoeffs(:)
    !> The resulting point values (Chebyshev nodes).
    real(kind=rk), intent(inout) :: pntVal(:)
-   logical, intent(in) :: lobattoPoints
    !---------------------------------------------------------------------------
    integer :: iFunc, iFuncX, iFuncY, funcIndex
+   integer :: striplen, iStrip, n, iAlph, nIndeps
+   integer :: iDof
+   real(kind=rk), dimension(:), allocatable :: alph
+   real(kind=rk), dimension(:), allocatable :: gam
    real(kind=rk) :: normFactor
    !---------------------------------------------------------------------------
 
-   ! Dimension-by-dimension transform Legendre expansion to Chebyshev expansion
-   ! ... transformation in X direction (Leg->Cheb)
-   call ply_fpt_exec_striped( nIndeps = fpt%legToChebParams%n, &
-     &                        alph    = legCoeffs,             &
-     &                        gam     = pntVal,                &
-     &                        params  = fpt%legToChebParams    )
+   striplen = fpt%legToChebParams%striplen
+   n = fpt%legToChebParams%n
 
-   ! ... transformation in Y direction (Leg->Cheb)
-   call ply_fpt_exec_striped( nIndeps = fpt%legToChebParams%n, &
-     &                        alph    = pntVal,                &
-     &                        gam     = legCoeffs,             &
-     &                        params  = fpt%legToChebParams    )
+   allocate(alph(min(striplen, n)*n))
+   allocate(gam(min(striplen, n)*n))
+   ! original layout (n = 3):
+   !  1  2  3
+   !  4  5  6
+   !  7  8  9
 
-   if (.not. lobattoPoints) then
-
-     ! Normalize the coefficients of the Chebyshev polynomials due
-     ! to the unnormalized version of DCT-III in the FFTW.
-     !$OMP DO
-     do iFunc = 1, fpt%legToChebParams%n**2
-       iFuncX = (iFunc-1)/fpt%legToChebParams%n+1
-       iFuncY = mod(iFunc-1,fpt%legToChebParams%n)+1
-       normFactor =   ((-1)**(iFuncX-1)) &
-                  & * ((-1)**(iFuncY-1)) * 0.25_rk
-       legCoeffs(ifunc) = normFactor * legCoeffs(ifunc)
+   ! layout after y-trafo:
+   !  1  4  7
+   !  2  5  8
+   !  3  6  9
+   yStripLoop: do iStrip = 1, n, striplen
+     ! iAlph is the index of the first element in a line for the transformation in 
+     ! y-direction. 
+     do iAlph = iStrip, min(iStrip+striplen-1, n)  !y-Trafo
+       alph((iAlph-iStrip)*n+1:(iAlph-iStrip+1)*n) = &
+           & legCoeffs(iAlph::n) !ytrafo
      end do
-     !$OMP END DO
-     !$OMP DO
-     do iFunc = 1, fpt%legToChebParams%n
-       ifuncY = 1 + (ifunc-1)*fpt%legToChebParams%n
-       legCoeffs(iFunc) = legCoeffs(iFunc)*2.0_rk
-       legCoeffs(iFuncY) = legCoeffs(iFuncY)*2.0_rk
+
+     ! At the end of the array the number of computed strips might be smaller
+     nIndeps = min(striplen, n-iStrip+1)
+ 
+     call ply_legToPnt( fpt       = fpt,     &
+       &                nIndeps   = nIndeps, &
+       &                legCoeffs = alph,    &
+       &                pntVal    = gam      )
+
+     ! Write gam to pntVal array
+     pntVal((iStrip-1)*n+1 : (iStrip+nIndeps-1)*n) = gam(1:nIndeps*n)
+
+   end do yStripLoop
+
+  ! x-direction
+   xStripLoop: do iStrip = 1, n, striplen
+     do iAlph = iStrip, min(iStrip+striplen-1, n)  
+       alph((iAlph-iStrip)*n+1:(iAlph-iStrip+1)*n) = &
+           & pntVal(iAlph::n) !ztrafo
      end do
-     !$OMP END DO
 
-     ! Transform Chebyshev expansion to point values at Chebyshev nodes by DCT III
-     !$OMP SINGLE
-     call fftw_execute_r2r( fpt%planChebToPnt, legCoeffs(:), pntVal(:) )
-     !$OMP END SINGLE
+     ! At the end of the array the number of computed strips might be smaller
+     nIndeps = min(striplen, n-iStrip+1)
 
-   else
+     call ply_legToPnt( fpt       = fpt,     &
+       &                nIndeps   = nIndeps, &
+       &                legCoeffs = alph,    &
+       &                pntVal    = gam      )
 
-     ! Normalization factor for the DCT I of the transformation to point values
-     !$OMP DO
-     do iFunc = 1, (fpt%legToChebParams%n-2)**2
-       iFuncX = (iFunc-1)/(fpt%legToChebParams%n-2)+2
-       iFuncY = mod(iFunc-1,fpt%legToChebParams%n-2)+2
-?? copy :: posOfModgCoeffQTens(iFuncX, iFuncY, 1, fpt%legToChebParams%n-1, funcIndex)
-       legCoeffs(funcIndex) = legCoeffs(funcIndex) / 4.0_rk
-     end do
-     !$OMP END DO
-     !$OMP DO
-     do iFuncX = 2, fpt%legToChebParams%n-1
-?? copy :: posOfModgCoeffQTens(1, iFuncX, 1, fpt%legToChebParams%n-1, funcIndex)
-       legCoeffs(funcIndex) = legCoeffs(funcIndex)/2.0_rk
-?? copy :: posOfModgCoeffQTens(iFuncX, 1, 1, fpt%legToChebParams%n-1, funcIndex)
-       legCoeffs(funcIndex) = legCoeffs(funcIndex)/2.0_rk
-?? copy :: posOfModgCoeffQTens(fpt%legToChebParams%n, iFuncX, 1, fpt%legToChebParams%n-1, funcIndex)
-       legCoeffs(funcIndex) = legCoeffs(funcIndex)/2.0_rk
-?? copy :: posOfModgCoeffQTens(iFuncX, fpt%legToChebParams%n, 1, fpt%legToChebParams%n-1, funcIndex)
-       legCoeffs(funcIndex) = legCoeffs(funcIndex)/2.0_rk
-     end do
-     !$OMP END DO
+     pntVal((iStrip-1)*n+1 : (iStrip+nIndeps-1)*n)  = gam(1:nIndeps*n)
 
-     ! Transform Chebyshev expansion to point values at
-     ! Lobatto-Chebyshev nodes by DCT I
-     !$OMP SINGLE
-     call fftw_execute_r2r( fpt%planChebToPnt, legCoeffs(:), pntVal(:) )
-     !$OMP END SINGLE
-
-   end if
+   end do xStripLoop
 
   end subroutine ply_legToPnt_2D_singVar
   !****************************************************************************
@@ -245,7 +120,7 @@ contains
   !****************************************************************************
   !> Subroutine to transform Legendre expansion to point values
   !! at Chebyshev nodes.
-  subroutine ply_legToPnt_2D_multVar(fpt,legCoeffs, pntVal, nVars,lobattoPoints )
+  subroutine ply_legToPnt_2D_multVar(fpt,legCoeffs, pntVal, nVars )
    !---------------------------------------------------------------------------
    !> The FPT parameters.
    type(ply_legFpt_type), intent(inout) :: fpt
@@ -259,13 +134,12 @@ contains
    real(kind=rk), intent(inout) :: pntVal(:,:)
    !> The number of scalar variables to transform.
    integer, intent(in) :: nVars
-   logical, intent(in) :: lobattoPoints
    !---------------------------------------------------------------------------
    integer :: iVar
    !---------------------------------------------------------------------------
 
    do iVar = 1, nVars
-     call ply_legToPnt_2D(fpt, legCoeffs(:,iVar), pntVal(:,iVar), lobattoPoints)
+     call ply_legToPnt_2D(fpt, legCoeffs(:,iVar), pntVal(:,iVar))
    end do
 
   end subroutine ply_legToPnt_2D_multVar
@@ -275,7 +149,7 @@ contains
   !****************************************************************************
   !> Subroutine to transform Legendre expansion to point values
   !! at Chebyshev nodes.
-  subroutine ply_pntToLeg_2D_singVar( fpt, pntVal, legCoeffs, lobattoPoints )
+  subroutine ply_pntToLeg_2D_singVar( fpt, pntVal, legCoeffs )
     !---------------------------------------------------------------------------
     !> Parameters of the Fast Polynomial transformation.
     type(ply_legFpt_type), intent(inout) :: fpt
@@ -287,87 +161,58 @@ contains
     real(kind=rk), intent(inout) :: pntVal(:)
     !> The Legendre coefficients.
     real(kind=rk), intent(inout) :: legCoeffs(:)
-    logical, intent(in) :: lobattoPoints
     !---------------------------------------------------------------------------
-    integer :: iFunc, iFuncX, iFuncY, funcIndex
+    integer :: iFunc, iFuncX, iFuncY, funcIndex, iDof
+    integer :: iStrip, striplen, nIndeps, iAlph, n, n_squared
+    real(kind=rk), dimension(:), allocatable :: alph
+    real(kind=rk), dimension(:), allocatable :: gam
     real(kind=rk) :: normFactor, inv_ndofs
     !---------------------------------------------------------------------------
 
-    if(.not.lobattoPoints) then
+    striplen = fpt%chebToLegParams%striplen
+    n = fpt%legToChebParams%n
+    n_squared = n**2
 
-      ! Transform the point values to Chebyshev polynomials by DCT II
-      !$OMP SINGLE
-      call fftw_execute_r2r( fpt%planPntToCheb, pntVal(:), legCoeffs(:) )
-      !$OMP END SINGLE
+    allocate(alph(min(striplen, n)*n))
+    allocate(gam(min(striplen, n)*n))
 
-      inv_ndofs = 1.0_rk / ( (fpt%chebToLegParams%n)**2 )
-
-      ! Apply normalization factors of the DCT II
-      !$OMP DO
-      do iFunc = 1, fpt%chebToLegParams%n**2
-        iFuncX = (iFunc-1)/fpt%chebToLegParams%n + 1
-        iFuncY = mod(iFunc-1,fpt%chebToLegParams%n) + 1
-        normFactor = ((-1)**(iFuncX-1)) &
-                 & * ((-1)**(iFuncY-1)) &
-                 & * inv_ndofs
-               legCoeffs(iFunc) = legCoeffs(iFunc) * normFactor
+    yStripLoop: do iStrip = 1, n, striplen
+      do iAlph = iStrip, min(iStrip+striplen-1, n)  !y_Trafo
+        alph((iAlph-iStrip)*n+1:(iAlph-iStrip+1)*n) = &
+            & pntVal(iAlph::n) 
       end do
-      !$OMP END DO
-      !$OMP DO
-      do iFuncX = 1, fpt%chebToLegParams%n
-?? copy :: posOfModgCoeffQTens(1, iFuncX, 1, fpt%chebToLegParams%n-1, funcIndex)
-        legCoeffs(funcIndex) = legCoeffs(funcIndex) * 0.5_rk
-?? copy :: posOfModgCoeffQTens(iFuncX, 1, 1, fpt%chebToLegParams%n-1, funcIndex)
-        legCoeffs(funcIndex) = legCoeffs(funcIndex) * 0.5_rk
+
+      ! At the end of the array the number of computed strips might be smaller
+      nIndeps = min(striplen, n-iStrip+1)
+
+      call ply_pntToLeg( fpt       = fpt,     &
+        &                nIndeps   = nIndeps, &
+        &                legCoeffs = gam,     &
+        &                pntVal    = alph     )
+ 
+      ! temp -> pntVal (stride-1 writing)
+      legCoeffs((iStrip-1)*n+1 : (iStrip+nIndeps-1)*n)  = gam(1:nIndeps*n)
+
+    end do yStripLoop ! iStrip
+
+    ! x-direction
+    xStripLoop: do iStrip = 1,n,striplen
+      do iAlph = iStrip, min(iStrip+striplen-1, n) 
+        alph((iAlph-iStrip)*n+1:(iAlph-iStrip+1)*n) = &
+            & legCoeffs(iAlph::n) !ztrafo
       end do
-      !$OMP END DO
 
-    else
+      ! At the end of the array the number of computed strips might be smaller
+      nIndeps = min(striplen, n-iStrip+1)
 
-      ! Transform the point values (Lob-Cheb-nodes) to Chebyshev polynomials by DCT I
-      !$OMP SINGLE
-      call fftw_execute_r2r( fpt%planPntToCheb, pntVal(:), legCoeffs(:) )
-      !$OMP END SINGLE
+      call ply_pntToLeg( fpt       = fpt,     &
+        &                nIndeps   = nIndeps, &
+        &                legCoeffs = gam,     &
+        &                pntVal    = alph     )
+ 
+      legCoeffs((iStrip-1)*n+1 : (iStrip+nIndeps-1)*n)  = gam(1:nIndeps*n)
 
-      ! Apply normalization
-      !$OMP DO
-      do iFunc = 1, (fpt%chebToLegParams%n-2)**2
-        iFuncX = (iFunc-1)/(fpt%chebToLegParams%n-3+1) + 2
-        iFuncY = mod(iFunc-1,fpt%chebToLegParams%n-2) + 2
-?? copy :: posOfModgCoeffQTens(iFuncX, iFuncY, 1, fpt%chebToLegParams%n-1, funcIndex)
-        legCoeffs(funcIndex) = legCoeffs(funcIndex) * 4.0_rk
-      end do
-      !$OMP END DO
-      !$OMP DO
-      do iFuncX = 2, fpt%chebToLegParams%n-1
-?? copy :: posOfModgCoeffQTens(1, iFuncX, 1, fpt%chebToLegParams%n-1, funcIndex)
-        legCoeffs(funcIndex) = legCoeffs(funcIndex) * 2.0_rk
-?? copy :: posOfModgCoeffQTens(iFuncX, 1, 1, fpt%chebToLegParams%n-1, funcIndex)
-        legCoeffs(funcIndex) = legCoeffs(funcIndex) * 2.0_rk
-?? copy :: posOfModgCoeffQTens(fpt%chebToLegParams%n, iFuncX, 1, fpt%chebToLegParams%n-1, funcIndex)
-        legCoeffs(funcIndex) = legCoeffs(funcIndex) * 2.0_rk
-?? copy :: posOfModgCoeffQTens(iFuncX, fpt%chebToLegParams%n, 1, fpt%chebToLegParams%n-1, funcIndex)
-        legCoeffs(funcIndex) = legCoeffs(funcIndex) * 2.0_rk
-      end do
-      !$OMP END DO
-      !$OMP WORKSHARE
-      legCoeffs(:) = legCoeffs(:) / ((2.0_rk*(fpt%chebToLegParams%n-1))**2.0_rk)
-      !$OMP END WORKSHARE
-
-    end if
-
-    ! Dimension-by-dimension transform Chebyshev polynomials to Legendre polynomial
-    ! ... transformation in X direction (Cheb->Leg)
-    call ply_fpt_exec_striped(nIndeps = fpt%legToChebParams%n, &
-      &                       alph    = legCoeffs,             &
-      &                       gam     = pntVal,                &
-      &                       params  = fpt%chebToLegParams    )
-
-   ! ... transformation in Y direction (Cheb->Leg)
-    call ply_fpt_exec_striped(nIndeps = fpt%legToChebParams%n, &
-      &                       alph    = pntVal,                 &
-      &                       gam     = legCoeffs,              &
-      &                       params  = fpt%chebToLegParams         )
+    end do xStripLoop
 
   end subroutine ply_pntToLeg_2D_singVar
   !****************************************************************************
@@ -376,7 +221,7 @@ contains
   !****************************************************************************
   !> Subroutine to transform Legendre expansion to point values
   !! at Chebyshev nodes.
-  subroutine ply_pntToLeg_2D_multVar(fpt,pntVal,legCoeffs,nVars,lobattoPoints )
+  subroutine ply_pntToLeg_2D_multVar(fpt,pntVal,legCoeffs,nVars )
    !---------------------------------------------------------------------------
    !> Parameters of the Fast Polynomial transformation.
    type(ply_legFpt_type), intent(inout) :: fpt
@@ -390,17 +235,15 @@ contains
    real(kind=rk), intent(inout) :: legCoeffs(:,:)
    !> The number of scalar variables to transform.
    integer, intent(in) :: nVars
-   logical, intent(in) :: lobattoPoints
    !---------------------------------------------------------------------------
    integer :: iVar
    !---------------------------------------------------------------------------
 
    do iVar = 1, nVars
-     call ply_pntToLeg_2D(fpt, pntVal(:,iVar), legCoeffs(:,iVar), lobattoPoints)
+     call ply_pntToLeg_2D(fpt, pntVal(:,iVar), legCoeffs(:,iVar))
    end do
 
   end subroutine ply_pntToLeg_2D_multVar
   !****************************************************************************
 
 end module ply_legFpt_2D_module
-

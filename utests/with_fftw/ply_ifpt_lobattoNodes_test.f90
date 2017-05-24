@@ -75,14 +75,16 @@ contains
     write(logUnit(10),*) 'Finished'
   
     ! Init the FPT 
-    call ply_init_legFpt( maxPolyDegree = maxPolyDegree, fpt = fpt, &
-      &                   lobattoPoints = .true. )
+    call ply_init_legFpt( maxPolyDegree = maxPolyDegree, &
+      &                   nIndeps       = 1,             &
+      &                   fpt           = fpt,           &
+      &                   lobattoPoints = .true.         )
   
     ! now transform to the Legendre coefficients
     allocate(legVal(1:maxPolyDegree+1)) 
     write(logUnit(10),*) 'Calculating inverse FPT ...'
     call ply_pntToLeg( fpt = fpt, pntVal = pntVal, legCoeffs = legVal, &
-     &                 lobattoPoints = .true. ) 
+      &                nIndeps = 1 ) 
     write(logUnit(10),*) 'Finished'
   
     !!do iPoly = 1, maxPolyDegree+1

@@ -7,10 +7,9 @@ program ply_ifpt_3D_singVar_test
   use tem_logging_module,       only: logUnit
   use tem_aux_module,           only: tem_abort
   use tem_general_module,       only: tem_general_type, tem_start
-  use ply_legFpt_module,        only: ply_legFpt_type
-  use ply_legFpt_3D_module,     only: ply_init_legFpt_3D, &
-                                    & ply_pntToLeg_3D
-  use ply_modg_basis_module,    only: evalLegendreTensPoly
+  use ply_legFpt_module,        only: ply_legFpt_type, ply_init_legFPT
+  use ply_legFpt_3D_module,     only: ply_pntToLeg_3D
+  use ply_modg_basis_module,    only: legendre_1D
   use ply_dof_module,           only: Q_space
 
   implicit none
@@ -83,26 +82,10 @@ contains
       chebPnt1D(iPoint) = (-1.0_rk) * &
                 & cos(PI/(maxPolyDegree+1)*((iPoint-1.0_rk)+1.0_rk/2.0_rk))
     end do
-    ! Now, create the 3D Chebyshev nodes in [-1,+1]^3
-    allocate(chebPnt( (maxPolyDegree+1)**3,3 ))
-    do iPointX = 1, maxPolyDegree+1
-      do iPointY = 1, maxPolyDegree+1
-        do iPointZ = 1, maxPolyDegree+1
-          pointIndex = 1 + (iPointX-1) + (iPointY-1)*(maxPolyDegree+1) &
-                     & + (iPointZ-1)*((maxPolyDegree+1)**2)
-          chebPnt(pointIndex,1) = chebPnt1D(iPointX)
-          chebPnt(pointIndex,2) = chebPnt1D(iPointY)
-          chebPnt(pointIndex,3) = chebPnt1D(iPointZ)
-        end do
-      end do
-    end do
 
     ! define the reference results for the point values (Chebyshev nodes)
-    !allocate( legValChebPnt((maxPolyDegree+1)**3,(maxPolyDegree+1)**3) )
-    !legValChebPnt(:,:) = legendre_1D(chebPnt, maxPolyDegree)
-    call evalLegendreTensPoly( coords = chebPnt , nCoords = (maxPolyDegree+1)**3, &
-                             & maxPolyDegree = maxPolyDegree, basisType = Q_space, &
-                             & polyVal = legValChebPnt )
+    allocate( legValChebPnt((maxPolyDegree+1),(maxPolyDegree+1)) )
+    legValChebPnt(:,:) = legendre_1D(chebPnt1D, maxPolyDegree)
     allocate(pntVal( (maxPolyDegree+1)**3 ))
     pntVal(:) = 0.0_rk
     write(logUnit(10),*) 'Calculating reference results ...'
@@ -110,23 +93,34 @@ contains
       do iPolyY = 1, maxPolyDegree+1
         do iPolyZ = 1, maxPolyDegree+1
 ?? copy :: posOfModgCoeffQTens(iPolyX, iPolyY, iPolyZ, maxPolyDegree, funcIndex)
-          pntVal(:) = pntVal(:) + &
-                 & legValChebPnt(funcIndex,:) * legCoeffsRef(funcIndex)
+          do iPointX = 1, maxPolyDegree+1
+            do iPointY = 1, maxPolyDegree+1
+              do iPointZ = 1, maxPolyDegree+1
+                pointIndex = 1 + (iPointX-1) + (iPointY-1)*(maxPolyDegree+1) &
+                  &        + (iPointZ-1)*((maxPolyDegree+1)**2)
+                pntVal(pointIndex) = pntVal(pointIndex)               &
+                  &                + legValChebPnt(iPolyX, iPointX)   &
+                  &                  * legValChebPnt(iPolyY, iPointY) &
+                  &                  * legValChebPnt(iPolyZ, iPointZ) &
+                  &                  * legCoeffsRef(funcIndex)
+              end do
+            end do
+          end do
         end do
       end do
     end do
     write(logUnit(10),*) 'Finished'
 
     ! Init the FPT
-    call ply_init_legFpt_3D( maxPolyDegree = maxPolyDegree, &
-      &                      nVars = 1, fpt = fpt)
+    call ply_init_legFpt( maxPolyDegree = maxPolyDegree,        &
+      &                   nIndeps       = (maxPolyDegree+1)**2, &
+      &                   fpt           = fpt                   )
 
     ! now transform to the Chebyshev nodes
     write(logUnit(10),*) 'Calculating FPT ...'
     !$OMP PARALLEL &
     !$OMP DEFAULT(shared)
-    call ply_pntToLeg_3D( fpt = fpt, pntVal = pntVal, legCoeffs = legCoeffs, &
-      &                   lobattoPoints = .false.)
+    call ply_pntToLeg_3D( fpt = fpt, pntVal = pntVal, legCoeffs = legCoeffs )
     !$OMP END PARALLEL
     write(logUnit(10),*) 'Finished'
 

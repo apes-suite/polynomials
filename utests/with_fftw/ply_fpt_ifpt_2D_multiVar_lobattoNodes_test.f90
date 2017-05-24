@@ -4,9 +4,8 @@ program ply_fpt_ifpt_2D_multiVar_lobattoNodes_test
   use env_module,               only: rk, fin_env
   use tem_logging_module,       only: logUnit 
   use tem_general_module,       only: tem_general_type, tem_start
-  use ply_legFpt_module,        only: ply_legFpt_type
-  use ply_legFpt_2D_module,     only: ply_init_legFpt_2D, & 
-    &                                 ply_legToPnt_2D,    &
+  use ply_legFpt_module,        only: ply_legFpt_type, ply_init_legFPT
+  use ply_legFpt_2D_module,     only: ply_legToPnt_2D,    &
     &                                 ply_pntToLeg_2D
 
   implicit none
@@ -62,8 +61,10 @@ contains
     end do
   
     ! Init the FPT 
-    call ply_init_legFpt_2D( maxPolyDegree = maxPolyDegree, fpt = fpt, nVars = nVars, &
-      &                      lobattoPoints = .true. )
+    call ply_init_legFpt( maxPolyDegree = maxPolyDegree,   &
+      &                   fpt           = fpt,             &
+      &                   nIndeps       = maxPolyDegree+1, &
+      &                   lobattoPoints = .true.           )
   
     ! now transform to the Chebyshev nodes
     allocate(pntVal( (maxPolyDegree+1)**2,nVars )) 
@@ -72,8 +73,7 @@ contains
     !$OMP PARALLEL &
     !$OMP DEFAULT(shared) 
     call ply_legToPnt_2D( fpt = fpt, legCoeffs = legCoeffsIn, &
-      &                   pntVal = pntVal, nVars = nVars, & 
-      &                   lobattoPoints = .true. )
+      &                   pntVal = pntVal, nVars = nVars )
     !$OMP END PARALLEL
     write(logUnit(10),*) 'Finished'
 
@@ -82,9 +82,8 @@ contains
     write(logUnit(10),*) 'Calculating inverse FPT ...'
     !$OMP PARALLEL &
     !$OMP DEFAULT(shared) private(iVar)
-    call ply_pntToLeg_2D( fpt = fpt, pntVal = pntVal, &
-      &                   legCoeffs = legVal, nVars = nVars, & 
-      &                   lobattoPoints = .true. )
+    call ply_pntToLeg_2D( fpt = fpt, pntVal = pntVal,       &
+      &                   legCoeffs = legVal, nVars = nVars )
     !$OMP END PARALLEL
     write(logUnit(10),*) 'Finished'
   

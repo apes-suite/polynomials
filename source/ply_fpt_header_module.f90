@@ -24,9 +24,14 @@ module ply_fpt_header_module
 
   !> The recommended minimal blocksize for double precision.
   integer, public, parameter :: ply_fpt_default_blocksize = 64
+
   !> The default width of the subblocking of the diagonal calculation of the
   !! fpt projection
   integer, public, parameter :: ply_fpt_default_subblockingWidth = 8
+
+  !> Default number of terms to use in FPT blocks. 18 is recommended for
+  !! double precision.
+  integer, public, parameter :: ply_fpt_default_approx_terms = 18
 
   !> Type for the fpt header, stores all information needed to initialize the
   !! fpt method later on
@@ -39,7 +44,7 @@ module ply_fpt_header_module
     !! factor determines by how many zeros the modal vector is extended
     !! before transformation. This factor has to be chosen properly with
     !! respect of the type of nonlinearity of your equation.
-    real(kind=rk) :: factor=1.0_rk
+    real(kind=rk) :: factor = 1.0_rk
 
     !> The blockisze of the fast bases exchange algorithm from
     !! Legendre to Chebyshev polynomials.
@@ -51,7 +56,7 @@ module ply_fpt_header_module
     !! diagonal.
     !!
     !! This defaults to 18, which is recommended for double precision.
-    integer :: approx_terms
+    integer :: approx_terms = ply_fpt_default_approx_terms
 
     !> The striplen, that should be used for vectorized simultaneous
     !! computations of the matrix operation.
@@ -60,7 +65,7 @@ module ply_fpt_header_module
     !! be set differently here, as we are dealing with a twodimensional
     !! problem here, and the optimal setting might be different from the code
     !! parts.
-    integer :: striplen
+    integer :: striplen = vlen
 
     !> The width of the subblocks used during the unrolled base exchange to
     !! ensure a better cache usage.
@@ -74,7 +79,7 @@ module ply_fpt_header_module
     !! If this is true, the factor will be increased to ensure
     !! an oversampled representation with a power of 2.
     !! Default is false.
-    logical :: adapt_factor_pow2
+    logical :: adapt_factor_pow2 = .false.
   end type ply_fpt_header_type
 
   interface assignment(=)
@@ -139,7 +144,6 @@ module ply_fpt_header_module
 
 
   !****************************************************************************!
-  !> Load settings to describe a projection method from a Lua table.
   subroutine ply_fpt_header_load(me, conf, thandle)
     !--------------------------------------------------------------------------!
     type(ply_fpt_header_type), intent(out) :: me
@@ -228,11 +232,6 @@ module ply_fpt_header_module
       &              ErrCode = iError,            &
       &              default = .false.            )
 
-   !$ if (fftMultiThread) then
-   !$   write(logUnit(1),*) 'Using multithreaded FFT is enabled ... '
-   !$   write(logUnit(1),*) 'ATTENTION: enabling OpenMP NESTING ...'
-   !$   call omp_set_nested(.true.)
-   !$ end if
    write(logUnit(1),*) ' * using fftMultithread =',fftMultiThread
 
   end subroutine ply_fpt_header_load

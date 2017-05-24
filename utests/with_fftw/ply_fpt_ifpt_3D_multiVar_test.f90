@@ -4,9 +4,8 @@ program ply_fpt_ifpt_3D_multiVar_test
   use env_module,               only: rk, fin_env
   use tem_logging_module,       only: logUnit
   use tem_general_module,       only: tem_general_type, tem_start
-  use ply_legFpt_module,        only: ply_legFpt_type
-  use ply_legFpt_3D_module,     only: ply_init_legFpt_3D,  & 
-    &                                 ply_legToPnt_3D, &
+  use ply_legFpt_module,        only: ply_legFpt_type, ply_init_legFPT
+  use ply_legFpt_3D_module,     only: ply_legToPnt_3D, &
     &                                 ply_pntToLeg_3D
 
   implicit none
@@ -61,8 +60,9 @@ contains
     end do
   
     ! Init the FPT 
-    call ply_init_legFpt_3D( maxPolyDegree = maxPolyDegree, nVars = nVars, &
-      &                      fpt = fpt)
+    call ply_init_legFpt( maxPolyDegree = maxPolyDegree,        &
+      &                   nIndeps       = (maxpolydegree+1)**2, &
+      &                   fpt           = fpt                   )
   
     ! now transform to the Chebyshev nodes
     allocate(pntVal( (maxPolyDegree+1)**3, nVars )) 
@@ -70,11 +70,10 @@ contains
     write(logUnit(10),*) 'Calculating FPT ...'
     !$OMP PARALLEL &
     !$OMP DEFAULT(shared) 
-    call ply_legToPnt_3D( fpt       = fpt, &
+    call ply_legToPnt_3D( fpt       = fpt,         &
       &                   legCoeffs = legCoeffsIn, &
-      &                   pntVal    = pntVal, &
-      &                   nVars = nVars, &
-      &                   lobattoPoints = .false. ) 
+      &                   pntVal    = pntVal,      &
+      &                   nVars     = nVars        ) 
     !$OMP END PARALLEL
     write(logUnit(10),*) 'Finished'
 
@@ -83,11 +82,10 @@ contains
     write(logUnit(10),*) 'Calculating inverse FPT ...'
     !$OMP PARALLEL &
     !$OMP DEFAULT(shared) 
-    call ply_pntToLeg_3D( fpt = fpt, &
-      &                   pntVal = pntVal, &
+    call ply_pntToLeg_3D( fpt       = fpt,    &
+      &                   pntVal    = pntVal, &
       &                   legCoeffs = legVal, &
-      &                   nVars = nVars, &
-      &                   lobattoPoints = .false. ) 
+      &                   nVars     = nVars   )
     !$OMP END PARALLEL
     write(logUnit(10),*) 'Finished'
   

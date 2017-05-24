@@ -6,9 +6,8 @@ program ply_fpt_2D_singVar_test
   use tem_param_module,         only: PI
   use tem_logging_module,       only: logUnit
   use tem_general_module,       only: tem_general_type, tem_start
-  use ply_legFpt_module,        only: ply_legFpt_type
-  use ply_legFpt_2D_module,     only: ply_init_legFpt_2D, &
-    &                                 ply_legToPnt_2D
+  use ply_legFpt_module,        only: ply_legFpt_type, ply_init_legFPT
+  use ply_legFpt_2D_module,     only: ply_legToPnt_2D
   use ply_modg_basis_module,    only: evalLegendreTensPoly
   use ply_dof_module,           only: Q_Space
 
@@ -113,16 +112,16 @@ contains
     write(logUnit(1),*) 'Finished'
 
     ! Init the FPT
-    call ply_init_legFpt_2D( maxPolyDegree = maxPolyDegree, &
-      &                      nVars = 1, fpt = fpt)
+    call ply_init_legFpt( maxPolyDegree = maxPolyDegree,   &
+      &                   nIndeps       = maxPolyDegree+1, &
+      &                   fpt           = fpt              )
 
     ! now transform to the Chebyshev nodes
     allocate(pntVal( (maxPolyDegree+1)**2 ))
     write(logUnit(1),*) 'Calculating FPT ...'
     !$OMP PARALLEL &
     !$OMP DEFAULT(shared)
-    call ply_legToPnt_2D( fpt = fpt, legCoeffs = legCoeffs, pntVal = pntVal, &
-      &                   lobattoPoints = .false. )
+    call ply_legToPnt_2D( fpt = fpt, legCoeffs = legCoeffs, pntVal = pntVal )
     !$OMP END PARALLEL
     write(logUnit(1),*) 'Finished'
 
