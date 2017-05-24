@@ -10,6 +10,7 @@ module ply_l2p_header_module
 
   use tem_aux_module,     only: tem_abort
   use tem_logging_module, only: logUnit
+  use tem_float_module,   only: operator(.feq.), operator(.fne.)
 
   use ply_nodes_header_module, only: ply_nodes_header_type,      &
     &                                assignment(=),              &
@@ -183,7 +184,7 @@ contains
     !---------------------------------------------------------------------------
 
     equality = ( left%nodes_header == right%nodes_header ) &
-      &         .and. ( left%factor == right%factor ) 
+      &         .and. ( left%factor .feq. right%factor )
 
   end function isEqual
   !****************************************************************************!
@@ -205,7 +206,7 @@ contains
     !---------------------------------------------------------------------------
 
     unequality = ( left%nodes_header /= right%nodes_header ) &
-      &         .or. ( left%factor /= right%factor)
+      &         .or. ( left%factor .fne. right%factor )
 
   end function isUnequal
   !****************************************************************************!

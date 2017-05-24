@@ -8,7 +8,6 @@ module ply_legFpt_2D_module
   use env_module, only: rk
   use tem_aux_module, only: tem_abort
   use tem_logging_module, only: logUnit
-  use tem_timer_module
   use ply_nodes_module,       only: ply_faceNodes_type
   use fftw_wrap
   use ply_legFpt_module,      only: ply_legFpt_type, &
@@ -58,19 +57,7 @@ contains
    real(kind=rk), dimension(:), allocatable :: alph
    real(kind=rk), dimension(:), allocatable :: gam
    real(kind=rk) :: normFactor
-   type(tem_timer_type), save :: legToPnt2dTimer
-   integer :: timerHandle
    !---------------------------------------------------------------------------
- timerHandle = tem_getNTimers(legToPnt2dTimer) 
-! write(*,*)' timerHandle ', timerHandle
-   if ( timerHandle .eq. 0 ) then
-     write(*,*)     'add timer'
-     call tem_addTimer(me = legToPnt2dTimer, timerHandle = timerHandle, timerName='legToPnt2dTimer')
-!   else
-! write(*,*)     'no need to add timer'
-!     call tem_writeTimer(me = plyTimer, timerHandle = timerHandle)
-   end if
-   call tem_startTimer(me = legToPnt2dTimer, timerHandle = timerHandle)
 
    striplen = fpt%legToChebParams%striplen
    n = fpt%legToChebParams%n
@@ -126,9 +113,6 @@ contains
 
    end do xStripLoop
 
-  call tem_stopTimer(me= legToPnt2dTimer, timerHandle = timerHandle)
-  call tem_writeTimer(me = legToPnt2dTimer, timerHandle = timerHandle)
-
   end subroutine ply_legToPnt_2D_singVar
   !****************************************************************************
 
@@ -183,17 +167,7 @@ contains
     real(kind=rk), dimension(:), allocatable :: alph
     real(kind=rk), dimension(:), allocatable :: gam
     real(kind=rk) :: normFactor, inv_ndofs
-    type(tem_timer_type), save :: pntToLeg2dTimer
-    integer :: timerHandle
     !---------------------------------------------------------------------------
-    timerHandle = tem_getNTimers(pntToLeg2dTimer) 
-    if (timerHandle .eq. 0 ) then
-      write(*,*)     'add timer'
-      call tem_addTimer( me = pntToLeg2dTimer, &
-        &                timerHandle = timerHandle, &
-        &                timerName='pntToLeg2dTimer')
-    end if
-    call tem_startTimer(me = pntToLeg2dTimer, timerHandle = timerHandle)
 
     striplen = fpt%chebToLegParams%striplen
     n = fpt%legToChebParams%n
@@ -240,9 +214,6 @@ contains
 
     end do xStripLoop
 
-    call tem_stopTimer(me= pntToLeg2dTimer, timerHandle = timerHandle)
-    call tem_writeTimer(me = pntToLeg2dTimer, timerHandle = timerHandle)
-  
   end subroutine ply_pntToLeg_2D_singVar
   !****************************************************************************
 

@@ -239,6 +239,8 @@ contains
       case ('fxt')
          equality = ( left%kind == right%kind ) &
            &  .and. ( left%fxt_header == right%fxt_header ) 
+      case default
+        call tem_abort('Wrong kind! Select fpt, l2p or fxt.')
     end select
 
   end function isEqual

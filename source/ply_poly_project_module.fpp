@@ -10,6 +10,7 @@ module ply_poly_project_module
   use tem_aux_module,            only: tem_abort
   use tem_logging_module,        only: logUnit
   use tem_tools_module,          only: tem_horizontalSpacer
+  use tem_debug_module,          only: dbgUnit
 
   use ply_modg_basis_module,     only: evalLegendreTensPoly, scalProdLeg
   use ply_dof_module,            only: Q_space, P_space
@@ -83,6 +84,7 @@ module ply_poly_project_module
     ! minimal number of dofs, used to enable the flexibilty to
     ! set the oversampling factor < 1
     integer                    :: min_dofs
+
   end type ply_prj_body_type
 
 
@@ -130,6 +132,11 @@ module ply_poly_project_module
     type(ply_prj_body_type)   :: body_2d
     type(ply_prj_body_type)   :: body_3d
 
+    integer :: nEdges
+    integer, allocatable :: edges(:,:)
+    integer :: nTriangles
+    integer, allocatable :: triangles(:,:)
+
   end type ply_poly_project_type
 
 
@@ -160,6 +167,115 @@ module ply_poly_project_module
 
 
 contains
+
+  !****************************************************************************!
+  !> Routine to generate the face edges, through given nQuadPoints per dircetion
+  !! for the 2D testcase. Since we have a 2D case, we have just lines (edges) to
+  !!connect the nQuadPoints. d1 is the first coupling domain and d2 the second.
+  !!_______ 
+  !!|d1 |d2|
+  !!|___|__|
+  subroutine build_faceNodes_edges_2D( edges, nEdges, nQuadPointsPerDir )
+    !--------------------------------------------------------------------------!
+    integer, allocatable, intent(out) :: edges(:,:)
+    integer, intent(out) :: nEdges
+    integer, intent(in) :: nQuadPointsPerDir
+    !--------------------------------------------------------------------------!
+    integer :: ii !loop incides
+    integer :: iEdge ! initial edge
+    !--------------------------------------------------------------------------!
+
+    nEdges = nQuadPointsPerDir - 1
+    allocate(edges(nEdges,2))
+
+    iEdge = 1
+    do ii = 1, nEdges
+      edges (iEdge,1) = ii
+      edges (iEdge,2) = ii+1
+      iEdge = iEdge + 1
+    end do
+
+  end subroutine build_faceNodes_edges_2D
+  !****************************************************************************!
+
+
+  !****************************************************************************!
+  !> Routine to generate the face edges as well as triangles, through given
+  !! nQuadPoints per dircetion and the necessary edges. For the coupling in 3D
+  !! the coupling face is a plane. From every square two triangles can be 
+  !!created. 
+  subroutine build_faceNodes_triangles_3D( triangles, nTriangles, edges, &
+    &                                      nEdges, nQuadPointsPerDir )
+    !--------------------------------------------------------------------------!
+    integer, allocatable, intent(out) :: triangles(:,:)
+    integer, intent(out) :: nTriangles
+    integer, allocatable, intent(out) :: edges(:,:)
+    integer, intent(out) :: nEdges
+    integer, intent(in) :: nQuadPointsPerDir
+    !--------------------------------------------------------------------------!
+    integer :: ii, jj !loop incides
+    integer :: iEdge ! initial edge
+    integer :: iTriangle !initial triangle
+    integer :: edgeID_1, edgeID_2, edgeID_3 !local edgeID created per point
+    integer :: nEdgesPerDir !number of edges per direction
+    integer :: offset
+    !--------------------------------------------------------------------------!
+    nTriangles = 2*(nQuadPointsPerDir-1)**2
+    nEdges = ( (nQuadPointsPerDir-1)*nQuadPointsPerDir ) * 2 &
+      &    + (nQuadPointsPerDir-1)**2
+    nEdgesPerDir = (nQuadPointsPerDir-1)*3+1
+    allocate(edges(nEdges,2))
+    allocate(triangles(nTriangles,3))
+    
+    iTriangle = 0
+    iEdge = 0
+    do jj = 1, nQuadPointsPerDir
+      do ii = 1, nQuadPointsPerDir     
+        ! define the vertical edges and give them an ID
+        if (ii <= nQuadPointsPerDir .and. jj <= nQuadPointsPerDir-1) then
+          iEdge = iEdge + 1
+          edges(iEdge,1) = (jj-1)*nQuadPointsPerDir+ii
+          edges(iEdge,2) = jj*nQuadPointsPerDir+ii
+          edgeID_1 = iEdge
+        end if 
+
+        ! define the horizantal edges and give them an ID
+        if (jj <= nQuadPointsPerDir .and. ii <= nQuadPointsPerDir-1) then 
+          iEdge = iEdge + 1
+          edges(iEdge,1) = (jj-1)*nQuadPointsPerDir+ii
+          edges(iEdge,2) = (jj-1)*nQuadPointsPerDir+ii+1
+          edgeID_2 = iEdge
+        end if  
+
+        ! creat diagonal edges, which are needed for the triangels 
+        if (ii <= nQuadPointsPerDir-1 .and. jj <= nQuadPointsPerDir-1) then
+          iEdge = iEdge + 1
+          edges(iEdge,1) = (jj-1)*nQuadPointsPerDir+ii
+          edges(iEdge,2) = jj*nQuadPointsPerDir+ii+1
+          edgeID_3 = iEdge
+          ! creat two triangles per quad, each of them needs three edges
+          iTriangle = iTriangle + 2
+          triangles(iTriangle-1, 1) = edgeID_3
+          triangles(iTriangle-1, 2) = edgeID_1
+          if (jj == nQuadPointsPerDir-1) then
+            if (ii == 1) then
+              offset = 1
+            else
+              offset = offset + 2
+            end if
+            triangles(iTriangle-1, 3) = edgeID_2 + nEdgesPerDir - offset
+          else
+            triangles(iTriangle-1, 3) = edgeID_2 + nEdgesPerDir
+          end if
+          triangles(iTriangle, 1) = edgeID_3
+          triangles(iTriangle, 2) = edgeID_1 + 3
+          triangles(iTriangle, 3) = edgeID_2
+        end if  
+      end do
+    end do
+
+  end subroutine build_faceNodes_triangles_3D
+  !****************************************************************************!
 
 
   !**************************************************************************!
@@ -363,7 +479,7 @@ contains
     me%body_3d%oversamp_dofs = (oversampling_order)**3
     me%body_2d%oversamp_dofs = (oversampling_order)**2
     me%body_1d%oversamp_dofs = oversampling_order
-
+!------------------------------------------------------------------------------
     select case (trim(proj_init%header%kind))
     case('fpt')
       ! Fill fpt datatype
@@ -404,6 +520,12 @@ contains
           &    nodes = me%body_2d%nodes,                      &
           &    faces = me%body_2d%faces,                      &
           &    nQuadPointsPerDir = me%nQuadPointsPerDir       )
+
+        !KM: Implament a routine to build up list of edges  
+        call build_faceNodes_edges_2D(               &
+          & edges             = me%edges,            &
+          & nEdges            = me%nEdges,           &
+          & nQuadPointsPerDir = me%nQuadPointsPerDir )
       end if
 
       if (scheme_dim >= 3) then
@@ -421,6 +543,14 @@ contains
           &    nodes = me%body_3d%nodes,                      &
           &    faces = me%body_3d%faces,                      &
           &    nQuadPointsPerDir = me%nQuadPointsPerDir       )
+
+        !KM: Implament a routine to build up list of edges and triangles 
+        call build_faceNodes_triangles_3D(           &
+          & triangles         = me%triangles,        &
+          & nTriangles        = me%nTriangles,       &
+          & edges             = me%edges,            &
+          & nEdges            = me%nEdges,           &
+          & nQuadPointsPerDir = me%nQuadPointsPerDir )
       end if
 
     case('l2p')

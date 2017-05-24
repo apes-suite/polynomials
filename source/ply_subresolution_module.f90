@@ -1,15 +1,18 @@
 module ply_subresolution_module
+  use, intrinsic :: iso_c_binding, only: c_f_pointer
   use env_module, only: pathLen, rk, isLittleEndian, long_k, newunit
 
   use aotus_module, only: flu_State, aot_get_val, aoterr_Fatal, close_config
 
   use treelmesh_module, only: treelmesh_type
   use tem_aux_module, only: tem_open_distconf, tem_abort
-  use tem_color_prop_module, only: tem_color_prop_type
+  use tem_color_prop_module, only: tem_color_prop_type, colors_per_char
   use tem_comm_env_module, only: tem_comm_env_type
   use tem_logging_module, only: logunit
   use tem_subres_prop_module, only: tem_subres_prop_type, tem_subres_prop_load
   use tem_tools_module, only: upper_to_lower
+  use tem_time_module, only: tem_time_type
+  use tem_varSys_module, only: tem_varSys_type, tem_varSys_op_type
 
   use ply_dof_module, only: P_Space, Q_space
 
@@ -23,6 +26,24 @@ module ply_subresolution_module
     type(tem_subres_prop_type) :: subres_prop
   end type ply_subresolution_type
 
+  !> Self contained description of color data to be used for method data.
+  type ply_subres_colvar_type
+    !> Pointer to the overall color property description.
+    type(tem_color_prop_type), pointer :: color => NULL()
+
+    !> Pointer to the overall subresolution property description.
+    type(ply_subresolution_type), pointer :: subres => NULL()
+
+    !> Degrees of freedom for subresolved elements.
+    real(kind=rk), allocatable :: subresdat(:,:)
+
+    !> Number of degrees of freedom of the subresolution data.
+    integer :: nsubdofs
+
+    !> Position of this color in the list of colors, needed to make use of the
+    !! pointers above.
+    integer :: colpos
+  end type ply_subres_colvar_type
 
 contains
 
@@ -157,14 +178,17 @@ contains
 
       ! Figure out the target polynomial representation.
       select case(target_space)
-      case (Q_Space)
-        target_dofs = (target_degree+1)**target_dim
+        case (Q_Space)
+          target_dofs = (target_degree+1)**target_dim
 
-      case (P_Space)
-        target_dofs = target_degree+1
-        do pdim=2,target_dim
-          target_dofs = (target_dofs * (target_degree+pdim) ) / pdim
-        end do
+        case (P_Space)
+          target_dofs = target_degree+1
+          do pdim=2,target_dim
+            target_dofs = (target_dofs * (target_degree+pdim) ) / pdim
+          end do
+
+        case default
+          call tem_abort('Wrong target_space! Select Q_Space or P_Space.')
 
       end select
 
@@ -173,22 +197,25 @@ contains
 
       ! Figure out input polynomial representation.
       select case(me%basistype)
-      case (Q_Space)
-        in_dofs = (me%polydegree+1)**3
+        case (Q_Space)
+          in_dofs = (me%polydegree+1)**3
 
-        if (target_dim < in_dim) then
-          read_dofs = (me%polydegree+1)**target_dim
-          recs_per_elem = (me%polydegree+1)**(in_dim-target_dim)
-        else
+          if (target_dim < in_dim) then
+            read_dofs = (me%polydegree+1)**target_dim
+            recs_per_elem = (me%polydegree+1)**(in_dim-target_dim)
+          else
+            read_dofs = in_dofs
+          end if
+
+        case (P_Space)
+          in_dofs = me%polydegree+1
+          do pdim=2,in_dim
+            in_dofs = (in_dofs * (me%polydegree+pdim) ) / pdim
+          end do
           read_dofs = in_dofs
-        end if
 
-      case (P_Space)
-        in_dofs = me%polydegree+1
-        do pdim=2,in_dim
-          in_dofs = (in_dofs * (me%polydegree+pdim) ) / pdim
-        end do
-        read_dofs = in_dofs
+        case default
+          call tem_abort('Wrong basistype! Select Q_Space or P_Space.')
 
       end select
 
@@ -265,6 +292,149 @@ contains
     end if
 
   end subroutine ply_subres_import_color
+
+
+  ! ****************************************************************************
+  !> Get the color of an element.
+  !!
+  !! This routine provides the get_element for the variable definition.
+  !! It returns the coloring value for the elements in elempos with the given
+  !! number of degrees of freedom.
+  subroutine ply_subres_get_elemcolor( fun, elempos, n, nDofs, res )
+    ! --------------------------------------------------------------------------
+    !> Description of the method to obtain the variables, here some preset
+    !! values might be stored, like the space time function to use or the
+    !! required variables.
+    class(tem_varSys_op_type), intent(in) :: fun
+
+    !> TreeID of the element to get the variable for.
+    integer, intent(in) :: elempos(:)
+
+    !> Number of elements to obtain for this variable (vectorized access).
+    integer, intent(in) :: n
+
+    !> Number of degrees of freedom within an element.
+    integer, intent(in) :: nDofs
+
+    !> Resulting values for the requested variable.
+    !!
+    !! Linearized array dimension:
+    !! (nComponents of resulting variable) x (nDegrees of freedom) x (nElems)
+    !! Access: (iElem-1)*fun%nComponents*nDofs +
+    !!         (iDof-1)*fun%nComponents + iComp
+    real(kind=rk), intent(out) :: res(:)
+    ! --------------------------------------------------------------------------
+    type(ply_subres_colvar_type), pointer :: p
+    integer :: ipos, iElem
+    integer :: icol_pos
+    integer :: icol_elem
+    integer :: isub_pos
+    integer :: isub_elem
+    integer :: colchar, colbit
+    integer :: cpos
+    integer :: first
+    integer :: minsubdofs
+    logical :: has_subres
+    real(kind=rk) :: void, fill
+    ! --------------------------------------------------------------------------
+
+    call c_f_pointer(fun%method_data, p)
+
+    cpos = p%colpos
+
+    icol_pos = 1
+    icol_elem = p%color%property%elemID(icol_pos)
+
+    has_subres = (size(p%subresdat) > 0)
+
+    ! Byte and bit to probe for this color
+    colchar = 1 + (cpos-1) / colors_per_char
+    colbit = mod((cpos-1), colors_per_char)
+
+    ! Initialize all degrees of freedom with 0.
+    res = 0.0_rk
+
+    void = p%color%color_void(cpos)
+    fill = p%color%color_fill(cpos)
+
+    do iPos = 1,n
+
+      iElem = elempos(ipos)
+      ! iElem is smaller than the first colored element's ID icol_elem and thus
+      ! can't be colored.
+      if ( iElem < icol_elem ) then
+        ! Not colored element, set first degree of freedom to the void value.
+        res(nDofs*(iPos-1)+1) = void
+      else
+        ! The current element is larger or equal than the current colored one.
+        ! Keep on increasing the colored counter, until we reach the current
+        ! element or the end of the list of colored elements
+        !>\todo HK: we could do a binary search on the colpos, to find the next
+        !!          colored element equal or greater to the current element.
+        do
+          if ( (iElem <= icol_elem) &
+            &  .or. (icol_pos == p%color%property%nElems) ) EXIT
+          icol_pos = icol_pos + 1
+          icol_elem = p%color%property%elemID(icol_pos)
+        end do
+        ! Now the current colored element is either the same as the current
+        ! element, further ahead or the last element in the colored elements.
+        if (iElem == icol_elem) then
+          ! For the bit checking, we need to convert the character into an
+          ! integer via ichar.
+          if ( btest(ichar(p%color%colored_bit(colchar, icol_pos)), &
+            &        colbit) ) then
+            res(nDofs*(iPos-1)+1) = fill
+
+            ! If there is subresolution data: Check wether this element is
+            ! subresolved for this color.
+            if (has_subres) then
+              isub_pos = 1
+              isub_elem = p%subres%subres_prop%elem(cpos)%ID(isub_pos)
+              minsubdofs = min(nDofs, p%nSubdofs)
+
+              do
+                if ( (iElem <= isub_elem) &
+                  &  .or. (isub_pos == p%subres%subres_prop%nElems(cpos)) ) EXIT
+                isub_pos = isub_pos + 1
+                isub_elem = p%subres%subres_prop%elem(cpos)%ID(isub_pos)
+              end do
+              if (iElem == isub_elem) then
+                if ( btest(ichar(p%subres%subres_prop &
+                  &                      %subresolved_colors(colchar,    &
+                  &                                          isub_pos)), &
+                  &        colbit) ) then
+                  ! This element has subresolution information for this color.
+                  ! Set it from the subresdat accordingly.
+                  first = nDofs*(iPos-1)
+                  res(first+1:first+minsubdofs) &
+                    &  = p%subresdat(:minsubdofs, isub_pos)
+                end if
+                isub_pos = min(isub_pos+1, p%subres%subres_prop%nElems(cpos))
+                isub_elem = p%subres%subres_prop%elem(cpos)%ID(isub_pos)
+              end if
+
+            end if
+
+          else
+
+            res(nDofs*(iPos-1)+1) = void
+
+          end if
+
+          ! We can push the position of the colored element one further, as
+          ! we found the matching element already.
+          icol_pos = min(icol_pos+1, p%color%property%nElems)
+          icol_elem = p%color%property%elemID(icol_pos)
+        else
+          res(nDofs*(iPos-1)+1) = void
+        end if
+      end if
+
+    end do
+
+  end subroutine ply_subres_get_elemcolor
+  ! ****************************************************************************
 
 
 end module ply_subresolution_module

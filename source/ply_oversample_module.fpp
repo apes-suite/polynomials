@@ -79,7 +79,7 @@ contains
     integer, intent(in) :: nDim
 
     !> Truncated state for one element obtained from the modalCoeffs
-    real(kind=rk), intent(inout) :: state(:,:)
+    real(kind=rk), intent(out) :: state(:,:)
 
     !> The number of scalar variables to convert. If nScalars is not passed
     !! to this subroutine, all variables of argument state will be considered
@@ -181,7 +181,7 @@ contains
     real(kind=rk), intent(in) :: modalCoeffs(:,:)
 
     !> Truncated state for one element obtained from the modalCoeffs
-    real(kind=rk), intent(inout) :: state(:,:)
+    real(kind=rk), intent(out) :: state(:,:)
     !--------------------------------------------------------------------------
     integer :: oversamp_degree
     integer :: mpd1, mpd1_square, mpd1_cube
@@ -321,7 +321,7 @@ contains
     real(kind=rk), intent(in) :: modalCoeffs(:,:)
 
     !> Truncated state for one element obtained from the modalCoeffs
-    real(kind=rk), intent(inout) :: state(:,:)
+    real(kind=rk), intent(out) :: state(:,:)
 
     !> The number of scalar variables to convert. If nScalars is not passed
     !! to this subroutine, all variables of argument state will be considered
@@ -434,7 +434,7 @@ contains
     real(kind=rk), intent(in) :: modalCoeffs(:,:)
 
     !> Truncated state for one element obtained from the modalCoeffs
-    real(kind=rk), intent(inout) :: state(:,:)
+    real(kind=rk), intent(out) :: state(:,:)
 
     !> The number of scalar variables to convert. If nScalars is not passed
     !! to this subroutine, all variables of argument state will be considered

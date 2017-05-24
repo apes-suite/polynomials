@@ -29,6 +29,7 @@
 module ply_polyBaseExc_module
   use, intrinsic :: iso_c_binding
   use env_module,            only: rk
+  use tem_float_module,      only: operator(.fne.)
   use tem_param_module,      only: pi
   use tem_aux_module,        only: tem_abort
   use tem_gamma_module
@@ -661,7 +662,7 @@ contains
     !>\todo: as we use a relation of gamma, it might be better to use the
     !!       gammln function provided by the numerical recipes, and just
     !!       use the difference in an exponential function.
-    if (val /= 0.0_rk) then
+    if (val .fne. 0.0_rk) then
       invVal = 1.0_rk/val
 
       if ((invVal.le.0) .or. (invVal.ge.0.067_rk)) then

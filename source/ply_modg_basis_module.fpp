@@ -121,7 +121,7 @@ module ply_modg_basis_module
 
   public :: init_modg_multilevelCoeffs, evalLegendreTensPoly, scalProdLeg, &
     &       scalProdDualLeg, scalProdDualLegDiff, ply_modg_refine_type,    &
-    &       faceValLeftBndAns, faceValRightBndAns, faceValLeftBndTest,     &
+    &       faceValLeftBndAns, faceValLeftBndTest,                         &
     &       faceValRightBndTest, ply_modg_basis_type, legendre_1D,         &
     &       faceValLeftBndTestGrad, faceValRightBndTestGrad,               &
     &       faceValLeftBndgradTest, faceValRightBndgradTest,               &
@@ -313,18 +313,18 @@ contains
     real(kind=rk) :: integral(maxdegree+1)
 
     integer :: nOrigModes
-    integer :: commonModes
+    integer :: minModes
     integer :: iMode
 
     nOrigModes = size(integrand)
-    commonModes = min(nOrigModes-1, maxdegree+1)
+    minModes = min(nOrigModes-1, maxdegree+1)
 
     if (nOrigModes >= 2) then
       integral(1) = -1.0_rk/3.0_rk * integrand(2)
     else
       integral(1) = 0.0_rk
     end if
-    do iMode=2,commonModes
+    do iMode=2,minModes
       integral(iMode) = integrand(iMode-1)/real(2*iMode-3, kind=rk) &
         &             - integrand(iMode+1)/real(2*iMode+1, kind=rk)
     end do
@@ -464,20 +464,6 @@ contains
 
   end subroutine evalLegendreTensPoly
 
-  !> Returns the value of the non-normalized Legendre polynomial at the right
-  !! boundary of the reference element, i.e. at +1.
-  pure function faceValRightBndAns(ansFunc) result(val)
-    !---------------------------------------------------------------------------
-    !> The ansatz function index, first ansatz function has index 1.
-    integer, intent(in) :: ansFunc
-    !> The function value.
-    real(kind=rk) :: val
-    !---------------------------------------------------------------------------
-    !---------------------------------------------------------------------------
-
-    val = 1.0_rk
-
-  end function faceValRightBndAns
 
   !> Returns the value of the non-normalized differentiated Legendre polynomial
   !! at the right boundary of the reference element, i.e. at +1.

@@ -8,7 +8,6 @@ module ply_legFpt_3D_module
   use env_module, only: rk
   use tem_aux_module, only: tem_abort
   use tem_logging_module, only: logUnit
-  use tem_timer_module
   use fftw_wrap
   use ply_nodes_module,  only: ply_faceNodes_type
   use ply_legFpt_module, only: ply_legFpt_type, &
@@ -73,8 +72,6 @@ contains
    integer :: iIndex
    real(kind=rk), allocatable :: alph(:)
    real(kind=rk), allocatable :: gam(:)
-   type(tem_timer_type), save :: legToPnt3dTimer
-   integer :: timerHandle
    !---------------------------------------------------------------------------
 
    striplen = fpt%legToChebParams%striplen
@@ -261,17 +258,7 @@ contains
     real(kind=rk) :: normFactor(0:1)
     real(kind=rk), dimension(:), allocatable :: alph
     real(kind=rk), dimension(:), allocatable :: gam
-    type(tem_timer_type), save :: pntToLeg3dTimer
-    integer :: timerHandle
     !---------------------------------------------------------------------------
-    timerHandle = tem_getNTimers(pntToLeg3dTimer) 
-    if (timerHandle .eq. 0 ) then
-      write(*,*)     'add timer'
-      call tem_addTimer( me          = pntToLeg3dTimer,  &
-        &                timerHandle = timerHandle,      &
-        &                timerName   = 'pntToLeg3dTimer' )
-    end if
-    call tem_startTimer(me = pntToLeg3dTimer, timerHandle = timerHandle)
 
     striplen = fpt%legToChebParams%striplen
     n = fpt%legToChebParams%n
@@ -352,9 +339,6 @@ contains
       legCoeffs((iStrip-1)*n+1 : (iStrip+nIndeps-1)*n)  = gam(1:nIndeps*n)
 
     end do xStripLoop
-
-    call tem_stopTimer(me= pntToLeg3dTimer, timerHandle = timerHandle)
-    call tem_writeTimer(me = pntToLeg3dTimer, timerHandle = timerHandle)
 
   end subroutine ply_pntToLeg_3D_singVar
 
