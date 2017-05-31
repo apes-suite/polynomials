@@ -12,6 +12,7 @@ module ply_legser_module
 
 contains
 
+  ! ************************************************************************ !
   !> Subroutine to convert Chebyshev (A) to Legendre (B) coefficients.
   !!
   !! This is Piessens Algorithm, which can be found as Algorithm 473 in the
@@ -27,6 +28,7 @@ contains
   !! with I_{0,0} and I_{n,k} = 0 if k < n. For I_{n,n} we have:
   !! I_{n,n} = 2^{2n}*(n!)^2/(2n+1)! if n > 0
   subroutine legser(A, B, n)
+    ! -------------------------------------------------------------------- !
     !> Number of coefficients.
     integer, intent(in) :: n
 
@@ -35,9 +37,10 @@ contains
 
     !> Computed corresponding coefficients of the Legendre approximation.
     real(kind=rk), intent(out) :: B(n)
-
+    ! -------------------------------------------------------------------- !
     real(kind=rk) :: ak, al, bb, c, d
     integer :: k, l, ll
+    ! -------------------------------------------------------------------- !
 
     ak = 0.0_rk
 
@@ -59,17 +62,19 @@ contains
       d = c
       ak = al
       do k=ll,n,2
-        d =   ( (ak-1.0_rk)*ak - al*(al+1.0_rk) ) * (ak+2.0_rk) * d &
-          & / ( ((ak+3.0_rk)*(ak+2.0_rk) - al*(al+1.0_rk)) * ak )
+        d = ( (ak-1.0_rk)*ak - al*(al+1.0_rk) ) &
+          &   * (ak+2.0_rk) &
+          &   * d &
+          &   / ( ((ak+3.0_rk)*(ak+2.0_rk) - al*(al+1.0_rk)) * ak )
         bb = bb + a(k)*d
         ak = ak + 2.0_rk
       end do
       c = 4.0_rk * c * (al+1.0_rk)*(al+1.0_rk) &
-        &  / ( (al+al+3.0_rk)*(al+al+2.0_rk) )
+        &   / ( (al+al+3.0_rk)*(al+al+2.0_rk) )
       b(l) = (al+0.5_rk)*bb
     end do
-    
-  end subroutine legser
 
+  end subroutine legser
+  ! ************************************************************************ !
 
 end module ply_legser_module

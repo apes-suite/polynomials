@@ -1,33 +1,31 @@
-!******************************************************************************!
+! **************************************************************************** !
 !> Module for projection of Q Legendre Polynomials from parent cell
 !! to child cells.
 !!
 module ply_LegPolyProjection_module
 
   ! include treelm modules
-  use env_module,          only: rk, long_k
+  use env_module,          only: rk
   use tem_param_module,    only: PI
-  use tem_logging_module,  only: logUnit
   use tem_aux_module,      only: tem_abort
   use treelmesh_module,    only: treelmesh_type
-  use tem_topology_module, only: tem_directChildren
-  use tem_param_module,    only: childPosition 
+  use tem_param_module,    only: childPosition
 
   implicit none
 
   private
 
-  !-----------------------------------------------------------------------------
+  ! ************************************************************************ !
   !> Parameter to specify Legendre polynomials as the degrees of freedoms
-  !! of the elements. The multidimensional polynomias are build as 
+  !! of the elements. The multidimensional polynomias are build as
   !! Q-polynomials.
-  !! The projection is a L2-Projection onto the ansatz function of the finer 
+  !! The projection is a L2-Projection onto the ansatz function of the finer
   !! elements.
   integer, parameter :: ply_QLegendrePoly_prp = 1
-  !-----------------------------------------------------------------------------
+  ! ************************************************************************ !
 
 
-  !----------------------------------------------------------------------------!
+  ! ************************************************************************ !
   !> Datatype storing the coefficients arising for the projection
   !! of solutions on a parent cell to its children during the subsampling
   !! routines.
@@ -39,10 +37,10 @@ module ply_LegPolyProjection_module
     !! Therefore the dimension of this array is (nDofs, nDofs, 8).
     real(kind=rk), allocatable :: projCoeff(:,:,:)
   end type ply_ProjCoeff_type
-  !-----------------------------------------------------------------------------
+  ! ************************************************************************ !
 
 
-  !-----------------------------------------------------------------------------
+  ! ************************************************************************ !
   type ply_subsample_type
     !> Is subsampling active
     logical :: isActive = .false.
@@ -76,11 +74,13 @@ module ply_LegPolyProjection_module
     !> Absolute upper bound level to refine to.
     integer :: AbsUpperBoundLevel
   end type ply_subsample_type
-  !----------------------------------------------------------------------------!
+  ! ************************************************************************ !
 
+  ! ************************************************************************ !
   type ply_array_type
     real(kind=rk),allocatable :: dat(:)
   end type ply_array_type
+  ! ************************************************************************ !
 
   public :: ply_subsample_type
   public :: ply_QPolyProjection
@@ -88,12 +88,12 @@ module ply_LegPolyProjection_module
 
 contains
 
-  !****************************************************************************!
+  ! ************************************************************************ !
   !> Subsampling by L2-Projection of the Q-Tensorproduct Legendre polynomials.
   subroutine ply_QPolyProjection( subsamp, dofReduction, tree, meshData,   &
-    &                             varDofs, ndims, varcomps, refine_tree,   & 
+    &                             varDofs, ndims, varcomps, refine_tree,   &
     &                             new_refine_tree, newMeshData, newVarDofs )
-    !---------------------------------------------------------------------------
+    ! -------------------------------------------------------------------- !
     !> Parameters for the subsampling.
     type(ply_subsample_type), intent(in) :: subsamp
 
@@ -115,7 +115,8 @@ contains
     !> Number of components
     integer, intent(in) :: varcomps(:)
 
-    !> Logical array that marks elements for refinement from the last sampling lvl.
+    !> Logical array that marks elements for refinement from the last sampling
+    ! level.
     logical, intent(in) :: refine_tree(:)
 
     !> Logical array that marks elements for refinment.
@@ -126,7 +127,7 @@ contains
 
     !> The number of dofs for the subsampled dofs.
     integer, allocatable, intent(out) :: newVarDofs(:)
-    !---------------------------------------------------------------------------
+    ! -------------------------------------------------------------------- !
     integer :: nChilds, nVars, nDofs, nComponents
     integer :: iVar
     type(ply_ProjCoeff_type) :: projection
@@ -135,12 +136,10 @@ contains
     real(kind=rk), allocatable :: workDat(:)
     real(kind=rk), allocatable :: newWorkDat(:)
     integer :: nChildDofs, oneDof
-    !---------------------------------------------------------------------------
+    ! -------------------------------------------------------------------- !
     if (subsamp%projectionType.ne.ply_QLegendrePoly_prp) then
-      write(logunit(0),*) 'ERROR in ply_QPolyProjection: subsampling is '    &
-        &                 // 'only implemented for Q-Legendre-Polynomials, ' &
-        &                 // 'stopping...'
-      call tem_abort()
+      call tem_abort( 'ERROR in ply_QPolyProjection: subsampling is ' &
+        & // 'only implemented for Q-Legendre-Polynomials'            )
     end if
 
     nVars = size(varDofs)
@@ -157,12 +156,12 @@ contains
       ! All elements in refine_tree marked with .TRUE. will get
       ! a projection to the next sampling level while all other elements
       ! will get their integral mean value ( projection till there is only
-      ! one dof left ) 
-  
+      ! one dof left )
+
       ! Reduce the number of dofs per direction in each subsample
       nChildDofs = (ceiling(nint(nDofs**(1.0_rk/real(ndims, kind=rk))) &
         &                      * dofReduction(iVar)))**nDims
-  
+
       if (nChildDofs > nDofs) then
         nChildDofs = nDofs
       elseif (nChildDofs < 1) then
@@ -172,28 +171,36 @@ contains
       if (subsamp%sampling_lvl == subsamp%maxsub) then
         nChildDofs = 1
       end if
-  
+
       ! Set the correct number of Childs for the projection to reduced Dofs.
       nChilds = 2**ndims
-  
+
       ! init the projection coefficients for the current number of child dofs.
-      call ply_initQLegProjCoeff( subsamp%projectionType, nDofs, ndims, nChilds, &
-        &                         nChildDofs, projection )
-      
+      call ply_initQLegProjCoeff( doftype    = subsamp%projectionType, &
+        &                         nDofs      = nDofs,                  &
+        &                         ndims      = ndims,                  &
+        &                         nChilds    = nChilds,                &
+        &                         nChildDofs = nChildDofs,             &
+        &                         projection = projection              )
+
       ! init the projection coefficients for the reduction to polynomial
       ! degree of 0.
       oneDof = 1
       ! Set the correct number of childs for the projection to one dof.
       nChilds = 1
-      call ply_initQLegProjCoeff( subsamp%projectionType, nDofs, ndims, nChilds, &
-        &                         oneDof, projection_oneDof )
-      
+      call ply_initQLegProjCoeff( doftype    = subsamp%projectionType, &
+        &                         ndofs      = nDofs,                  &
+        &                         ndims      = ndims,                  &
+        &                         nChilds    = nChilds,                &
+        &                         nChildDofs = oneDof,                 &
+        &                         projection = projection_oneDof       )
+
       ! ... subsample the data
       call ply_subsampleData( tree              = tree,              &
         &                     meshData          = workDat,           &
         &                     nDofs             = nDofs,             &
         &                     nChildDofs        = nChildDofs,        &
-        &                     nComponents       = nComponents,       & 
+        &                     nComponents       = nComponents,       &
         &                     projection        = projection,        &
         &                     projection_oneDof = projection_oneDof, &
         &                     refine_tree       = refine_tree,       &
@@ -214,23 +221,23 @@ contains
     end do varLoop
 
   end subroutine ply_QPolyProjection
-  !****************************************************************************!
+  ! ************************************************************************ !
 
-    
-  !****************************************************************************!
+
+  ! ************************************************************************ !
   !> Routine to initialize the projection coefficients for a usage in the
   !! subsampling routine to project degrees of freedoms of a parent cell
   !! to the degrees of freedoms of a child cell if the degrees of
   !! freedoms are Q-Legendre polynomials.
-  subroutine ply_initQLegProjCoeff(doftype, nDofs, ndims, nChilds, nChildDofs, &
-    &                              projection )  
-    !--------------------------------------------------------------------------- 
+  subroutine ply_initQLegProjCoeff( doftype, nDofs, ndims, nChilds, &
+    &                               nChildDofs, projection          )
+    ! -------------------------------------------------------------------- !
     !> The type of degrees of freedom we have in our cells.
     integer, intent(in) :: dofType
- 
+
     !> The number of degrees of freedom for the parent cells.
     integer, intent(in) :: nDofs
-   
+
     !> The  number of dimensions in the polynomial representation.
     integer, intent(in) :: ndims
 
@@ -242,7 +249,7 @@ contains
 
     !> The subsampling coefficients that will be initialized by this routine.
     type(ply_ProjCoeff_type), intent(out) :: projection
-    !---------------------------------------------------------------------------
+    ! -------------------------------------------------------------------- !
     integer :: iParentDof, iChildDof, iChild
     integer :: xShift, yShift, zShift
     integer :: xParentAnsFunc, yParentAnsFunc, zParentAnsFunc
@@ -252,27 +259,27 @@ contains
     ! or right projection.
     real(kind=rk), allocatable :: projCoeffOneDim(:,:,:)
     real(kind=rk) :: dimexp
-    !---------------------------------------------------------------------------
+    ! -------------------------------------------------------------------- !
     select case(dofType)
     case(ply_QLegendrePoly_prp)
       allocate(projection%projCoeff(nDofs, nChildDofs, nChilds))
       projection%projCoeff = 0.0_rk
-  
-      ! Create projection of one-dimensional Legendre polynomials for the 
-      ! reference interval [-1,+1]  (child-element) and the double length ref 
-      ! element [-1,+3] (parent element). 
+
+      ! Create projection of one-dimensional Legendre polynomials for the
+      ! reference interval [-1,+1]  (child-element) and the double length ref
+      ! element [-1,+3] (parent element).
       dimexp = 1.0_rk/real(ndims, kind=rk)
       projCoeffOneDim = ply_QLegOneDimCoeff( nint(nDofs**dimexp),     &
         &                                    nint(nChildDofs**dimexp) )
-  
+
       ! Loop over the children of this element
       childLoop: do iChild = 1, nChilds
-  
-        ! get the right index for the x,y,z shift of the current child with 
+
+        ! get the right index for the x,y,z shift of the current child with
         ! respect to the parent cell.
         if(childPosition(iChild,1).eq.-1) then
           xShift = 1
-        else 
+        else
           xShift = 2
         end if
         if(childPosition(iChild,2).eq.-1) then
@@ -288,15 +295,15 @@ contains
         ! Loop over the parent dofs and calculate the projection coefficients
         ! for each of the child dofs
         parentDofLoop: do iParentDof = 1, nDofs
-          ! convert the number of the parent dof to ansatz function numbers in the
-          ! spatial direction.
+          ! convert the number of the parent dof to ansatz function numbers in
+          ! the spatial direction.
           call ply_dofToQPoly( dof      = iParentDof,     &
             &                  nDofs    = nDofs,          &
             &                  ndims    = ndims,          &
             &                  xAnsFunc = xParentAnsFunc, &
             &                  yAnsFunc = yParentAnsFunc, &
             &                  zAnsFunc = zParentAnsFunc  )
-  
+
           childDofLoop: do iChildDof = 1, nChildDofs
             ! convert the number of the child dof to ansatz function numbers in
             ! the spatial direction.
@@ -306,36 +313,34 @@ contains
               &                  xAnsFunc = xChildAnsFunc, &
               &                  yAnsFunc = yChildAnsFunc, &
               &                  zAnsFunc = zChildAnsFunc  )
-  
-            ! reuse the one-dimensional projection coefficients to build up the 3D
-            projection%projCoeff(iParentDof, iChildDof, iChild)             &
-              &  = projCoeffOneDim(xParentAnsFunc, xChildAnsFunc, xShift)   &
-              &    * projCoeffOneDim(yParentAnsFunc, yChildAnsFunc, yShift) &
-              &    * projCoeffOneDim(zParentAnsFunc, zChildAnsFunc, zShift)
-  
+
+            ! reuse the one-dimensional projection coefficients to build up the
+            ! 3D
+            projection%projCoeff(iParentDof, iChildDof, iChild)            &
+              & = projCoeffOneDim(xParentAnsFunc, xChildAnsFunc, xShift)   &
+              &   * projCoeffOneDim(yParentAnsFunc, yChildAnsFunc, yShift) &
+              &   * projCoeffOneDim(zParentAnsFunc, zChildAnsFunc, zShift)
+
           end do childDofLoop
-  
         end do parentDofLoop
       end do childLoop
 
     case default
-      write(logunit(0),*) 'WARNING in ply_initProjCoeff: initialization of ' &
-        &                 // 'projection coefficients for subsampling is '   &
-        &                 // 'implemented only for Q-Legendre polynomials, ' &
-        &                 // 'initializing for copying...'
-      call tem_abort()
+      call tem_abort( 'ERROR in ply_initProjCoeff: initialization of '      &
+        & // 'projection coefficients for subsampling is implemented only ' &
+        & // 'for Q-Legendre polynomials'                                   )
     end select
     deallocate(projCoeffOneDim)
   end subroutine ply_initQLegProjCoeff
-  !****************************************************************************!
+  ! ************************************************************************ !
 
 
-  !****************************************************************************!
+  ! ************************************************************************ !
   !> Routine to create one-dimensional projection coefficient for a coarse
   !! element to a fine element.
   function ply_QLegOneDimCoeff( nDofsOneDim, nChildDofsOneDim ) &
-    &                         result(projCoeffOneDim)
-    !---------------------------------------------------------------------------
+    & result(projCoeffOneDim)
+    ! -------------------------------------------------------------------- !
     !> The number of dofs in one dimension.
     integer , intent(in) :: nDofsOneDim
 
@@ -348,12 +353,12 @@ contains
     !! is the Legendre polynomial on the child element, third index is left
     !! or right projection.
     real(kind=rk), allocatable :: projCoeffOneDim(:,:,:)
-    !---------------------------------------------------------------------------
+    ! -------------------------------------------------------------------- !
     integer :: nIntP, iParentFunc, iChildFunc
     real(kind=rk), allocatable :: points(:), weights(:),              &
       &                           pointsLeft(:), pointsRight(:),      &
       &                           parentFuncVal(:,:), childFuncVal(:,:)
-    !---------------------------------------------------------------------------
+    ! -------------------------------------------------------------------- !
     allocate(projCoeffOneDim(nDofsOneDim, nChildDofsOneDim,2))
 
     ! Create the gauss legendre quadrature points for the reference element
@@ -366,7 +371,7 @@ contains
     ! the mapping from reference to physical element (for child and
     ! parent).
     ! So, we evaluate the parent Legendre polynomial at shifted quadrature
-    ! points ( shifted by 0.5 x - 0.5 ) and evaluate the child Legendre 
+    ! points ( shifted by 0.5 x - 0.5 ) and evaluate the child Legendre
     ! quadrature points at the original Gauss-Legendre points.
     allocate( pointsLeft(size(points)) )
     pointsLeft(:) = 0.5_rk * points(:) - 0.5_rk
@@ -375,13 +380,13 @@ contains
     do iParentFunc = 1, nDofsOneDim
       do iChildFunc = 1, nChildDofsOneDim
         ! ... calculate the integral by the quadrature rule.
-        projCoeffOneDim(iParentFunc, iChildFunc,1)            &
-          &  = sum( weights(:) * parentFuncVal(iParentFunc,:) &
-          &         * childFuncVal(iChildFunc,:) )
+        projCoeffOneDim(iParentFunc, iChildFunc,1)           &
+          & = sum( weights(:) * parentFuncVal(iParentFunc,:) &
+          &        * childFuncVal(iChildFunc,:) )
         ! ... and normalize by the norm of the child function.
-        projCoeffOneDim(iParentFunc, iChildFunc,1)        &
-          &  = projCoeffOneDim(iParentFunc, iChildFunc,1) &
-          &    * (1.0_rk / ply_QLegSqNorm(iChildFunc))
+        projCoeffOneDim(iParentFunc, iChildFunc,1)       &
+          & = projCoeffOneDim(iParentFunc, iChildFunc,1) &
+          &   * (1.0_rk / ply_QLegSqNorm(iChildFunc))
       end do
     end do
     deallocate(parentFuncVal)
@@ -398,13 +403,13 @@ contains
     do iParentFunc = 1, nDofsOneDim
       do iChildFunc = 1, nChildDofsOneDim
         ! ... calculate the integral by the quadrature rule.
-        projCoeffOneDim(iParentFunc, iChildFunc,2)            &
-          &  = sum( weights(:) * parentFuncVal(iParentFunc,:) &
-          &         * childFuncVal(iChildFunc,:) )
+        projCoeffOneDim(iParentFunc, iChildFunc,2)           &
+          & = sum( weights(:) * parentFuncVal(iParentFunc,:) &
+          &        * childFuncVal(iChildFunc,:) )
         ! ... and normalize by the norm of the child function.
-        projCoeffOneDim(iParentFunc, iChildFunc,2)        &
-          &  = projCoeffOneDim(iParentFunc, iChildFunc,2) &
-          &    * (1.0_rk / ply_QLegSqNorm(iChildFunc))
+        projCoeffOneDim(iParentFunc, iChildFunc,2)       &
+          & = projCoeffOneDim(iParentFunc, iChildFunc,2) &
+          &   * (1.0_rk / ply_QLegSqNorm(iChildFunc))
       end do
     end do
     deallocate(parentFuncVal)
@@ -412,33 +417,33 @@ contains
     deallocate(pointsRight)
 
   end function ply_QLegOneDimCoeff
-  !****************************************************************************!
+  ! ************************************************************************ !
 
 
-  !****************************************************************************!
+  ! ************************************************************************ !
   !> Function to calculate the squared L2-Norm of a given Legendre polynomial
   !! on the reference element [-1,+1].
   function ply_QLegSqNorm( polyIndex ) result(sqNorm)
-    !---------------------------------------------------------------------------
+    ! -------------------------------------------------------------------- !
     !> The Legendre polynomial index to calculate the squared norm for.
     !! The first polynomial has index 1.
     integer, intent(in) :: polyIndex
 
     !> The squared L2 Norm of the Legendre polynomial.
     real(kind=rk) :: sqNorm
-    !---------------------------------------------------------------------------
+    ! -------------------------------------------------------------------- !
 
     sqNorm = 2.0_rk / ( 2.0_rk * polyIndex  - 1.0_rk)
 
   end function ply_QLegSqNorm
-  !****************************************************************************!
+  ! ************************************************************************ !
 
 
-  !****************************************************************************!
+  ! ************************************************************************ !
   !> Evaluate a given set of Legendre polynomials a given set of 1D points.
   !!
   function ply_legVal( points, nPoints, maxPolyDegree ) result( val )
-    !---------------------------------------------------------------------------
+    ! -------------------------------------------------------------------- !
     !> A given set of 1D points.
     real(kind=rk), intent(in) :: points(:)
 
@@ -452,9 +457,9 @@ contains
     !! maxPolyDegree at all given points.
     !! Therefore the dimension of this array is (maxPolyDegree+1, nPoints)
     real(kind=rk), allocatable :: val(:,:)
-    !---------------------------------------------------------------------------
+    ! -------------------------------------------------------------------- !
     integer :: iAns
-    !---------------------------------------------------------------------------
+    ! -------------------------------------------------------------------- !
 
     allocate(val(maxPolyDegree+1, nPoints))
 
@@ -465,26 +470,29 @@ contains
       val(2,:) = points(:)
       ! apply the recursion
       do iAns = 3, maxPolyDegree+1
-        val(iAns,:) = ( (2.0_rk*(iAns-1.0_rk)-1.0_rk)*points(:)*val(iAns-1,:)  &
-          &         - ((iAns-1)-1)*val(iAns-2,:) )/(iAns-1)
+        val(iAns,:) = ( (2.0_rk*(iAns-1.0_rk)-1.0_rk) &
+          &               * points(:)*val(iAns-1,:)   &
+          &             - ((iAns-1)-1)                &
+          &               * val(iAns-2,:) )           &
+          &           / (iAns-1)
       end do
     end if
 
   end function ply_legVal
-  !****************************************************************************!
+  ! ************************************************************************ !
 
 
-  !****************************************************************************!
-  !> Subroutine to convert linearized dof index to ansatz function number for 
+  ! ************************************************************************ !
+  !> Subroutine to convert linearized dof index to ansatz function number for
   !! Q-Polynomials.
   subroutine ply_dofToQPoly( dof, nDofs, ndims, xAnsFunc, yAnsFunc, zAnsFunc )
-    !---------------------------------------------------------------------------
+    ! -------------------------------------------------------------------- !
     !> The linearized degree of freedom index.
     integer, intent(in) :: dof
 
     !> The number of dofs for all directions.
     integer, intent(in) :: nDofs
-   
+
     !> The number of Dimensions in the polynomial representation.
     integer, intent(in) :: ndims
 
@@ -496,31 +504,31 @@ contains
 
     !> The ansatz function number in z direction.
     integer, intent(out) :: zAnsFunc
-    !--------------- ------------------------------------------------------------
+    ! -------------------------------------------------------------------- !
     integer :: nDofsPerDir
-    !---------------------------------------------------------------------------
+    ! -------------------------------------------------------------------- !
 
     ! The number of dofs in each direction
-    nDofsPerDir = nint(nDofs**(1.0_rk/real(ndims,kind=rk))) 
+    nDofsPerDir = nint(nDofs**(1.0_rk/real(ndims,kind=rk)))
 
     ! now, we compute the ansatz function numbers
     ! Works for polynomials of all dimensionality, as dof will never reach
     ! sufficiently high values for lower dimensions.
     zAnsFunc = (dof-1) / (nDofsPerDir**2)  + 1
     yAnsFunc = (dof-1-(zAnsFunc-1)*(nDofsPerDir**2)) / nDofsPerDir + 1
-    xAnsFunc = dof - (zAnsFunc-1)*(nDofsPerDir**2) - (yAnsFunc-1)*nDofsPerDir 
+    xAnsFunc = dof - (zAnsFunc-1)*(nDofsPerDir**2) - (yAnsFunc-1)*nDofsPerDir
 
   end subroutine ply_dofToQPoly
-  !****************************************************************************!
+  ! ************************************************************************ !
 
 
-  !****************************************************************************!
+  ! ************************************************************************ !
   !> Routine to subsample mesh information for one refinement level.
   subroutine ply_subsampleData( tree, meshData, nDofs, nChildDofs,          &
     &                           nComponents, projection, projection_oneDof, &
     &                           refine_tree, new_refine_tree, ndims,        &
     &                           subsamp, newMeshData                        )
-    !---------------------------------------------------------------------------
+    ! -------------------------------------------------------------------- !
     !> The tree the data is written for.
     type(treelmesh_type), intent(in) :: tree
 
@@ -544,11 +552,12 @@ contains
     !! degree of 0.
     type(ply_ProjCoeff_type), intent(in), optional :: projection_oneDof
 
-    !> Logical array that marks all elements for refinement from the last sampling lvl.
+    !> Logical array that marks all elements for refinement from the last
+    !! sampling lvl.
     logical, intent(in), optional :: refine_tree(:)
 
     !> Logical array that marks all elements for refinement
-    logical, intent(in) :: new_refine_tree(:) 
+    logical, intent(in) :: new_refine_tree(:)
 
     !> The number of dimensions in the polynomial representation.
     integer, intent(in) :: ndims
@@ -558,13 +567,13 @@ contains
 
     !> The subsampled data.
     real(kind=rk), allocatable, intent(out) :: newMeshData(:)
-    !---------------------------------------------------------------------------
+    ! -------------------------------------------------------------------- !
     integer :: nElems, nChilds, nParentElems, nElemsToRefine, nElemsNotToRefine
     integer :: iElem, iParentElem, iChild
     integer :: lowElemIndex, upElemIndex, lowChildIndex, upChildIndex
     integer :: oneDof, noChilds, childpos
     real(kind=rk), allocatable :: childData(:)
-    !---------------------------------------------------------------------------
+    ! -------------------------------------------------------------------- !
     nChilds = 2**ndims
     nElems = tree%nElems
     nElemsToRefine = count(new_refine_tree)
@@ -578,7 +587,7 @@ contains
     upChildIndex = 0
     upElemIndex = 0
     childPos = 0
-    
+
     if (subsamp%sampling_lvl > 1) then
 
       elementLoop: do iParentElem=1,nParentElems
@@ -589,16 +598,18 @@ contains
             childPos = childPos + 1
             ! Check if the child elems will be refined...
             if (new_refine_tree(childPos)) then
-             
+
               ! Child cell will be refined.
               !
-              ! Need to project current elem data to new childs with reduced dofs.
+              ! Need to project current elem data to new childs with reduced
+              ! dofs.
               allocate(childData(nChildDofs*nChilds*nComponents))
-              ! Create lower and upper indices for all data of iElem in meshData.
-              lowElemIndex = upElemIndex + 1 
+              ! Create lower and upper indices for all data of iElem in
+              ! meshData.
+              lowElemIndex = upElemIndex + 1
               upElemIndex = (lowElemIndex-1) + nDofs * nComponents
 
-              ! Project these dofs from the coarse element to the 
+              ! Project these dofs from the coarse element to the
               ! finer elements.
               call ply_projDataToChild(                              &
                 &  parentData  = meshData(lowElemIndex:upElemIndex), &
@@ -608,10 +619,12 @@ contains
                 &  nChilds     = nChilds,                            &
                 &  projection  = projection,                         &
                 &  childData   = childData                           )
-  
-              ! Iterate over all childDofs and set the data corectly in newMeshData
+
+              ! Iterate over all childDofs and set the data corectly in
+              ! newMeshData
               lowChildIndex = upChildIndex + 1
-              upChildIndex = (lowChildIndex-1) + nChilds * nChildDofs * nComponents
+              upChildIndex = (lowChildIndex-1) + nChilds * nChildDofs &
+                &                                        * nComponents
 
               newMeshData(lowChildIndex:upChildIndex) = childData
               deallocate(childData)
@@ -620,7 +633,8 @@ contains
               !
               ! Need projecton from current dofs to 1 dof.
               allocate(childData(nComponents))
-              ! Create lower and upper indices for all data of iElem in meshData.
+              ! Create lower and upper indices for all data of iElem in
+              ! meshData.
               lowElemIndex = upElemIndex + 1
               upElemIndex = (lowElemIndex-1) + nDofs * nComponents
 
@@ -635,18 +649,20 @@ contains
                 &  nChilds     = noChilds,                           &
                 &  projection  = projection_oneDof,                  &
                 &  childData   = childData                           )
-  
-              ! Iterate over all childDofs and set the data corectly in newMeshData
+
+              ! Iterate over all childDofs and set the data corectly in
+              ! newMeshData
               lowChildIndex = upChildIndex + 1
               upChildIndex = (lowChildIndex-1) + nComponents
-      
+
               newMeshData(lowChildIndex:upChildIndex) = childData
               deallocate(childData)
             end if
           end do childLoop
 
         else
-          ! Parent cell wasn't refined so it contains data with only one dof left.
+          ! Parent cell wasn't refined so it contains data with only one dof
+          ! left.
           ! Simple copying.
           allocate(childData(nComponents))
 
@@ -672,10 +688,10 @@ contains
         if (new_refine_tree(iElem)) then
           allocate(childData(nChildDofs*nChilds*nComponents))
           ! Create lower and upper indices for all data of iElem in meshData.
-          lowElemIndex = upElemIndex + 1 
+          lowElemIndex = upElemIndex + 1
           upElemIndex = (lowElemIndex-1) + nDofs * nComponents
 
-          ! Project these dofs from the coarse element to the 
+          ! Project these dofs from the coarse element to the
           ! finer elements.
           call ply_projDataToChild(                              &
             &  parentData  = meshData(lowElemIndex:upElemIndex), &
@@ -685,7 +701,7 @@ contains
             &  nChilds     = nChilds,                            &
             &  projection  = projection,                         &
             &  childData   = childData                           )
-  
+
           ! Iterate over all childDofs and set the data corectly in newMeshData
           lowChildIndex = upChildIndex + 1
           upChildIndex = (lowChildIndex-1) + nChilds * nChildDofs * nComponents
@@ -709,11 +725,11 @@ contains
             &  nChilds     = noChilds,                           &
             &  projection  = projection_oneDof,                  &
             &  childData   = childData                           )
-  
+
           ! Iterate over all childDofs and set the data corectly in newMeshData
           lowChildIndex = upChildIndex + 1
           upChildIndex = (lowChildIndex-1) + nComponents
-      
+
           newMeshData(lowChildIndex:upChildIndex) = childData
           deallocate(childData)
         end if
@@ -721,16 +737,16 @@ contains
     end if
 
   end subroutine ply_subsampleData
-  !****************************************************************************!
+  ! ************************************************************************ !
 
 
-  !****************************************************************************!
-  !> Subroutine to project elemental data from a parent cell to one of 
+  ! ************************************************************************ !
+  !> Subroutine to project elemental data from a parent cell to one of
   !! its children.
-  subroutine ply_projDataToChild( parentData, nParentDofs, nChildDofs,         &
-    &                             nComponents, nChilds, projection, childData  )
-    !---------------------------------------------------------------------------
-    !> Linearized data for a single variable (can have multiple components) 
+  subroutine ply_projDataToChild( parentData, nParentDofs, nChildDofs,        &
+    &                             nComponents, nChilds, projection, childData )
+    ! -------------------------------------------------------------------- !
+    !> Linearized data for a single variable (can have multiple components)
     !! and a single degree of freedom of the parent cell.
     real(kind=rk), intent(in) :: parentData(:)
 
@@ -750,13 +766,13 @@ contains
     !! dofs to the child dofs.
     type(ply_ProjCoeff_type), intent(in) :: projection
 
-    !> The created childData. 
+    !> The created childData.
     real(kind=rk), intent(out) :: childData(:)
-    !---------------------------------------------------------------------------
+    ! -------------------------------------------------------------------- !
     integer :: iChildDof, iComp, iChild, iParentDof
     integer :: childDof_pos, parentDof_pos
     real(kind=rk) :: projCoeff
-    !---------------------------------------------------------------------------
+    ! -------------------------------------------------------------------- !
     childData(:) = 0.0_rk
 
     childLoop: do iChild = 1, nChilds
@@ -780,15 +796,15 @@ contains
     end do childLoop
 
   end subroutine ply_projDataToChild
-  !****************************************************************************!
+  ! ************************************************************************ !
 
 
-  !****************************************************************************!
-  !> subroutine to create gauss points and weights for one-dimensional 
+  ! ************************************************************************ !
+  !> subroutine to create gauss points and weights for one-dimensional
   !! integration on the interval [x1,x2].
   subroutine gauleg( x1, x2, x, w, nIntP )
-    !---------------------------------------------------------------------------
-    !> The coordinates of the gauss points on the interval [-1,1]. 
+    ! -------------------------------------------------------------------- !
+    !> The coordinates of the gauss points on the interval [-1,1].
     !! The array has the length nIntP.
     real(kind=rk), allocatable, intent(inout) :: x(:)
 
@@ -803,33 +819,33 @@ contains
 
     !> upper limit of integration interval
     real(kind=rk), intent(in) :: x2
-    !---------------------------------------------------------------------------
+    ! -------------------------------------------------------------------- !
     ! some work variables
-    real(kind=rk) :: z1,z,xm,xl,pp,p3,p2,p1; 
+    real(kind=rk) :: z1,z,xm,xl,pp,p3,p2,p1;
     ! the relative precision of the points
     real(kind=rk) :: EPS
     integer :: m, i, j
-    !---------------------------------------------------------------------------
+    ! -------------------------------------------------------------------- !
 
     allocate(x(nIntP), w(nIntP))
 
-    EPS= 1.0 / (10.0**(PRECISION(1.0_rk)-2) ) 
-    m = (nIntP+1)/2; 
-    xm=0.5*(x2+x1); 
-    xl=0.5*(x2-x1); 
+    EPS= 1.0 / (10.0**(PRECISION(1.0_rk)-2) )
+    m = (nIntP+1)/2;
+    xm=0.5*(x2+x1);
+    xl=0.5*(x2-x1);
 
-    do i = 1, m 
+    do i = 1, m
 
       z=cos(PI*((i-1)+0.75_rk)/(nIntP+0.5_rk));
 
       loopToExit : do
-        p1=1.0_rk; p2=0.0_rk; 
+        p1=1.0_rk; p2=0.0_rk;
         do j=0 , nIntP-1
           p3=p2;
           p2=p1;
           p1=((2.0_rk*j+1.0_rk)*z*p2-j*p3)/(j+1.0_rk);
         end do
-        pp=nIntP*(z*p1-p2)/(z*z-1.0_rk); 
+        pp=nIntP*(z*p1-p2)/(z*z-1.0_rk);
         z1=z;
         z=z1-p1/pp;
         if ( abs(z-z1) < EPS ) then
@@ -845,7 +861,7 @@ contains
     end do
 
   end subroutine gauleg
-  !****************************************************************************!
+  ! ************************************************************************ !
 
 end module ply_LegPolyProjection_module
-!******************************************************************************!
+! **************************************************************************** !

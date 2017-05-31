@@ -5,7 +5,7 @@
 ?? INTEGER, PARAMETER :: unroll = 8
 
 !> Module to change bases functions of a modal representation.
-!! 
+!!
 !! \author{Jens Zudrop}
 !!
 !! This module provides routines for a fast basis exchange between Legendre
@@ -31,7 +31,6 @@ module ply_polyBaseExc_module
   use env_module,            only: rk
   use tem_float_module,      only: operator(.fne.)
   use tem_param_module,      only: pi
-  use tem_aux_module,        only: tem_abort
   use tem_gamma_module
   use tem_logging_module,    only: logUnit
   use ply_fpt_header_module, only: ply_fpt_default_subblockingWidth
@@ -150,14 +149,14 @@ module ply_polyBaseExc_module
 contains
 
 
-  !****************************************************************************
-  subroutine Copy_trafo_params(left,right)
-    !--------------------------------------------------------------------------
+  ! ************************************************************************ !
+  subroutine Copy_trafo_params( left, right )
+    ! -------------------------------------------------------------------- !
     !> fpt to copy to
     type(ply_trafo_params_type), intent(out) :: left
     !> fpt to copy from
     type(ply_trafo_params_type), intent(in) :: right
-    !--------------------------------------------------------------------------
+    ! -------------------------------------------------------------------- !
 
     left%trafo = right%trafo
     left%h = right%h
@@ -193,13 +192,13 @@ contains
     left%u = right%u
 
   end subroutine Copy_trafo_params
-  !****************************************************************************
+  ! ************************************************************************ !
 
 
-  !****************************************************************************
-  subroutine ply_fpt_init( n , params, trafo, blocksize, approx_terms, &
-    &                      striplen, subblockingWidth)
-    !--------------------------------------------------------------------------
+  ! ************************************************************************ !
+  subroutine ply_fpt_init( n, params, trafo, blocksize, approx_terms, &
+    &                      striplen, subblockingWidth                 )
+    ! -------------------------------------------------------------------- !
     integer, intent(in) :: n
     type(ply_trafo_params_type), intent(inout) :: params
     integer, intent(in) :: trafo
@@ -222,7 +221,7 @@ contains
     !> The width of the subblocks used during the unrolled base exchange to
     !! ensure a better cache usage.
     integer, optional, intent(in) :: subblockingWidth
-    !--------------------------------------------------------------------------
+    ! -------------------------------------------------------------------- !
     integer :: r, l, k, s, h, i, j, m, diagonals, blockdiagonals
     integer :: remainder
     integer :: diag_off, block_off
@@ -233,7 +232,9 @@ contains
     real(kind=rk) :: x
     type(ply_submatrix_type), allocatable :: sub(:)
     type(ply_sub_vec), allocatable :: u(:,:)
-    !---------------------------------------------------------------------------
+    ! -------------------------------------------------------------------- !
+
+    write(logUnit(3),*) 'Initializing FPT'
 
     params%trafo = trafo
     params%striplen = striplen
@@ -244,7 +245,7 @@ contains
       params%subblockingWidth = ply_fpt_default_subblockingWidth
     endif
 
-    !write(logUnit(1),*) 'subblockingWidth = ', params%subblockingWidth
+    write(logUnit(3),*) 'subblockingWidth = ', params%subblockingWidth
 
     ! The number of polynomials to approximate the entries in M.
     ! As double precision is required, the paper suggests k = 18.
@@ -253,7 +254,8 @@ contains
     else
       k = 18
     end if
-    !write(logUnit(1),*) 'Number of Cheb. coeffs for matrix function approximation: ', k
+    write(logUnit(3),*) &
+      & 'Number of Cheb. coeffs for matrix function approximation: ', k
 
     ! The minimum size of a submatrix in M, the paper suggests:
     ! approx. 4*k and power of 2
@@ -262,26 +264,29 @@ contains
     else
       s = 64
     end if
-    !write(logUnit(1),*) 'Smallest subblock size for evaluation of M: ',s
+    write(logUnit(3),*) 'Smallest subblock size for evaluation of M: ',s
 
     ! Check if the number of coefficients is smaller than the smallest subblock.
     ! if this is true, we set the smallest subblock to n, to ensure that the
-    ! direct multiplication with the entries near the diagonal is working correctly.
+    ! direct multiplication with the entries near the diagonal is working
+    ! correctly.
     if (n<s) then
       s = n
-      !write(logUnit(1),*) 'Corrected smallest subblock size for evaluation of M: ',s
+      write(logUnit(3),*) &
+        & 'Corrected smallest subblock size for evaluation of M: ',s
     end if
 
     params%nBlocks = n/s
 
     ! Logarithm of the maximal block size in terms of minimal block size s.
-    ! The formula in the Alpert&Rohklin paper is only valid if n is a power of 2.
+    ! The formula in the Alpert&Rohklin paper is only valid if n is a power of
+    ! 2.
     if (params%nBlocks > 1) then
       ! The first block is always a diagonal one, and not available for the
       ! approximation blocks.
       ! Of the remaining ones only half of them can be used in the largest
       ! block, as that block otherwise would not be detached from the diagonal.
-      h = int( log(real(params%nBlocks-1,rk))/log(2.0_rk) ) - 1
+      h = int( log( real( params%nBlocks - 1, rk ) ) / log(2.0_rk) ) - 1
     else
       h = -1
     end if
@@ -294,12 +299,12 @@ contains
     !
     ! The remainder are the first diagonals close to the main diagonal and have
     ! at least the length of one block.
-    remainder = n - s*(params%nBlocks-1)
+    remainder = n - s * (params%nBlocks-1)
 
     ! The non-zero diagonals within the remainder (only every second diagonal).
     ! Obviously it is beneficial to have an even remainder, as otherwise there
     ! is an additional diagonal to take into account.
-    diagonals = (remainder + mod(remainder,2))/2
+    diagonals = (remainder + mod(remainder,2)) / 2
 
     !HK: All approximation related initializations are actually only required
     !HK: if params%nBlocks > 2, maybe we should check this here. However, the
@@ -310,7 +315,7 @@ contains
     ! [Construct Chebyshev nodes to, tl,..., tk- on the
     ! interval [0, 1]
     do r = 0,k-1
-      t(r) = 0.5_rk * ( 1.0_rk - cos((r + 0.5_rk)*pi/k) )
+      t(r) = 0.5_rk * ( 1.0_rk - cos( ( r + 0.5_rk ) * pi / k ) )
     end do
 
     ! Step 2
@@ -367,10 +372,9 @@ contains
             do m = 0, rowsize-1
               allocate(sub(l)%subRow(i)%subCol(j)%rowDat(m)%coeff(0:k-1))
               do r = 0, k-1
-                sub(l)%subRow(i)%subCol(j)%rowDat(m)%coeff(r)     &
-                  &  = ply_m(  m + real(i,rk) * real(rowsize,rk), &
-                  &            row_rem + (real(j-1,rk)+t(r))      &
-                  &                      * real(rowsize,rk)       )
+                sub(l)%subRow(i)%subCol(j)%rowDat(m)%coeff(r)                 &
+                  & = ply_m( m + real(i,rk) * real(rowsize,rk),               &
+                  &          row_rem + (real(j-1,rk)+t(r)) * real(rowsize,rk) )
               end do ! r
             end do ! m
           end do ! j
@@ -396,10 +400,9 @@ contains
             do m = 0, rowsize-1
               allocate(sub(l)%subRow(i)%subCol(j)%rowDat(m)%coeff(0:k-1))
               do r = 0, k-1
-                sub(l)%subRow(i)%subCol(j)%rowDat(m)%coeff(r)     &
-                  &  = ply_l(  m + real(i,rk) * real(rowsize,rk), &
-                  &            row_rem + (real(j-1,rk)+t(r))      &
-                  &                      * real(rowsize,rk)       )
+                sub(l)%subRow(i)%subCol(j)%rowDat(m)%coeff(r)                &
+                  & = ply_l( m + real(i,rk) * real(rowsize,rk),              &
+                  &          row_rem + (real(j-1,rk)+t(r))* real(rowsize,rk) )
               end do ! r
             end do ! m
           end do ! j
@@ -572,29 +575,29 @@ contains
     end do
 
   end subroutine ply_fpt_init
-  !****************************************************************************
+  ! ************************************************************************ !
 
 
-  !****************************************************************************
-  elemental function ply_m(iReal,jReal) result( mVal )
-    !---------------------------------------------------------------------------
+  ! ************************************************************************ !
+  elemental function ply_m( iReal, jReal ) result( mVal )
+    ! -------------------------------------------------------------------- !
     real(kind=rk), intent(in) :: iReal, jReal
     real(kind=rk) :: mVal
-    !---------------------------------------------------------------------------
+    ! -------------------------------------------------------------------- !
 
     mVal = (2.0_rk/pi) * ply_lambda( 0.5_rk*(jReal - iReal) ) &
       &                * ply_lambda( 0.5_rk*(jReal + iReal) )
 
   end function ply_m
-  !****************************************************************************
+  ! ************************************************************************ !
 
 
-  !****************************************************************************
-  elemental function ply_m_int(iReal,jReal) result( mVal )
-    !---------------------------------------------------------------------------
+  ! ************************************************************************ !
+  elemental function ply_m_int( iReal, jReal ) result( mVal )
+    ! -------------------------------------------------------------------- !
     integer, intent(in) :: iReal, jReal
     real(kind=rk) :: mVal
-    !---------------------------------------------------------------------------
+    ! -------------------------------------------------------------------- !
 
     if (mod(iReal+jReal,2).eq.0) then
       if (iReal.eq.0) then
@@ -607,19 +610,19 @@ contains
     !HK: deactivated to allow declaration as elemental function
     !HK!     write(*,*) iReal, jReal, 'error!'
     !HK!     stop
-     mVal = 0.0_rk
+      mVal = 0.0_rk
     end if
 
   end function ply_m_int
-  !****************************************************************************
+  ! ************************************************************************ !
 
 
-  !****************************************************************************
-  elemental function ply_l(iReal,jReal) result( lVal )
-    !---------------------------------------------------------------------------
+  ! ************************************************************************ !
+  elemental function ply_l( iReal, jReal ) result( lVal )
+    ! -------------------------------------------------------------------- !
     real(kind=rk), intent(in) :: iReal, jReal
     real(kind=rk) :: lVal
-    !---------------------------------------------------------------------------
+    ! -------------------------------------------------------------------- !
 
     lVal = ( (-1.0_rk)*jReal*(iReal+0.5_rk)          &
       &     / ((jReal+iReal+1.0_rk)*(jReal-iReal)) ) &
@@ -627,15 +630,15 @@ contains
       &  * ply_lambda(0.5_rk*(jReal+iReal-1.0_rk))
 
   end function ply_l
-  !****************************************************************************
+  ! ************************************************************************ !
 
 
-  !****************************************************************************
-  elemental function ply_l_int(i,j) result( lVal )
-    !---------------------------------------------------------------------------
+  ! ************************************************************************ !
+  elemental function ply_l_int( i, j ) result( lVal )
+    ! -------------------------------------------------------------------- !
     integer, intent(in) :: i, j
     real(kind=rk) :: lVal
-    !---------------------------------------------------------------------------
+    ! -------------------------------------------------------------------- !
 
     if (i.eq.0 .and. j.eq.0) then
       lVal = 1.0_rk
@@ -648,21 +651,21 @@ contains
     end if
 
   end function ply_l_int
-  !****************************************************************************
+  ! ************************************************************************ !
 
 
-  !****************************************************************************
+  ! ************************************************************************ !
   elemental function ply_lambda( val ) result( funcVal )
-    !---------------------------------------------------------------------------
+    ! -------------------------------------------------------------------- !
     real(kind=rk), intent(in) :: val
     real(kind=rk) :: funcVal
-    !---------------------------------------------------------------------------
+    ! -------------------------------------------------------------------- !
     real(kind=rk), parameter :: lb_poly = 1.0_rk/0.067_rk
     real(kind=rk), parameter :: inter1 = 0.058_rk
     real(kind=rk), parameter :: inter2 = 0.04_rk
     real(kind=rk), parameter :: invbound = 0.02_rk
     real(kind=rk) :: invVal, a0, a1, a2, a3, a4, a5
-    !---------------------------------------------------------------------------
+    ! -------------------------------------------------------------------- !
 
     !>\todo: as we use a relation of gamma, it might be better to use the
     !!       gammln function provided by the numerical recipes, and just
@@ -714,14 +717,14 @@ contains
     end if
 
   end function ply_lambda
-  !****************************************************************************
+  ! ************************************************************************ !
 
 
-  !****************************************************************************
-  subroutine ply_calculate_coeff_strip(nIndeps, n, s, gam, matrix, alph, &
-    &                                  nDiagonals, block_offset, remainder, &
-    &                                  strip_lb, strip_ub, subblockingWidth )
-    !---------------------------------------------------------------------------
+  ! ************************************************************************ !
+  subroutine ply_calculate_coeff_strip( nIndeps, n, s, gam, matrix, alph,    &
+    &                                   nDiagonals, block_offset, remainder, &
+    &                                   strip_lb, strip_ub, subblockingWidth )
+    ! -------------------------------------------------------------------- !
     !> Number of values that can be computed independently.
     integer, intent(in) :: nIndeps
     ! The overall number of modal coefficients
@@ -756,7 +759,7 @@ contains
     !! strides, i.e. in y direction. This subblocking is used to get a better
     !! cache locality.
     integer, intent(in) :: subblockingWidth
-    !---------------------------------------------------------------------------
+    ! -------------------------------------------------------------------- !
     ! The index for the line loop
     integer :: m
     ! The next index to calculate
@@ -770,7 +773,7 @@ contains
     integer :: diag_off
     !> The start of the current block of m
     integer :: m_blocking
-    !---------------------------------------------------------------------------
+    ! -------------------------------------------------------------------- !
     iDiag_next = 1
     m = 1 ! default value for the index of the line loop
 
@@ -886,14 +889,15 @@ contains
     end do
 
   end subroutine ply_calculate_coeff_strip
-  !****************************************************************************
+  ! ************************************************************************ !
 
-  !****************************************************************************
+
+  ! ************************************************************************ !
   !> Convert strip of coefficients of a modal representation in terms of
   !! Legendre polynomials to modal coefficients in terms of Chebyshev
   !! polynomials.
-  subroutine ply_fpt_exec(alph, gam, params, nIndeps)
-    !---------------------------------------------------------------------------
+  subroutine ply_fpt_exec( alph, gam, params, nIndeps )
+    ! -------------------------------------------------------------------- !
     !> Number of values that can be computed independently.
     integer :: nIndeps
 
@@ -914,11 +918,11 @@ contains
     !> The parameters of the fast polynomial transformation.
     type(ply_trafo_params_type), intent(inout) :: params
 
-    !> Lower and upper bound of the strip     
-!'  integer, intent(in) :: strip_lb    
-!'  integer, intent(in) :: strip_ub    
+    !> Lower and upper bound of the strip
+!'  integer, intent(in) :: strip_lb
+!'  integer, intent(in) :: strip_ub
 
-    !---------------------------------------------------------------------------
+    ! -------------------------------------------------------------------- !
     real(kind=rk) :: normFactor
     integer :: j, r, i, l, k, h, n, s, m, numberOfBlocks
     integer :: iStrip, iFun, indep, iDof
@@ -933,8 +937,8 @@ contains
     integer :: rowsize
     integer :: block_off
     integer :: iBlock
-!'    integer :: iStrip !'should not be necessary anymore 
-    !---------------------------------------------------------------------------
+!'    integer :: iStrip !'should not be necessary anymore
+    ! -------------------------------------------------------------------- !
 
     n = params%n
     k = params%k
@@ -956,7 +960,7 @@ contains
 !"     strip_ub = min(strip_lb + striplen, nIndeps)
 
 !'      do indep = iStrip+1, strip_ub
-      do indep = 1, nIndeps 
+      do indep = 1, nIndeps
         iFun = (indep-1)*params%n            ! todo check this assignment
         ! Calculate bs for all columns
         blockSizeLoop: do l = 0,h
@@ -984,9 +988,9 @@ contains
             do j = i+2, i+ub_row - mod(i,2)
               do m = 0, rowsize - 1
                 odd = mod(m+block_off,2)
-                iVal = (indep-1)*n + m + block_off+1       ! todo check this assignment
+                iVal = (indep-1)*n + m + block_off+1 !todo check this assignment
                 do r = 0, k-1
-                  gam(iVal) = gam(iVal)      & 
+                  gam(iVal) = gam(iVal)      &
                     &       + params%sub(l)%subRow(i)%subCol(j)%rowDat(m)&
                     &               %coeff(r) &
                     &         * params%b(l)%col(j)%coeff(r,odd)
@@ -1010,18 +1014,19 @@ contains
         &                - nDiagonals
 
       ! Multiply with the entries near the diagonal
-      call ply_calculate_coeff_strip(nIndeps          = nIndeps,               &
-        &                            n                = params%n,              &
-        &                            s                = params%n,              &
-        &                            gam              = gam,                   &
-        &                            matrix           = params%diag,           &
-        &                            alph             = alph,                  &
-        &                            nDiagonals       = nDiagonals,            &
-        &                            block_offset     = 0,                     &
-        &                            remainder        = 0,                     &
-        &                            strip_lb         = iStrip,                &
-        &                            strip_ub         = strip_ub,              &
-        &                            subblockingWidth = params%subblockingWidth)
+      call ply_calculate_coeff_strip(                &
+        & nIndeps          = nIndeps,                &
+        & n                = params%n,               &
+        & s                = params%n,               &
+        & gam              = gam,                    &
+        & matrix           = params%diag,            &
+        & alph             = alph,                   &
+        & nDiagonals       = nDiagonals,             &
+        & block_offset     = 0,                      &
+        & remainder        = 0,                      &
+        & strip_lb         = iStrip,                 &
+        & strip_ub         = strip_ub,               &
+        & subblockingWidth = params%subblockingWidth )
 
       ! Multiply with entries in the adapters
       do iBlock=1,params%nBlocks-1
@@ -1045,15 +1050,14 @@ contains
       end do
 
   end subroutine ply_fpt_exec
-  !****************************************************************************
+  ! ************************************************************************ !
 
-    
 
-  !****************************************************************************
+  ! ************************************************************************ !
   !> Convert coefficients of a modal representation in terms of Legendre
   !! polynomials to modal coefficients in terms of Chebyshev polynomials.
-  subroutine ply_fpt_exec_striped(nIndeps, alph, gam, params)
-    !---------------------------------------------------------------------------
+  subroutine ply_fpt_exec_striped( nIndeps, alph, gam, params )
+    ! -------------------------------------------------------------------- !
     !> Number of values that can be computed independently.
     integer, intent(in) :: nIndeps
 
@@ -1073,7 +1077,7 @@ contains
     !! Note, that the resulting array will have changed layout, and the
     !! transformed direction will run slowest in the array.
     real(kind=rk), intent(out) :: gam(:)
-    !---------------------------------------------------------------------------
+    ! -------------------------------------------------------------------- !
     integer :: j, r, i, l, k, h, n, s, m, numberOfBlocks
     integer :: iStrip, iFun, indep
     integer :: iVal
@@ -1086,7 +1090,7 @@ contains
     integer :: rowsize
     integer :: block_off
     integer :: iBlock
-    !---------------------------------------------------------------------------
+    ! -------------------------------------------------------------------- !
 
     n = params%n
     k = params%k
@@ -1163,18 +1167,19 @@ contains
         &                - nDiagonals
 
       ! Multiply with the entries near the diagonal
-      call ply_calculate_coeff_strip(nIndeps          = nIndeps,               &
-        &                            n                = params%n,              &
-        &                            s                = params%n,              &
-        &                            gam              = gam,                   &
-        &                            matrix           = params%diag,           &
-        &                            alph             = alph,                  &
-        &                            nDiagonals       = nDiagonals,            &
-        &                            block_offset     = 0,                     &
-        &                            remainder        = 0,                     &
-        &                            strip_lb         = iStrip,                &
-        &                            strip_ub         = strip_ub,              &
-        &                            subblockingWidth = params%subblockingWidth)
+      call ply_calculate_coeff_strip(                &
+        & nIndeps          = nIndeps,                &
+        & n                = params%n,               &
+        & s                = params%n,               &
+        & gam              = gam,                    &
+        & matrix           = params%diag,            &
+        & alph             = alph,                   &
+        & nDiagonals       = nDiagonals,             &
+        & block_offset     = 0,                      &
+        & remainder        = 0,                      &
+        & strip_lb         = iStrip,                 &
+        & strip_ub         = strip_ub,               &
+        & subblockingWidth = params%subblockingWidth )
 
 
       ! Multiply with entries in the adapters
@@ -1201,7 +1206,7 @@ contains
     !$OMP END DO
 
   end subroutine ply_fpt_exec_striped
-  !****************************************************************************
+  ! ************************************************************************ !
 
 
 end module ply_polyBaseExc_module

@@ -1,7 +1,6 @@
 !> Module provides subroutines, functions and datatypes regarding
 !! cell local degrees of freedoms.
 module ply_dof_module
-  use env_module, only: rk
 
   implicit none
 
@@ -44,9 +43,11 @@ module ply_dof_module
 
 contains
 
+  ! ************************************************************************ !
   !> The x, y and z ansatz degrees are turned into the degrees of the next
   !! ansatz function in the linearized Q tensor
   pure subroutine nextModgCoeffQTens(ansFuncX, ansFuncY, ansFuncZ, maxdegree)
+    ! -------------------------------------------------------------------- !
     !> Ansatz function index in x direction. First ansatz function has index 1.
     integer, intent(inout) :: ansFuncX
     !> Ansatz function index in y direction. First ansatz function has index 1.
@@ -55,8 +56,9 @@ contains
     integer, intent(inout) :: ansFuncZ
     !> Maximal polynomial degree
     integer, intent(in) :: maxdegree
-
+    ! -------------------------------------------------------------------- !
     integer :: PolyOrd
+    ! -------------------------------------------------------------------- !
 
     PolyOrd = maxdegree + 1
 
@@ -74,11 +76,14 @@ contains
       ansFuncZ = ansFuncZ+1
     end if
   end subroutine nextModgCoeffQTens
+  ! ************************************************************************ !
 
 
+  ! ************************************************************************ !
   !> The x, y and z ansatz degrees are turned into the degrees of the next
   !! ansatz function in the layered P list
   pure subroutine nextModgCoeffPTens(ansFuncX, ansFuncY, ansFuncZ, maxdegree)
+    ! -------------------------------------------------------------------- !
     !> Ansatz function index in x direction. First ansatz function has index 1.
     integer, intent(inout) :: ansFuncX
     !> Ansatz function index in y direction. First ansatz function has index 1.
@@ -87,8 +92,9 @@ contains
     integer, intent(inout) :: ansFuncZ
     !> Maximal polynomial degree in each direction
     integer, intent(in) :: maxdegree
-
+    ! -------------------------------------------------------------------- !
     integer :: polyOrd
+    ! -------------------------------------------------------------------- !
 
     polyOrd = maxdegree + 1
     ! - ansatz indices are arranged in layers. Within each layer, the total
@@ -114,19 +120,23 @@ contains
       ansFuncZ = 1
     end if
   end subroutine nextModgCoeffPTens
+  ! ************************************************************************ !
 
 
+  ! ************************************************************************ !
   !> The x and y ansatz degrees are turned into the degrees of the next
   !! ansatz function in the linearized Q tensor
   pure subroutine nextModgCoeffQTens2D(ansFuncX, ansFuncY, maxdegree)
+    ! -------------------------------------------------------------------- !
     !> Ansatz function index in x direction. First ansatz function has index 1.
     integer, intent(inout) :: ansFuncX
     !> Ansatz function index in y direction. First ansatz function has index 1.
     integer, intent(inout) :: ansFuncY
     !> Maximal polynomial degree
     integer, intent(in) :: maxdegree
-
+    ! -------------------------------------------------------------------- !
     integer :: PolyOrd
+    ! -------------------------------------------------------------------- !
 
     PolyOrd = maxdegree + 1
 
@@ -139,15 +149,19 @@ contains
       ansFuncY = ansFuncY+1
     end if
   end subroutine nextModgCoeffQTens2D
+  ! ************************************************************************ !
 
 
+  ! ************************************************************************ !
   !> The x and y ansatz degrees are turned into the degrees of the next
   !! ansatz function in the layered P list
   pure subroutine nextModgCoeffPTens2D(ansFuncX, ansFuncY)
+    ! -------------------------------------------------------------------- !
     !> Ansatz function index in x direction. First ansatz function has index 1.
     integer, intent(inout) :: ansFuncX
     !> Ansatz function index in y direction. First ansatz function has index 1.
     integer, intent(inout) :: ansFuncY
+    ! -------------------------------------------------------------------- !
 
     ! - ansatz indices are arranged in layers. Within each layer, the total
     !   degree remains constant.
@@ -167,28 +181,37 @@ contains
     end if
 
   end subroutine nextModgCoeffPTens2D
+  ! ************************************************************************ !
 
 
+  ! ************************************************************************ !
   !> The x ansatz degree is turned into the degree of the next
   !! ansatz function in the linearized Q tensor
   pure subroutine nextModgCoeffQTens1D(ansFuncX)
+    ! -------------------------------------------------------------------- !
     !> Ansatz function index in x direction. First ansatz function has index 1.
     integer, intent(inout) :: ansFuncX
+    ! -------------------------------------------------------------------- !
 
     ansFuncX = ansFuncX +1
 
   end subroutine nextModgCoeffQTens1D
+  ! ************************************************************************ !
 
 
+  ! ************************************************************************ !
   !> The x ansatz degree is turned into the degree of the next
   !! ansatz function in the layered P list
   pure subroutine nextModgCoeffPTens1D(ansFuncX)
+    ! -------------------------------------------------------------------- !
     !> Ansatz function index in x direction. First ansatz function has index 1.
     integer, intent(inout) :: ansFuncX
+    ! -------------------------------------------------------------------- !
 
     ansFuncX = ansFuncX +1
 
   end subroutine nextModgCoeffPTens1D
+  ! ************************************************************************ !
 
 
 end module ply_dof_module

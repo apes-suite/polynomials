@@ -1,22 +1,35 @@
 module ply_subresolution_module
   use, intrinsic :: iso_c_binding, only: c_f_pointer
-  use env_module, only: pathLen, rk, isLittleEndian, long_k, newunit
 
-  use aotus_module, only: flu_State, aot_get_val, aoterr_Fatal, close_config
+  use env_module,                  only: pathLen,        &
+    &                                    rk,             &
+    &                                    isLittleEndian, &
+    &                                    long_k,         &
+    &                                    newunit
 
-  use treelmesh_module, only: treelmesh_type
-  use tem_aux_module, only: tem_open_distconf, tem_abort
-  use tem_color_prop_module, only: tem_color_prop_type, colors_per_char
-  use tem_comm_env_module, only: tem_comm_env_type
-  use tem_logging_module, only: logunit
-  use tem_subres_prop_module, only: tem_subres_prop_type, tem_subres_prop_load
-  use tem_tools_module, only: upper_to_lower
-  use tem_time_module, only: tem_time_type
-  use tem_varSys_module, only: tem_varSys_type, tem_varSys_op_type
+  use aotus_module,                only: flu_State,    &
+    &                                    aot_get_val,  &
+    &                                    aoterr_Fatal, &
+    &                                    close_config
 
-  use ply_dof_module, only: P_Space, Q_space
+  use treelmesh_module,            only: treelmesh_type
+  use tem_aux_module,              only: tem_open_distconf, &
+    &                                    tem_abort
+  use tem_color_prop_module,       only: tem_color_prop_type, &
+    &                                    colors_per_char
+  use tem_comm_env_module,         only: tem_comm_env_type
+  use tem_logging_module,          only: logunit
+  use tem_subres_prop_module,      only: tem_subres_prop_type, &
+    &                                    tem_subres_prop_load
+  use tem_tools_module,            only: upper_to_lower
+  use tem_time_module,             only: tem_time_type
+  use tem_varSys_module,           only: tem_varSys_type, &
+    &                                    tem_varSys_op_type
 
-  use ply_transfer_module, only: ply_transfer_P_dim, ply_transfer_dofs
+  use ply_dof_module,              only: P_Space, &
+    &                                    Q_space
+  use ply_transfer_module,         only: ply_transfer_P_dim, &
+    &                                    ply_transfer_dofs
 
   implicit none
 
@@ -45,25 +58,26 @@ module ply_subresolution_module
     integer :: colpos
   end type ply_subres_colvar_type
 
+
 contains
 
 
-  !****************************************************************************!
+  ! ************************************************************************ !
   !> Subroutine to load subresolution information for a given tree.
-  subroutine ply_subresolution_load(me, tree, proc, coloring)
-    !--------------------------------------------------------------------------!
+  subroutine ply_subresolution_load( me, tree, proc, coloring )
+    ! --------------------------------------------------------------------- !
     type(ply_subresolution_type), intent(out) :: me
     type(treelmesh_type), intent(in) :: tree
     type(tem_comm_env_type), intent(in) :: proc
     type(tem_color_prop_type), intent(in) :: coloring
-    !--------------------------------------------------------------------------!
+    ! --------------------------------------------------------------------- !
     character(len=pathLen) :: configfile
     character :: polyspace
     type(flu_State) :: conf
     integer :: iError
-    !--------------------------------------------------------------------------!
+    ! --------------------------------------------------------------------- !
 
-    configfile = trim(tree%global%dirname)//'subresolution.lua'
+    configfile = trim(tree%global%dirname) // 'subresolution.lua'
 
     call tem_subres_prop_load( me       = me%subres_prop, &
       &                        tree     = tree,           &
@@ -87,9 +101,8 @@ contains
         &               ErrCode = iError         )
 
       if (btest(iError, aoterr_Fatal)) then
-        write(logUnit(1),*) &
-          &  'FATAL Error occured, while retrieving subresolution polydegree'
-        call tem_abort()
+        call tem_abort(                                                      &
+          & 'FATAL Error occured, while retrieving subresolution polydegree' )
       end if
 
       call aot_get_val( L       = conf,        &
@@ -111,7 +124,6 @@ contains
         write(logUnit(1),*) 'Supported are:'
         write(logUnit(1),*) '* Q (quadratic with i,j,k <= maxDegree)'
         write(logUnit(1),*) '* P (with i+j+k <= maxDegree)'
-        write(logUnit(1),*) 'Stopping....'
         call tem_abort()
 
       end select
@@ -121,16 +133,16 @@ contains
     end if
 
   end subroutine ply_subresolution_load
-  !****************************************************************************!
+  ! ************************************************************************ !
 
 
-  !****************************************************************************!
+  ! ************************************************************************ !
   !> Get the subresolution data for all elements for a given color and in the
   !! requested format.
   subroutine ply_subres_import_color( me, tree, coloring, iColor,              &
     &                                 target_degree, target_space, target_dim, &
     &                                 subresdat )
-    !--------------------------------------------------------------------------!
+    ! --------------------------------------------------------------------- !
     type(ply_subresolution_type), intent(in) :: me
     type(treelmesh_type), intent(in) :: tree
     type(tem_color_prop_type), intent(in) :: coloring
@@ -139,7 +151,7 @@ contains
     integer, intent(in) :: target_space
     integer, intent(in) :: target_dim
     real(kind=rk), allocatable, intent(out) :: subresdat(:,:)
-    !--------------------------------------------------------------------------!
+    ! --------------------------------------------------------------------- !
     character(len=pathLen) :: datfile
     integer :: target_Dofs
     integer :: in_dofs
@@ -157,7 +169,7 @@ contains
     integer :: minOrd
     integer :: in_dim
     integer :: recs_per_elem
-    !--------------------------------------------------------------------------!
+    ! --------------------------------------------------------------------- !
 
     ! Seeder always writes three-dimensional data.
     ! Assume an input dimension of 3:
@@ -188,7 +200,7 @@ contains
           end do
 
         case default
-          call tem_abort('Wrong target_space! Select Q_Space or P_Space.')
+          call tem_abort( 'Wrong target_space! Select Q_Space or P_Space.' )
 
       end select
 
@@ -215,7 +227,7 @@ contains
           read_dofs = in_dofs
 
         case default
-          call tem_abort('Wrong basistype! Select Q_Space or P_Space.')
+          call tem_abort( 'Wrong basistype! Select Q_Space or P_Space.' )
 
       end select
 
@@ -230,9 +242,13 @@ contains
 
       fUnit = newunit()
 
-      open( unit = fUnit, file = datfile, action = 'read', &
-        &   access = 'direct', form = 'unformatted',       &
-        &   recl = rl, status = 'old'                      )
+      open( unit   = fUnit,         &
+        &   file   = datfile,       &
+        &   action = 'read',        &
+        &   access = 'direct',      &
+        &   form   = 'unformatted', &
+        &   recl   = rl,            &
+        &   status = 'old'          )
 
       minord = min(target_degree+1, me%polydegree+1)
 
@@ -292,9 +308,10 @@ contains
     end if
 
   end subroutine ply_subres_import_color
+  ! ************************************************************************ !
 
 
-  ! ****************************************************************************
+  ! ************************************************************************ !
   !> Get the color of an element.
   !!
   !! This routine provides the get_element for the variable definition.
@@ -302,8 +319,9 @@ contains
   !! number of degrees of freedom.
   !!
   !! The header of this subroutine must be same as tem_varSys_proc_element
-  subroutine ply_subres_get_elemcolor( fun, varSys, elempos, time, tree, nElems, nDofs, res )
-    ! --------------------------------------------------------------------------
+  subroutine ply_subres_get_elemcolor( fun, varSys, elempos, time, tree, &
+    &                                  nElems, nDofs, res                )
+    ! --------------------------------------------------------------------- !
     !> Description of the method to obtain the variables, here some preset
     !! values might be stored, like the space time function to use or the
     !! required variables.
@@ -316,7 +334,7 @@ contains
     integer, intent(in) :: elempos(:)
 
     !> Point in time at which to evaluate the variable.
-    type(tem_time_type), intent(in)  :: time
+    type(tem_time_type), intent(in) :: time
 
     !> global treelm mesh info
     type(treelmesh_type), intent(in) :: tree
@@ -334,7 +352,7 @@ contains
     !! Access: (iElem-1)*fun%nComponents*nDofs +
     !!         (iDof-1)*fun%nComponents + iComp
     real(kind=rk), intent(out) :: res(:)
-    ! --------------------------------------------------------------------------
+    ! --------------------------------------------------------------------- !
     type(ply_subres_colvar_type), pointer :: p
     integer :: ipos, iElem
     integer :: icol_pos
@@ -347,7 +365,7 @@ contains
     integer :: minsubdofs
     logical :: has_subres
     real(kind=rk) :: void, fill
-    ! --------------------------------------------------------------------------
+    ! --------------------------------------------------------------------- !
 
     call c_f_pointer(fun%method_data, p)
 
@@ -411,15 +429,15 @@ contains
                 isub_elem = p%subres%subres_prop%elem(cpos)%ID(isub_pos)
               end do
               if (iElem == isub_elem) then
-                if ( btest(ichar(p%subres%subres_prop &
-                  &                      %subresolved_colors(colchar,    &
-                  &                                          isub_pos)), &
+                if ( btest(ichar(p%subres                                  &
+                  &               %subres_prop                             &
+                  &               %subresolved_colors(colchar, isub_pos)), &
                   &        colbit) ) then
                   ! This element has subresolution information for this color.
                   ! Set it from the subresdat accordingly.
                   first = nDofs*(iPos-1)
                   res(first+1:first+minsubdofs) &
-                    &  = p%subresdat(:minsubdofs, isub_pos)
+                    & = p%subresdat(:minsubdofs, isub_pos)
                 end if
                 isub_pos = min(isub_pos+1, p%subres%subres_prop%nElems(cpos))
                 isub_elem = p%subres%subres_prop%elem(cpos)%ID(isub_pos)
@@ -445,7 +463,7 @@ contains
     end do
 
   end subroutine ply_subres_get_elemcolor
-  ! ****************************************************************************
+  ! ************************************************************************ !
 
 
 end module ply_subresolution_module

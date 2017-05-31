@@ -3,11 +3,9 @@
 
 module ply_poly_transformation_module
   use env_module,                   only: rk
-  use tem_aux_module,               only: tem_abort
   use treelmesh_module,             only: treelmesh_type
-  use tem_param_module,             only: childPosition
   use ply_LegPolyProjection_module, only: ply_subsample_type, &
-    &                                     ply_array_type 
+    &                                     ply_array_type
 
   implicit none
 
@@ -87,7 +85,6 @@ contains
         elseif (nChildDofs<1) then
           nChildDofs = 1
         end if
-       
       end if
 
       call ply_subsampleData( mesh             = mesh,             &
@@ -109,17 +106,14 @@ contains
       deallocate(workData)
 
     end do varLoop
- 
+
   end subroutine ply_Poly_Transformation
   ! ************************************************************************ !
 
   ! ************************************************************************ !
-  !>
-  !!
-  !!
-  subroutine ply_subsampleData(mesh, meshData, nDofs, nChildDofs,         &
-    &                          nComponents, refine_tree, new_refine_tree, &
-    &                          nDims, subsamp, newMeshData                )
+  subroutine ply_subsampleData( mesh, meshData, nDofs, nChildDofs,         &
+    &                           nComponents, refine_tree, new_refine_tree, &
+    &                           nDims, subsamp, newMeshData                )
     ! -------------------------------------------------------------------- !
     !> The mesh for the data.
     type(treelmesh_type), intent(in) :: mesh
@@ -157,7 +151,7 @@ contains
     integer :: nParentElems, childPos, lowElemIndex, upElemIndex
     integer :: iParentElem, iChild, iElem, upChildIndex, lowChildIndex
     integer :: oneDof, noChilds, max_modes
-    real(kind=rk), allocatable :: transform_matrix(:,:) 
+    real(kind=rk), allocatable :: transform_matrix(:,:)
     real(kind=rk), allocatable :: childData(:)
     ! -------------------------------------------------------------------- !
     nChilds = 2**nDims
@@ -182,7 +176,7 @@ contains
     upChildIndex = 0
     upElemIndex = 0
     childPos = 0
-    
+
     if (subsamp%sampling_lvl > 1) then
 
       elementLoop: do iParentElem=1,nParentElems
@@ -193,28 +187,28 @@ contains
             childPos = childPos + 1
             ! Check if the child elems will be refined...
             if (new_refine_tree(childPos)) then
-             
+
               ! Child cell will be refined.
               !
-              ! Need to project current elem data to new childs 
+              ! Need to project current elem data to new childs
               ! with reduced dofs.
-              ! Create lower and upper indices for all data of 
+              ! Create lower and upper indices for all data of
               ! iElem in meshData.
-              lowElemIndex = upElemIndex + 1 
+              lowElemIndex = upElemIndex + 1
               upElemIndex = (lowElemIndex-1) + nDofs * nComponents
 
-              ! Project these dofs from the coarse element to the 
+              ! Project these dofs from the coarse element to the
               ! finer elements.
-              call ply_projDataToChild(                                   &
-                &  parentData       = meshData(lowElemIndex:upElemIndex), &
-                &  nParentDofs      = nDofs,                              &
-                &  nChildDofs       = nChildDofs,                         &
-                &  nComponents      = nComponents,                        &
-                &  nDimensions      = nDims,                              &
-                &  nChilds          = nChilds,                            &
-                &  transform_matrix = transform_matrix,                   &
-                &  childData        = childData                           )
-  
+              call ply_projDataToChild(                                  &
+                & parentData       = meshData(lowElemIndex:upElemIndex), &
+                & nParentDofs      = nDofs,                              &
+                & nChildDofs       = nChildDofs,                         &
+                & nComponents      = nComponents,                        &
+                & nDimensions      = nDims,                              &
+                & nChilds          = nChilds,                            &
+                & transform_matrix = transform_matrix,                   &
+                & childData        = childData                           )
+
               ! Set the data correctly in newMeshData.
               lowChildIndex = upChildIndex + 1
               upChildIndex = (lowChildIndex-1) + &
@@ -226,7 +220,7 @@ contains
               ! Child cell won't be refined.
               !
               ! Need projecton from current dofs to 1 dof.
-              ! Create lower and upper indices for all data of 
+              ! Create lower and upper indices for all data of
               ! iElem in meshData.
               lowElemIndex = upElemIndex + 1
               upElemIndex = (lowElemIndex-1) + nDofs * nComponents
@@ -234,26 +228,25 @@ contains
               ! Projection from nDofs to oneDof (integral mean valuea).
               oneDof = 1
               noChilds = 1
-              call ply_projDataToChild(                                   &
-                &  parentData       = meshData(lowElemIndex:upElemIndex), &
-                &  nParentDofs      = oneDof,                              &
-                &  nChildDofs       = oneDof,                             &
-                &  nComponents      = nComponents,                        &
-                &  nDimensions      = nDims,                              &
-                &  nChilds          = noChilds,                           &
-                &  transform_matrix = transform_matrix,                   &
-                &  childData        = childData                           )
-  
-              ! Iterate over all childDofs and set the data corectly 
+              call ply_projDataToChild(                                  &
+                & parentData       = meshData(lowElemIndex:upElemIndex), &
+                & nParentDofs      = oneDof,                             &
+                & nChildDofs       = oneDof,                             &
+                & nComponents      = nComponents,                        &
+                & nDimensions      = nDims,                              &
+                & nChilds          = noChilds,                           &
+                & transform_matrix = transform_matrix,                   &
+                & childData        = childData                           )
+
+              ! Iterate over all childDofs and set the data corectly
               ! in newMeshData.
               lowChildIndex = upChildIndex + 1
               upChildIndex = (lowChildIndex-1) + nComponents
-      
+
               newMeshData(lowChildIndex:upChildIndex) = childData
               deallocate(childData)
             end if
           end do childLoop
-
         else
           ! Parent cell wasn't refined so it contains data with only one dof.
           ! Simple copying.
@@ -270,31 +263,27 @@ contains
           newMeshData(lowChildIndex:upChildIndex) = childData
           childpos = childpos + 1
           deallocate(childData)
-
         end if
-
       end do elementLoop
-
     else
-
       elemLoop: do iElem=1,nElems
         if (new_refine_tree(iElem)) then
           ! Create lower and upper indices for all data of iElem in meshData.
-          lowElemIndex = upElemIndex + 1 
+          lowElemIndex = upElemIndex + 1
           upElemIndex = (lowElemIndex-1) + nDofs * nComponents
 
-          ! Project these dofs from the coarse element to the 
+          ! Project these dofs from the coarse element to the
           ! finer elements.
-          call ply_projDataToChild(                                   &
-            &  parentData       = meshData(lowElemIndex:upElemIndex), &
-            &  nParentDofs      = nDofs,                              &
-            &  nChildDofs       = nChildDofs,                         &
-            &  nComponents      = nComponents,                        &
-            &  nDimensions      = nDims,                              &
-            &  nChilds          = nChilds,                            &
-            &  transform_matrix = transform_matrix,                   &
-            &  childData        = childData                           )
-  
+          call ply_projDataToChild(                                  &
+            & parentData       = meshData(lowElemIndex:upElemIndex), &
+            & nParentDofs      = nDofs,                              &
+            & nChildDofs       = nChildDofs,                         &
+            & nComponents      = nComponents,                        &
+            & nDimensions      = nDims,                              &
+            & nChilds          = nChilds,                            &
+            & transform_matrix = transform_matrix,                   &
+            & childData        = childData                           )
+
           ! Iterate over all childDofs and set the data corectly in newMeshData
           lowChildIndex = upChildIndex + 1
           upChildIndex = (lowChildIndex-1) + nChilds * nChildDofs * nComponents
@@ -309,16 +298,16 @@ contains
           ! Projection from nDofs to oneDof (integral mean value).
           oneDof = 1
           noChilds = 1
-          call ply_projDataToChild(                                   &
-            &  parentData       = meshData(lowElemIndex:upElemIndex), &
-            &  nParentDofs      = oneDof,                              &
-            &  nChildDofs       = oneDof,                             &
-            &  nComponents      = nComponents,                        &
-            &  nDimensions      = nDims,                              &
-            &  nChilds          = noChilds,                           &
-            &  transform_matrix = transform_matrix,                   &
-            &  childData        = childData                           )
-  
+          call ply_projDataToChild(                                  &
+            & parentData       = meshData(lowElemIndex:upElemIndex), &
+            & nParentDofs      = oneDof,                             &
+            & nChildDofs       = oneDof,                             &
+            & nComponents      = nComponents,                        &
+            & nDimensions      = nDims,                              &
+            & nChilds          = noChilds,                           &
+            & transform_matrix = transform_matrix,                   &
+            & childData        = childData                           )
+
           ! Iterate over all childDofs and set the data corectly in newMeshData
           lowChildIndex = upChildIndex + 1
           upChildIndex = (lowChildIndex-1) + nComponents
@@ -331,15 +320,15 @@ contains
 
     deallocate(transform_matrix)
 
-
   end subroutine ply_subsampleData
   ! ************************************************************************ !
 
+
   ! ************************************************************************ !
   !> Subroutine to project element data from a parent cell to its children.
-  subroutine ply_projDataToChild( parentData, nParentDofs, nChildDofs,        &
-    &                             nComponents, nDimensions, nChilds,          &
-    &                             transform_matrix, childData                 )
+  subroutine ply_projDataToChild( parentData, nParentDofs, nChildDofs, &
+    &                             nComponents, nDimensions, nChilds,   &
+    &                             transform_matrix, childData          )
     ! -------------------------------------------------------------------- !
     !> The polynomial data for a single parent element.
     real(kind=rk), intent(in) :: parentData(:)
@@ -383,7 +372,7 @@ contains
       &                **(1/real(nDimensions,kind=rk)))
 
     allocate(temp_Data(parent_modes))
- 
+
     do iDimension = 1,nDimensions
 
       if (nChilds > 1) then
@@ -408,9 +397,10 @@ contains
             &                * nComponents))
           childData = 0.0_rk
         else
-          allocate(childData(nChildElems_cur *                              &
-            &                     parent_modes**(nDimensions-1) *           &
-            &                     child_modes**(nDimensions-2) * nComponents))
+          allocate(childData(nChildElems_cur                   &
+            &                  * parent_modes**(nDimensions-1) &
+            &                  * child_modes**(nDimensions-2)  &
+            &                  * nComponents                   ))
           childData = 0.0_rk
         end if
 
@@ -424,17 +414,17 @@ contains
             temp_data = parentData(lower_bound:upper_bound:stride)
 
             do iMode = 1, child_modes
-                child_dofPos = iComponent +                               &
-                  &            (iMode-1) * nComponents +                  &
-                  &            (iIndep - 1) * child_modes * nComponents
+                child_dofPos = iComponent                                   &
+                  &              + (iMode-1) * nComponents                  &
+                  &              + (iIndep - 1) * child_modes * nComponents
 
               do jMode = iMode, parent_modes
 
-                childData(child_dofpos) = childData(child_dofpos) + &
-                  &                       temp_Data(jMode) *        &
-                  &                       transform_matrix(iMode,jMode)
- 
-              end do 
+                childData(child_dofpos) = childData(child_dofpos)         &
+                  &                         + temp_Data(jMode)            &
+                  &                         * transform_matrix(iMode,jMode)
+
+              end do
             end do
           end do
         end do
@@ -444,25 +434,27 @@ contains
           do iComponent = 1, nComponents
             do iIndep = 1, nIndeps
 
-              lower_bound = iComponent + (iIndep - 1) * parent_modes * nComponents
+              lower_bound = iComponent &
+                &             + (iIndep - 1) * parent_modes * nComponents
               upper_bound = iIndep * parent_modes * nComponents
 
               temp_data = parentData(lower_bound:upper_bound:stride)
 
               do iMode = 1, child_modes
-                  child_dofPos = iComponent +                                 &
-                    &            (iMode-1) * nComponents +                    &
-                    &            (iIndep - 1) * child_modes * nComponents +   &
-                    &            nComponents * child_modes**(nDimensions-2) * &
-                    &            parent_modes**(nDimensions-1) 
+                  child_dofPos = iComponent                                   &
+                    &              + (iMode-1) * nComponents                  &
+                    &              + (iIndep - 1) * child_modes * nComponents &
+                    &              + nComponents                              &
+                    &                * child_modes**(nDimensions-2)           &
+                    &                * parent_modes**(nDimensions-1)
 
                 do jMode = iMode, parent_modes
 
-                  childData(child_dofpos) = childData(child_dofpos) + &
-                    &                       temp_Data(jMode) *        &
-                    &                       transform_matrix(iMode,jMode)
- 
-                end do 
+                  childData(child_dofpos) = childData(child_dofpos)           &
+                    &                         + temp_Data(jMode)              &
+                    &                           * transform_matrix(iMode,jMode)
+
+                end do
               end do
             end do
           end do
@@ -480,9 +472,9 @@ contains
             &                * nComponents) )
           childData = 0.0_rk
         else
-          allocate(childData(nChildElems_cur *                         &
-            &                     parent_modes**(nDimensions-2) *           &
-            &                     child_modes**(nDimensions-1) * nComponents))
+          allocate(childData(nChildElems_cur                                &
+            &                  * parent_modes**(nDimensions-2)              &
+            &                  * child_modes**(nDimensions-1) * nComponents))
           childData = 0.0_rk
         end if
 
@@ -493,39 +485,36 @@ contains
             do kMode = 1, parent_modes
               do lMode = 1, child_modes
 
-                lower_bound = iComponent + (lMode-1) * nComponents + &
-                  &           (kMode-1) * child_modes*parent_modes * &
-                  &           nComponents +                          &
-                  &           (iChildElem_prev-1) * nComponents *    &
-                  &           child_modes**(nDimensions-2) *         &
-                  &           parent_modes**(nDimensions-1)
+                lower_bound = iComponent                                 &
+                  & + (lMode-1) * nComponents                            &
+                  & + (kMode-1) * child_modes*parent_modes * nComponents &
+                  & + (iChildElem_prev-1) * nComponents                  &
+                  &   * child_modes**(nDimensions-2)                     &
+                  &   * parent_modes**(nDimensions-1)
 
-                upper_bound = kMode * parent_modes*child_modes *  &
-                  &           nComponents +                       &
-                  &           (iChildElem_prev-1) * nComponents * &
-                  &           child_modes**(nDimensions-2) *      &
-                  &           parent_modes**(nDimensions-1)
+                upper_bound = kMode * parent_modes * child_modes * nComponents &
+                  &             + (iChildElem_prev-1) * nComponents            &
+                  &               * child_modes**(nDimensions-2)               &
+                  &               * parent_modes**(nDimensions-1)
 
-                temp_data = childData_prev &
-                  &            (lower_bound:upper_bound:stride)
+                temp_data = childData_prev(lower_bound:upper_bound:stride)
 
                 do iMode = 1, child_modes
-                    child_dofPos = iComponent +                            &
-                      &            (iMode-1) * child_modes * nComponents + &
-                      &            (lMode-1) * nComponents +               &
-                      &            (kMode-1) * nComponents *               &
-                      &            child_modes**2 +                        &
-                      &            (childElem-1) * nComponents *           &
-                      &            child_modes**(nDimensions-1) *          &
-                      &            parent_modes**(nDimensions-2)
+                    child_dofPos = iComponent                                &
+                      &              + (iMode-1) * child_modes * nComponents &
+                      &              + (lMode-1) * nComponents               &
+                      &              + (kMode-1) * nComponents               &
+                      &                * child_modes**2                      &
+                      &              + (childElem-1) * nComponents           &
+                      &                * child_modes**(nDimensions-1)        &
+                      &                * parent_modes**(nDimensions-2)
 
                   do jMode = iMode, parent_modes
 
-                    childData(child_dofpos) = childData(child_dofpos) +     &
-                      &                       temp_Data(jMode) *            &
-                      &                       transform_matrix(jMode,iMode)
+                    childData(child_dofpos) = childData(child_dofpos)         &
+                      & + temp_Data(jMode) * transform_matrix(jMode,iMode)
 
-                  end do 
+                  end do
                 end do
               end do
             end do
@@ -538,38 +527,35 @@ contains
               do kMode = 1, parent_modes
                 do lMode = 1, child_modes
 
-                  lower_bound = iComponent + (lMode-1) * nComponents + &
-                    &           (kMode-1) * child_modes*parent_modes * &
-                    &           nComponents +                          &
-                    &           (iChildElem_prev-1) * nComponents *    &
-                    &           child_modes**(nDimensions-2) *         &
-                    &           parent_modes**(nDimensions-1)
+                  lower_bound = iComponent                                 &
+                    & + (lMode-1) * nComponents                            &
+                    & + (kMode-1) * child_modes*parent_modes * nComponents &
+                    & + (iChildElem_prev-1) * nComponents                  &
+                    &   * child_modes**(nDimensions-2)                     &
+                    &   * parent_modes**(nDimensions-1)
 
-                  upper_bound = kMode * parent_modes*child_modes *  &
-                    &           nComponents +                       &
-                    &           (iChildElem_prev-1) * nComponents * &
-                    &           child_modes**(nDimensions-2) *      &
-                    &           parent_modes**(nDimensions-1)
+                  upper_bound = kMode * parent_modes * child_modes &
+                    &   * nComponents                              &
+                    & + (iChildElem_prev-1) * nComponents          &
+                    &   * child_modes**(nDimensions-2)             &
+                    &   * parent_modes**(nDimensions-1)
 
-                  temp_data = childData_prev &
-                    &            (lower_bound:upper_bound:stride)
+                  temp_data = childData_prev(lower_bound:upper_bound:stride)
 
                   do iMode = 1, child_modes
-                      child_dofPos = iComponent +                            &
-                        &            (iMode-1) * child_modes * nComponents + &
-                        &            (lMode-1) * nComponents +               &
-                        &            (kMode-1) * nComponents *               &
-                        &            child_modes**2 +                        &
-                        &            (childElem-1) * nComponents *           &
-                        &            child_modes**(nDimensions-1) *          &
-                        &            parent_modes**(nDimensions-2)
+                      child_dofPos = iComponent                      &
+                        & + (iMode-1) * child_modes * nComponents    &
+                        & + (lMode-1) * nComponents                  &
+                        & + (kMode-1) * nComponents * child_modes**2 &
+                        & + (childElem-1) * nComponents              &
+                        &   * child_modes**(nDimensions-1)           &
+                        &   * parent_modes**(nDimensions-2)
 
                     do jMode = iMode, parent_modes
 
-                      childData(child_dofpos) = childData(child_dofpos) +     &
-                        &                       temp_Data(jMode) *            &
-                        &                       transform_matrix(iMode,jMode)
- 
+                      childData(child_dofpos) = childData(child_dofpos) &
+                        & + temp_Data(jMode) * transform_matrix(iMode,jMode)
+
                     end do
                   end do
                 end do
@@ -600,38 +586,37 @@ contains
               do lMode = 1,child_modes
                 iIndep = iIndep + 1
 
-                lower_bound = iComponent + (iIndep - 1) * nComponents + &
-                  &           (iChildElem_prev-1) * nComponents *       &
-                  &           child_modes**(nDimensions-1) *            &
-                  &           parent_modes**(nDimensions-2)
+                lower_bound = iComponent                &
+                  & + (iIndep - 1) * nComponents        &
+                  & + (iChildElem_prev-1) * nComponents &
+                  &   * child_modes**(nDimensions-1)    &
+                  &   * parent_modes**(nDimensions-2)
 
-                upper_bound = parent_modes * child_modes**(nDimensions-1) * &
-                  &           nComponents -                                 &
-                  &           (nComponents - iComponent) +                  &
-                  &           (iChildElem_prev-1) * nComponents *           &
-                  &           child_modes**(nDimensions-1) *                &
-                  &           parent_modes**(nDimensions-2)
+                upper_bound = parent_modes * child_modes**(nDimensions-1) &
+                  &   * nComponents                                       &
+                  & - (nComponents - iComponent)                          &
+                  & + (iChildElem_prev-1) * nComponents                   &
+                  &   * child_modes**(nDimensions-1)                      &
+                  &   * parent_modes**(nDimensions-2)
 
                 temp_data(:) = childData_prev &
                   &            (lower_bound:upper_bound:stride)
 
                 do iMode = 1, child_modes
-                    child_dofPos = iComponent +                              &
-                      &            (iMode-1) * child_modes**2 *              &
-                      &            nComponents +                             &
-                      &            (lMode - 1) * nComponents +               &
-                      &            (kMode - 1) * child_modes * nComponents + &
-                      &            (childElem - 1) * nComponents *           &
-                      &            child_modes**nDimensions 
+                    child_dofPos = iComponent                      &
+                      & + (iMode-1) * child_modes**2 * nComponents &
+                      & + (lMode - 1) * nComponents                &
+                      & + (kMode - 1) * child_modes * nComponents  &
+                      & + (childElem - 1) * nComponents            &
+                      &   * child_modes**nDimensions
 
                   do jMode = iMode, parent_modes
 
-                    childData(child_dofpos) = childData(child_dofpos) +     &
-                      &                       temp_Data(jMode) *            &
-                      &                       transform_matrix(jMode,iMode)
+                    childData(child_dofpos) = childData(child_dofpos) &
+                      & + temp_Data(jMode) * transform_matrix(jMode,iMode)
 
                   end do
-                end do 
+                end do
               end do
             end do
           end do
@@ -645,35 +630,33 @@ contains
                 do lMode = 1,child_modes
                   iIndep = iIndep + 1
 
-                  lower_bound = iComponent + (iIndep - 1) * nComponents + &
-                    &           (iChildElem_prev-1) * nComponents *       &
-                    &           child_modes**(nDimensions-1) *            &
-                    &           parent_modes**(nDimensions-2)
+                  lower_bound = iComponent                &
+                    & + (iIndep - 1) * nComponents        &
+                    & + (iChildElem_prev-1) * nComponents &
+                    &   * child_modes**(nDimensions-1)    &
+                    &   * parent_modes**(nDimensions-2)
 
-                  upper_bound = parent_modes * child_modes**(nDimensions-1) * &
-                    &           nComponents -                                 &
-                    &           (nComponents - iComponent) +                  &
-                    &           (iChildElem_prev-1) * nComponents *           &
-                    &           child_modes**(nDimensions-1) *                &
-                    &           parent_modes**(nDimensions-2)
+                  upper_bound = parent_modes * child_modes**(nDimensions-1) &
+                    &   * nComponents                                       &
+                    & - (nComponents - iComponent)                          &
+                    & + (iChildElem_prev-1) * nComponents                   &
+                    &   * child_modes**(nDimensions-1)                      &
+                    &   * parent_modes**(nDimensions-2)
 
-                  temp_data(:) = childData_prev &
-                    &            (lower_bound:upper_bound:stride)
+                  temp_data(:) = childData_prev(lower_bound:upper_bound:stride)
 
                   do iMode = 1, child_modes
-                      child_dofPos = iComponent +                              &
-                        &            (iMode-1) * child_modes**2 *              &
-                        &            nComponents +                             &
-                        &            (lMode - 1) * nComponents +               &
-                        &            (kMode - 1) * child_modes * nComponents + &
-                        &            (childElem - 1) * nComponents *           &
-                        &            child_modes**nDimensions 
+                      child_dofPos = iComponent                      &
+                        & + (iMode-1) * child_modes**2 * nComponents &
+                        & + (lMode - 1) * nComponents                &
+                        & + (kMode - 1) * child_modes * nComponents  &
+                        & + (childElem - 1) * nComponents            &
+                        &   * child_modes**nDimensions
 
                     do jMode = iMode, parent_modes
 
-                      childData(child_dofpos) = childData(child_dofpos) +    &
-                        &                       temp_Data(jMode) *           &
-                        &                       transform_matrix(iMode,jMode)
+                      childData(child_dofpos) = childData(child_dofpos) &
+                        & + temp_Data(jMode) * transform_matrix(iMode,jMode)
 
                     end do
                   end do
@@ -682,7 +665,6 @@ contains
             end do
           end if
         end do
-
       end if
     end do
 
@@ -692,10 +674,8 @@ contains
   end subroutine ply_projDataToChild
   ! ************************************************************************ !
 
+
   ! ************************************************************************ !
-  !> 
-  !! 
-  !!
   subroutine ply_transform_matrix(max_modes, v)
     ! -------------------------------------------------------------------- !
     !> The number of modes in a single spatial direction.
@@ -734,15 +714,15 @@ contains
 
       if (max_modes > 2) then
         do orig = 3,max_modes
-          v(1,orig) = ply_beta(orig-1) * v(1,orig-2)                    &
-            &       + ply_alpha(orig-1) * shifting * v(1,orig-1)        &
-            &       - scaling * ply_alpha_beta(2,orig-1) * v(2, orig-1)
+          v(1,orig) = ply_beta(orig-1) * v(1,orig-2)                        &
+            &           + ply_alpha(orig-1) * shifting * v(1,orig-1)        &
+            &           - scaling * ply_alpha_beta(2,orig-1) * v(2, orig-1)
           do m = 2,orig
             if (m < max_modes) then
-              v(m,orig) = ply_beta(orig-1) * v(m,orig-2)                        &
-                &       + ply_alpha(orig-1) * shifting * v(m,orig-1)            &
-                &       - scaling * ply_alpha_beta(m+1,orig-1) * v(m+1, orig-1) & 
-                &       + scaling * ply_alpha_frac(m-1,orig-1) * v(m-1,orig-1)  
+              v(m,orig) = ply_beta(orig-1) * v(m,orig-2)                  &
+                & + ply_alpha(orig-1) * shifting * v(m,orig-1)            &
+                & - scaling * ply_alpha_beta(m+1,orig-1) * v(m+1, orig-1) &
+                & + scaling * ply_alpha_frac(m-1,orig-1) * v(m-1,orig-1)
             else
               !! Need to skip one summand for v(max_modes,max_modes).
               v(m,orig) = scaling * ply_alpha_frac(m-1,orig-1) * v(m-1,orig-1)
@@ -752,9 +732,9 @@ contains
       end if
       !! Fill the lower triangular matrix with help of the entries in upper
       !! triangular matrix.
-      do m = 1 , max_modes 
+      do m = 1 , max_modes
         do orig = 1, m-1
-          !! 
+          !!
           if (mod((m+orig),2) /= 0) then
             v(m ,orig) = - v(orig,m)
           else
@@ -766,6 +746,7 @@ contains
 
   end subroutine ply_transform_matrix
   ! ************************************************************************ !
+
 
   ! ************************************************************************ !
   !> Coefficients from the recursive formulation of legendre polynomials.
@@ -779,16 +760,14 @@ contains
     !! polynomials.
     real(kind=rk) :: alpha
     ! -------------------------------------------------------------------- !
-    ! -------------------------------------------------------------------- !
     if (mode > 0) then
       alpha = real((2 * mode - 1), kind=rk) / real(mode, kind=rk)
     else
       alpha = 0.0
     end if
-    return
-
   end function ply_alpha
   ! ************************************************************************ !
+
 
   ! ************************************************************************ !
   !> Coefficients from the recursive formulation of legendre polynomials.
@@ -803,16 +782,14 @@ contains
     !! polynomials.
     real(kind=rk) :: beta
     ! -------------------------------------------------------------------- !
-    ! -------------------------------------------------------------------- !
     if (mode > 0) then
       beta = real((1 - mode), kind=rk) / real(mode, kind=rk)
     else
       beta = 0.0
     end if
-    return
-
   end function ply_beta
   ! ************************************************************************ !
+
 
   ! ************************************************************************ !
   !> Quotient of two alpha values.
@@ -827,21 +804,19 @@ contains
     !> The quotient of two alpha values.
     real(kind=rk) :: alpha_frac
     ! -------------------------------------------------------------------- !
-    ! -------------------------------------------------------------------- !
     if ( denominator > 0 .and. numerator > 0 ) then
       if ( denominator == numerator ) then
         alpha_frac = 1.0_rk
       else
         alpha_frac = real((2*numerator-1)*denominator, kind=rk)  &
-          &            / real((2*denominator-1)*numerator, kind=rk) 
+          &            / real((2*denominator-1)*numerator, kind=rk)
       end if
     else
-      alpha_frac = 0.0_rk  
+      alpha_frac = 0.0_rk
     end if
-    return
-
   end function ply_alpha_frac
   ! ************************************************************************ !
+
 
   ! ************************************************************************ !
   !> Prodcut of alpha(numerator) * beta(denominator) / alpha(denominator)
@@ -856,7 +831,6 @@ contains
     !> The product of alpha(n) * beta(d) / alpha(d)
     real(kind=rk) :: alpha_beta
     ! -------------------------------------------------------------------- !
-    ! -------------------------------------------------------------------- !
     if (numerator > 0) then
       if ( denominator == numerator ) then
         alpha_beta = real((1-denominator), kind=rk)/ real(denominator, kind=rk)
@@ -867,9 +841,7 @@ contains
     else
       alpha_beta = 0.0_rk
     end if
-    return
-
   end function ply_alpha_beta
   ! ************************************************************************ !
 
-end module ply_poly_transformation_module 
+end module ply_poly_transformation_module

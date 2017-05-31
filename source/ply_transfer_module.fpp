@@ -5,9 +5,10 @@
 !! These routines allow the copying of data from one order and polynomial space
 !! into another.
 module ply_transfer_module
-  use env_module, only: rk
+  use env_module,     only: rk
 
-  use ply_dof_module, only: P_Space, Q_space,     &
+  use ply_dof_module, only: P_Space,              &
+    &                       Q_space,              &
     &                       nextModgCoeffPTens2D, &
     &                       nextModgCoeffPTens
 
@@ -261,7 +262,7 @@ contains
             out_off = out_Y*(outdegree+1) + out_zoff
             in_off = out_Y*(indegree+1) + in_zoff
             outdat(out_off+1:out_off+minord) &
-              &  = indat(in_off+1:in_off+minord)
+              & = indat(in_off+1:in_off+minord)
           end do
         end do
 

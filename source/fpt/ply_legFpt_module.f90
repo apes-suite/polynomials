@@ -3,18 +3,14 @@
 !! \author{Jens Zudrop}
 module ply_legFpt_module
   use, intrinsic :: iso_c_binding
-  use env_module, only: rk
-  use tem_param_module, only: PI
+  use env_module,             only: rk
   use tem_compileconf_module, only: vlen
-  use tem_aux_module, only: tem_abort
   use ply_polyBaseExc_module, only: ply_trafo_params_type, &
     &                               ply_fpt_init,          &
-    &                               ply_fpt_exec_striped,  &
     &                               ply_fpt_exec,          &
     &                               ply_legToCheb_param,   &
     &                               ply_chebToLeg_param,   &
     &                               assignment(=)
-  use ply_nodes_module,        only: ply_faceNodes_type
   use fftw_wrap
 
   implicit none
@@ -61,14 +57,14 @@ module ply_legFpt_module
 contains
 
 
-  !****************************************************************************
-  subroutine Copy_fpt(left,right)
-    !---------------------------------------------------------------------------
+  ! ************************************************************************ !
+  subroutine Copy_fpt( left, right )
+    ! -------------------------------------------------------------------- !
     !> fpt to copy to
     type(ply_legFpt_type), intent(out) :: left
     !> fpt to copy from
     type(ply_legFpt_type), intent(in) :: right
-    !---------------------------------------------------------------------------
+    ! -------------------------------------------------------------------- !
 
     left%legToChebParams = right%legToChebParams
     left%chebToLegParams = right%chebToLegParams
@@ -77,15 +73,15 @@ contains
     left%planPntToCheb = right%planPntToCheb
 
   end subroutine Copy_fpt
-  !****************************************************************************
+  ! ************************************************************************ !
 
 
-  ! ------------------------------------------------------------------------ !
+  ! ************************************************************************ !
   !> Subroutine to initialize the fast polynomial transformation
   !! for Legendre expansion.
-  subroutine ply_init_legFpt( maxPolyDegree, nIndeps, fpt,               &
-    &                         blocksize, approx_terms, striplen,         &
-    &                         lobattoPoints, subblockingWidth, fft_flags )
+  subroutine ply_init_legFpt( maxPolyDegree, nIndeps, fpt, blocksize, &
+    &                         approx_terms, striplen, lobattoPoints,  &
+    &                         subblockingWidth, fft_flags             )
     ! -------------------------------------------------------------------- !
     integer, intent(in) :: maxPolyDegree
 
@@ -113,7 +109,7 @@ contains
     !> Use Chebyshev-Lobatto Points (true) or simple Chebyshev points (false)
     !!
     !! Default is false.
-    logical, intent(in), optional  :: lobattoPoints
+    logical, intent(in), optional :: lobattoPoints
 
     !> The width of the subblocks used during the unrolled base exchange to
     !! ensure a better cache usage.
@@ -212,22 +208,22 @@ contains
     deallocate( tmpIn, tmpOut )
 
   end subroutine ply_init_legFpt
-  !****************************************************************************
+  ! ************************************************************************ !
 
 
-  !****************************************************************************
+  ! ************************************************************************ !
   !> Subroutine to transform Legendre expansion to point values
   !! at Chebyshev nodes.
   subroutine ply_legToPnt( fpt, legCoeffs, pntVal, nIndeps )
-    !---------------------------------------------------------------------------
+    ! -------------------------------------------------------------------- !
     real(kind=rk), intent(inout) :: legCoeffs(:)
     type(ply_legFpt_type), intent(inout) :: fpt
     real(kind=rk), intent(inout) :: pntVal(:)
     integer, intent(in) :: nIndeps
-    !---------------------------------------------------------------------------
+    ! -------------------------------------------------------------------- !
     integer :: iDof
     integer :: n
-    !---------------------------------------------------------------------------
+    ! -------------------------------------------------------------------- !
 
     n = fpt%legToChebParams%n
 
@@ -250,9 +246,9 @@ contains
           &                    legCoeffs(iDof:iDof+n-1), &
           &                    pntVal(iDof:iDof+n-1)     )
       end do
-  
+
     else
-  
+
       do iDof = 1, nIndeps*n, n
         legCoeffs(iDof) = pntVal(iDof)
         legCoeffs(iDof+n-1) = pntVal(iDof+n-1)
@@ -261,27 +257,27 @@ contains
           &                    legCoeffs(iDof:iDof+n-1), &
           &                    pntVal(iDof:iDof+n-1)     )
       end do
-       
+
     end if ! lobattoPoints
 
   end subroutine ply_legToPnt
-  !****************************************************************************
+  ! ************************************************************************ !
 
 
-  !****************************************************************************
+  ! ************************************************************************ !
   !> Subroutine to transform Legendre expansion to point values
   !! at Chebyshev nodes.
   subroutine ply_pntToLeg( fpt, pntVal, legCoeffs, nIndeps )
-    !---------------------------------------------------------------------------
+    ! -------------------------------------------------------------------- !
     type(ply_legFpt_type), intent(inout) :: fpt
     real(kind=rk), intent(inout) :: pntVal(:)
     real(kind=rk), intent(inout) :: legCoeffs(:)
     integer, intent(in) :: nIndeps
-    !---------------------------------------------------------------------------
+    ! -------------------------------------------------------------------- !
     real(kind=rk) :: normFactor
     integer :: iDof
     integer :: n
-    !---------------------------------------------------------------------------
+    ! -------------------------------------------------------------------- !
 
     n = fpt%legToChebParams%n
 
@@ -295,21 +291,22 @@ contains
           &                    legCoeffs(iDof:iDof+n-1) )
         pntVal(iDof) = legCoeffs(iDof) * 0.5_rk * normfactor
         pntVal(iDof+1:iDof+n-1:2) = -normFactor * legCoeffs(iDof+1:iDof+n-1:2)
-        pntVal(iDof+2:iDof+n-1:2) =  normFactor * legCoeffs(iDof+2:iDof+n-1:2)
+        pntVal(iDof+2:iDof+n-1:2) = normFactor * legCoeffs(iDof+2:iDof+n-1:2)
       end do
-  
+
     else
-  
+
       normFactor = 0.5_rk / real(n-1,kind=rk)
       do iDof = 1, nIndeps*n, n
         call fftw_execute_r2r( fpt%planPntToCheb,       &
           &                    pntVal(iDof:iDof+n-1),   &
           &                    legCoeffs(iDof:iDof+n-1) )
         pntVal(iDof) = legCoeffs(iDof) * normFactor
-        pntVal(iDof+1:iDof+n-2) = 2.0_rk * normFactor * legCoeffs(iDof+1:iDof+n-2)
+        pntVal(iDof+1:iDof+n-2)                              &
+          & = 2.0_rk * normFactor * legCoeffs(iDof+1:iDof+n-2)
         pntVal(iDof+n-1) = legCoeffs(iDof+n-1) * normFactor
       end do
-       
+
     end if ! lobattoPoints
 
     ! ply_fpt_exec on temp (no memory transpose)
@@ -319,5 +316,6 @@ contains
       &                params  = fpt%chebToLegParams )
 
   end subroutine ply_pntToLeg
+  ! ************************************************************************ !
 
 end module ply_legFpt_module

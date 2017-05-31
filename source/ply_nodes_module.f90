@@ -1,32 +1,31 @@
 module ply_nodes_module
-  use env_module,        only: rk, labelLen
-  use fftw_wrap,         only: fftw_available
-  use aotus_module,      only: flu_State, aot_get_val
+  use env_module,                   only: rk
 
-  use tem_aux_module,    only: tem_abort
-
-  use ply_space_integration_module,only:&
-                                   & ply_create_surface_gauss_points_cube,   & 
-                                   & ply_create_surface_gauss_points_cube_2d,& 
-                                   & ply_create_surface_gauss_points_cube_1d,& 
-                                   & ply_create_volume_gauss_points_cube,    & 
-                                   & ply_create_volume_gauss_points_cube_2d, & 
-                                   & ply_create_volume_gauss_points_cube_1d 
-  use ply_chebPoint_module,only: create_volume_cheb_points_cube,           &
-                               & create_volume_cheb_points_cube_2d,        &
-                               & create_volume_cheb_points_cube_1d,        &
-                               & create_volume_lobattocheb_points_cube,    &
-                               & create_volume_lobattocheb_points_cube_2d, &
-                               & create_volume_lobattocheb_points_cube_1d, &
-                               & create_surface_cheb_points_cube,          &
-                               & create_surface_lobattocheb_points_cube,   &
-                               & create_surface_cheb_points_cube_2d,       &
-                               & create_surface_lobattocheb_points_cube_2d,&
-                               & create_surface_cheb_points_cube_1d,       &
-                               & create_surface_lobattocheb_points_cube_1d
-  use ply_nodes_header_module, only: ply_nodes_header_type, assignment(=)
+  use ply_space_integration_module, only:      &
+    & ply_create_surface_gauss_points_cube,    &
+    & ply_create_surface_gauss_points_cube_2d, &
+    & ply_create_surface_gauss_points_cube_1d, &
+    & ply_create_volume_gauss_points_cube,     &
+    & ply_create_volume_gauss_points_cube_2d,  &
+    & ply_create_volume_gauss_points_cube_1d
+  use ply_chebPoint_module,         only:        &
+    & create_volume_cheb_points_cube,            &
+    & create_volume_cheb_points_cube_2d,         &
+    & create_volume_cheb_points_cube_1d,         &
+    & create_volume_lobattocheb_points_cube,     &
+    & create_volume_lobattocheb_points_cube_2d,  &
+    & create_volume_lobattocheb_points_cube_1d,  &
+    & create_surface_cheb_points_cube,           &
+    & create_surface_lobattocheb_points_cube,    &
+    & create_surface_cheb_points_cube_2d,        &
+    & create_surface_lobattocheb_points_cube_2d, &
+    & create_surface_cheb_points_cube_1d,        &
+    & create_surface_lobattocheb_points_cube_1d
+  use ply_nodes_header_module,      only: ply_nodes_header_type, &
+    &                                     assignment(=)
 
   implicit none
+
   private
 
   !> Datatype to represent facewise nodes
@@ -43,19 +42,20 @@ module ply_nodes_module
   public :: init_cheb_nodes, init_cheb_nodes_2d, init_cheb_nodes_1d
   public :: ply_faceNodes_type
 
-  contains
+contains
 
-  !****************************************************************************!
+  ! ************************************************************************ !
   !> routine to intilize quadrature points, 3d
-  subroutine init_gauss_nodes(nodes, faces, weights, nQuadPointsPerDir)
-    !--------------------------------------------------------------------------!
-    real(kind=rk), allocatable, intent (inout)  :: nodes(:,:)
-    type(ply_faceNodes_type), allocatable, intent (inout)  :: faces(:,:)
-    integer, intent (in)           :: nQuadPointsPerDir
-    real(kind=rk), allocatable,intent (inout)   :: weights(:)
+  subroutine init_gauss_nodes( nodes, faces, weights, nQuadPointsPerDir )
+    ! -------------------------------------------------------------------- !
+    real(kind=rk), allocatable, intent(inout) :: nodes(:,:)
+    type(ply_faceNodes_type), allocatable, intent(inout) :: faces(:,:)
+    real(kind=rk), allocatable, intent(inout) :: weights(:)
+    integer, intent(in) :: nQuadPointsPerDir
+    ! -------------------------------------------------------------------- !
     integer :: iDir, iAlign
     real(kind=rk), allocatable :: tmp_weights(:)
-    !--------------------------------------------------------------------------!
+    ! -------------------------------------------------------------------- !
 
     call ply_create_volume_gauss_points_cube(       &
       & num_intp_per_direction = nQuadPointsPerDir, &
@@ -77,22 +77,23 @@ module ply_nodes_module
           & refElemMax             = 1.0_rk,                    &
           & dir                    = idir,                      &
           & align                  = iAlign                     )
-      deallocate(tmp_weights)
+        deallocate(tmp_weights)
+      end do
     end do
-  end do
-end subroutine init_gauss_nodes
-!****************************************************************************!
+  end subroutine init_gauss_nodes
+  ! ************************************************************************ !
 
 
-!****************************************************************************!
-subroutine init_cheb_nodes(me, nodes, faces, nQuadPointsPerDir )
-  !--------------------------------------------------------------------------!
-  type(ply_nodes_header_type), intent(in)     :: me
-  real(kind=rk), allocatable, intent (inout)  :: nodes(:,:)
-    type(ply_faceNodes_type), allocatable, intent (inout)  :: faces(:,:)
-    integer, intent (in)           :: nQuadPointsPerDir
+  ! ************************************************************************ !
+  subroutine init_cheb_nodes( me, nodes, faces, nQuadPointsPerDir )
+    ! -------------------------------------------------------------------- !
+    type(ply_nodes_header_type), intent(in) :: me
+    real(kind=rk), allocatable, intent(inout) :: nodes(:,:)
+    type(ply_faceNodes_type), allocatable, intent(inout) :: faces(:,:)
+    integer, intent(in) :: nQuadPointsPerDir
+    ! -------------------------------------------------------------------- !
     integer :: iDir, iAlign
-    !--------------------------------------------------------------------------!
+    ! -------------------------------------------------------------------- !
 
     ! Build the Chebyshev nodes on the reference element (volume)
     if (me%lobattoPoints) then
@@ -130,19 +131,20 @@ subroutine init_cheb_nodes(me, nodes, faces, nQuadPointsPerDir )
       end do
     end do
   end subroutine init_cheb_nodes
-  !****************************************************************************!
+  ! ************************************************************************ !
 
 
-  !****************************************************************************!
-  subroutine init_gauss_nodes_2d(nodes, faces, weights, nQuadPointsPerDir)
-    !--------------------------------------------------------------------------!
-    real(kind=rk), allocatable, intent (inout)  :: nodes(:,:)
-    type(ply_faceNodes_type), allocatable, intent (inout)  :: faces(:,:)
-    integer, intent (in)           :: nQuadPointsPerDir
-    real(kind=rk), allocatable,intent (inout)   :: weights(:)
+  ! ************************************************************************ !
+  subroutine init_gauss_nodes_2d( nodes, faces, weights, nQuadPointsPerDir )
+    ! -------------------------------------------------------------------- !
+    real(kind=rk), allocatable, intent(inout) :: nodes(:,:)
+    type(ply_faceNodes_type), allocatable, intent(inout) :: faces(:,:)
+    real(kind=rk), allocatable, intent(inout) :: weights(:)
+    integer, intent(in) :: nQuadPointsPerDir
+    ! -------------------------------------------------------------------- !
     integer :: iDir, iAlign
     real(kind=rk), allocatable :: tmp_weights(:)
-    !--------------------------------------------------------------------------!
+    ! -------------------------------------------------------------------- !
 
     ! Build Gauss-Legendre Points in the volume, 2d
     call ply_create_volume_gauss_points_cube_2d(    &
@@ -150,7 +152,7 @@ subroutine init_cheb_nodes(me, nodes, faces, nQuadPointsPerDir )
       & points                 = nodes,             &
       & weights                = weights,           &
       & refElemMin             = -1.0_rk,           &
-      & refElemMax             =  1.0_rk            )
+      & refElemMax             = 1.0_rk             )
 
     ! Build the Gauss-Legendre nodes on the reference faces
     allocate( faces(2,2) )
@@ -167,22 +169,24 @@ subroutine init_cheb_nodes(me, nodes, faces, nQuadPointsPerDir )
           & Dir                    = iDir,                      &
           & Align                  = iAlign                     )
         deallocate(tmp_weights)
+
       end do
     end do
 
   end subroutine init_gauss_nodes_2d
-  !****************************************************************************!
+  ! ************************************************************************ !
 
 
-  !****************************************************************************!
-  subroutine init_cheb_nodes_2d(me, nodes, faces, nQuadPointsPerDir)
-    !--------------------------------------------------------------------------!
-    type(ply_nodes_header_type), intent(in)     :: me
-    real(kind=rk), allocatable, intent (inout)  :: nodes(:,:)
-    type(ply_faceNodes_type), allocatable, intent (inout)  :: faces(:,:)
-    integer, intent (in)           :: nQuadPointsPerDir
+  ! ************************************************************************ !
+  subroutine init_cheb_nodes_2d( me, nodes, faces, nQuadPointsPerDir )
+    ! -------------------------------------------------------------------- !
+    type(ply_nodes_header_type), intent(in) :: me
+    real(kind=rk), allocatable, intent(inout) :: nodes(:,:)
+    type(ply_faceNodes_type), allocatable, intent(inout) :: faces(:,:)
+    integer, intent(in) :: nQuadPointsPerDir
+    ! -------------------------------------------------------------------- !
     integer :: iDir, iAlign
-    !--------------------------------------------------------------------------!
+    ! -------------------------------------------------------------------- !
 
     ! Build the Chebyshev nodes on the reference element (volume)
     if (me%lobattoPoints) then
@@ -220,19 +224,20 @@ subroutine init_cheb_nodes(me, nodes, faces, nQuadPointsPerDir )
       end do
     end do
   end subroutine init_cheb_nodes_2d
-  !****************************************************************************!
+  ! ************************************************************************ !
 
 
-  !****************************************************************************!
-  subroutine init_gauss_nodes_1d(nodes, faces, weights, nQuadPointsPerDir)
-    !--------------------------------------------------------------------------!
-    real(kind=rk), allocatable, intent (inout)  :: nodes(:,:)
-    real(kind=rk), allocatable, intent (inout)  :: weights(:)
-    type(ply_faceNodes_type), allocatable, intent (inout)  :: faces(:,:)
-    integer, intent (in)           :: nQuadPointsPerDir
+  ! ************************************************************************ !
+  subroutine init_gauss_nodes_1d( nodes, faces, weights, nQuadPointsPerDir )
+    ! -------------------------------------------------------------------- !
+    real(kind=rk), allocatable, intent(inout) :: nodes(:,:)
+    type(ply_faceNodes_type), allocatable, intent(inout) :: faces(:,:)
+    real(kind=rk), allocatable, intent(inout) :: weights(:)
+    integer, intent(in) :: nQuadPointsPerDir
+    ! -------------------------------------------------------------------- !
     integer :: iDir, iAlign
     real(kind=rk), allocatable :: tmp_weights(:)
-    !--------------------------------------------------------------------------!
+    ! -------------------------------------------------------------------- !
 
     ! Build the Gauss nodes on the reference element (volume)
     call ply_create_volume_gauss_points_cube_1d(    &
@@ -240,7 +245,7 @@ subroutine init_cheb_nodes(me, nodes, faces, nQuadPointsPerDir )
       & points                 = nodes,             &
       & weights                = weights,           &
       & refElemMin             = -1.0_rk,           &
-      & refElemMax             =  1.0_rk            )
+      & refElemMax             = 1.0_rk             )
 
     ! Build the Gauss-Legendre nodes on the reference faces
     allocate( faces(1,2) )
@@ -253,23 +258,25 @@ subroutine init_cheb_nodes(me, nodes, faces, nQuadPointsPerDir )
           & weights = tmp_weights,                    &
           & Dir     = iDir,                           &
           & Align   = iAlign                          )
-      deallocate(tmp_weights)
+        deallocate(tmp_weights)
+
       end do
     end do
 
   end subroutine init_gauss_nodes_1d
-  !****************************************************************************!
+  ! ************************************************************************ !
 
 
-  !****************************************************************************!
-  subroutine init_cheb_nodes_1d(me, nodes, faces, nQuadPointsPerDir)
-    !--------------------------------------------------------------------------!
-    type(ply_nodes_header_type), intent(in)     :: me
-    real(kind=rk), allocatable, intent (inout)  :: nodes(:,:)
-    type(ply_faceNodes_type), allocatable, intent (inout)  :: faces(:,:)
-    integer, intent (in)           :: nQuadPointsPerDir
+  ! ************************************************************************ !
+  subroutine init_cheb_nodes_1d( me, nodes, faces, nQuadPointsPerDir )
+    ! -------------------------------------------------------------------- !
+    type(ply_nodes_header_type), intent(in) :: me
+    real(kind=rk), allocatable, intent(inout) :: nodes(:,:)
+    type(ply_faceNodes_type), allocatable, intent(inout) :: faces(:,:)
+    integer, intent(in) :: nQuadPointsPerDir
+    ! -------------------------------------------------------------------- !
     integer :: iDir, iAlign
-    !--------------------------------------------------------------------------!
+    ! -------------------------------------------------------------------- !
 
     ! Build the Chebyshev nodes on the reference element (volume)
     if (me%lobattoPoints) then
@@ -289,7 +296,8 @@ subroutine init_cheb_nodes(me, nodes, faces, nQuadPointsPerDir )
 
         faces(iDir,iAlign)%nquadpoints = 1
 
-        ! Check which points to generate, either Chebyshev or Lobatto-Chebyshev points
+        ! Check which points to generate, either Chebyshev or Lobatto-Chebyshev
+        ! points
         if(me%lobattoPoints) then
           call create_surface_lobattocheb_points_cube_1d( &
             & points = faces(iDir, iAlign)%points,        &
@@ -305,6 +313,6 @@ subroutine init_cheb_nodes(me, nodes, faces, nQuadPointsPerDir )
       end do
     end do
   end subroutine init_cheb_nodes_1d
-  !****************************************************************************!
+  ! ************************************************************************ !
 
 end module ply_nodes_module
