@@ -54,11 +54,9 @@ module ply_sampling_module
     &                                       nextModgCoeffPTens1D
   use ply_modg_basis_module,          only: legendre_1D
 
-  use ply_LegPolyProjection_module,   only: ply_QPolyProjection, &
-    &                                       ply_subsample_type,  &
+  use ply_poly_transformation_module, only: ply_Poly_Transformation, &
+    &                                       ply_subsample_type,      &
     &                                       ply_array_type
-
-  use ply_poly_transformation_module, only: ply_Poly_Transformation
 
   implicit none
 
@@ -1151,18 +1149,6 @@ contains
       &                           new_refine_tree = new_refine_tree, &
       &                           newMeshData     = newMeshData,     &
       &                           newVarDofs      = newVarDofs       )
-
-!!    call ply_QPolyProjection( subsamp         = subsamp,         &
-!!      &                       dofReduction    = dofReduction,    &
-!!      &                       tree            = mesh,            &
-!!      &                       meshData        = meshData,        &
-!!      &                       varDofs         = varDofs,         &
-!!      &                       ndims           = ndims,           &
-!!      &                       varcomps        = varcomps,        &
-!!      &                       refine_tree     = refine_tree,     &
-!!      &                       new_refine_tree = new_refine_tree, &
-!!      &                       newMeshData     = newMeshData,     &
-!!      &                       newVarDofs      = newVarDofs       )
 
     deallocate(dofReduction)
 

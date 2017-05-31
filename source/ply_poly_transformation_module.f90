@@ -4,14 +4,56 @@
 module ply_poly_transformation_module
   use env_module,                   only: rk
   use treelmesh_module,             only: treelmesh_type
-  use ply_LegPolyProjection_module, only: ply_subsample_type, &
-    &                                     ply_array_type
 
   implicit none
 
   private
 
+  ! ************************************************************************ !
+  type ply_subsample_type
+    !> Is subsampling active
+    logical :: isActive = .false.
+
+    !> The current sampling lvl.
+    integer :: sampling_lvl
+
+    !> The type of projection we use to subsample the elemental data.
+    integer :: projectionType = ply_QLegendrePoly_prp
+
+    !> Maximal Level down to which subsampling should be done.
+    integer :: caplevel = 20
+
+    !> Minimal subsampling depth:
+    integer :: minsub = 0
+
+    !> Maximal subsampling depth:
+    integer :: maxsub = 0
+
+    !> Maximum allowed oscillation of the solution.
+    !! For adaptive subsampling only.
+    real(kind=rk) :: eps_osci
+
+    !> Factor for the reduction of the degrees of freedom in one subsampling
+    !! step (per spatial direction).
+    real(kind=rk) :: dofReducFactor
+
+    !> Indicator for limitation of total memory consumption
+    logical :: adaptiveDofReduction
+
+    !> Absolute upper bound level to refine to.
+    integer :: AbsUpperBoundLevel
+  end type ply_subsample_type
+  ! ************************************************************************ !
+
+  ! ************************************************************************ !
+  type ply_array_type
+    real(kind=rk),allocatable :: dat(:)
+  end type ply_array_type
+  ! ************************************************************************ !
+
   public :: ply_Poly_Transformation
+  public :: ply_subsample_type
+  public :: ply_array_type
 
 contains
 
