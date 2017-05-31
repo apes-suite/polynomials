@@ -17,9 +17,6 @@ module ply_poly_transformation_module
     !> The current sampling lvl.
     integer :: sampling_lvl
 
-    !> The type of projection we use to subsample the elemental data.
-    integer :: projectionType = ply_QLegendrePoly_prp
-
     !> Maximal Level down to which subsampling should be done.
     integer :: caplevel = 20
 
