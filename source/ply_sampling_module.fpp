@@ -722,13 +722,13 @@ contains
       deallocate(meshData)
 
       nElemsToRefine = count(new_refine_tree)
-      call MPI_Allreduce( sendbuf  = MPI_IN_PLACE,          &
-        &                 recvbuf  = nElemsToRefine,        &
-        &                 count    = 1,                     &
-        &                 datatype = MPI_INTEGER,           &
-        &                 op       = MPI_SUM,               &
-        &                 comm     = orig_mesh%global%comm, &
-        &                 ierror   = iError                 )
+      call MPI_Allreduce( MPI_IN_PLACE,          & !sendbuf
+        &                 nElemsToRefine,        & !recvbuf
+        &                 1,                     & !count
+        &                 MPI_INTEGER,           & !datatype
+        &                 MPI_SUM,               & !op
+        &                 orig_mesh%global%comm, & !comm
+        &                 iError                 ) !ierror
 
       if ( nElemsToRefine == 0) then
         write(logunit(1),*) 'There are no Elements to refine.'
@@ -760,13 +760,13 @@ contains
           maxdofs_left = max(maxdofs_left, newvardofs(iVar))
         end do
 
-        call MPI_Allreduce( sendbuf  = MPI_IN_PLACE,          &
-          &                 recvbuf  = maxdofs_left,          &
-          &                 count    = 1,                     &
-          &                 datatype = MPI_INTEGER,           &
-          &                 op       = MPI_SUM,               &
-          &                 comm     = orig_mesh%global%comm, &
-          &                 ierror   = iError                 )
+        call MPI_Allreduce( MPI_IN_PLACE,          & !sendbuf
+          &                 maxdofs_left,          & !recvbuf
+          &                 1,                     & !count
+          &                 MPI_INTEGER,           & !datatype
+          &                 MPI_SUM,               & !op
+          &                 orig_mesh%global%comm, & !comm
+          &                 iError                 ) !ierror
 
         if (maxdofs_left == 1) then
           write(logunit(1),*) 'There is only one degree of freedom left.'
@@ -798,13 +798,13 @@ contains
               & newMeshData     = newMeshData      )
 
             nElemsToRefine = count(new_refine_tree)
-            call MPI_Allreduce( sendbuf  = MPI_IN_PLACE,          &
-              &                 recvbuf  = nElemsToRefine,        &
-              &                 count    = 1,                     &
-              &                 datatype = MPI_INTEGER,           &
-              &                 op       = MPI_SUM,               &
-              &                 comm     = orig_mesh%global%comm, &
-              &                 ierror   = iError                 )
+            call MPI_Allreduce( MPI_IN_PLACE,          & !sendbuf
+              &                 nElemsToRefine,        & !recvbuf
+              &                 1,                     & !count
+              &                 MPI_INTEGER,           & !datatype
+              &                 MPI_SUM,               & !op
+              &                 orig_mesh%global%comm, & !comm
+              &                 iError                 ) !ierror
 
             if ( nElemsToRefine == 0 ) then
               write(logunit(1),*) 'There are no more elements to refine.'
@@ -851,13 +851,13 @@ contains
               maxdofs_left = max(maxdofs_left, newvardofs(iVar))
             end do
 
-            call MPI_Allreduce( sendbuf  = MPI_IN_PLACE,          &
-              &                 recvbuf  = maxdofs_left,          &
-              &                 count    = 1,                     &
-              &                 datatype = MPI_INTEGER,           &
-              &                 op       = MPI_SUM,               &
-              &                 comm     = orig_mesh%global%comm, &
-              &                 ierror   = iError                 )
+            call MPI_Allreduce( MPI_IN_PLACE,          & !sendbuf
+              &                 maxdofs_left,          & !recvbuf
+              &                 1,                     & !count
+              &                 MPI_INTEGER,           & !datatype
+              &                 MPI_SUM,               & !op
+              &                 orig_mesh%global%comm, & !comm
+              &                 iError                 ) !ierror
 
             if (maxdofs_left == 1) then
               write(logunit(1),*) 'There is only one degree of freedom left.'
@@ -1091,13 +1091,13 @@ contains
     ! Number of Elements that need refinement.
     nElemsToRefine = count(new_refine_tree(:))
 
-    call MPI_Allreduce( sendbuf  = nElemsToRefine,   &
-      &                 recvbuf  = nRefineGlobal,    &
-      &                 count    = 1,                &
-      &                 datatype = MPI_INTEGER,      &
-      &                 op       = MPI_SUM,          &
-      &                 comm     = mesh%global%comm, &
-      &                 ierror   = iError            )
+    call MPI_Allreduce( nElemsToRefine,   & !sendbuf
+      &                 nRefineGlobal,    & !recvbuf
+      &                 1,                & !count
+      &                 MPI_INTEGER,      & !datatype
+      &                 MPI_SUM,          & !op
+      &                 mesh%global%comm, & !comm
+      &                 iError            ) !ierror
 
     ! Check if adaptiveDofReduction is true
     if (subsamp%adaptiveDofReduction .AND. nElemsToRefine > 0) then
