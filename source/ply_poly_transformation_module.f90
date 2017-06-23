@@ -715,16 +715,34 @@ contains
 
 
   ! ************************************************************************ !
+  !> Compute the transformation matrix for a projection to the left and right
+  !! half-interval of Legendre polynomials for the given maximal number of
+  !! modes.
+  !!
+  !! Note: The transformation matrices to each subinterval are triangular, and
+  !!       the diagonal entries are the same. To save memory both matrices are
+  !!       stored in a single 2 dimensional array of size
+  !!       (max_modes, max_modes).
+  !!
+  !! This matrix only needs to be computed once for a sufficiently high order,
+  !! as submatices out of it can by used to perform the transformation for
+  !! any lower polynomial degree.
   subroutine ply_transform_matrix(max_modes, v)
     ! -------------------------------------------------------------------- !
-    !> The number of modes in a single spatial direction.
+    !> The maximal number of modes to compute the transformation for.
     !!
+    !! The resulting matrix v will be max_modes x max_modes large and can
+    !! be used for the transformation of all polynomials with up to this
+    !! many modes.
     integer, intent(in) :: max_modes
 
     !> The transformation matrix.
     !!
     !! Upper triangular matrix is created for shifting and lower triangular
     !! for (-1) * shifting.
+    !! For the right interval we interpret the first index as row index
+    !! and the second as column. For the left interval this is reverted and
+    !! we interpret the first index as columns of the matrix.
     real(kind=rk), allocatable, intent(out) :: v(:,:)
     ! -------------------------------------------------------------------- !
     integer :: m, orig
@@ -740,44 +758,47 @@ contains
     ! [    :                    ...]
 
     allocate(v(max_modes,max_modes))
-    v(:,:) = 0.0
+    v = 0.0_rk
 
-    scaling = 0.5
-    shifting = 0.5
+    scaling = 0.5_rk
+    shifting = 0.5_rk
 
-    !! Set the first entries of v manually.
-    v(1,1) = 1.0
+    ! Set the first two entries of v manually.
+    v(1,1) = 1.0_rk
     if (max_modes > 1) then
       v(1,2) = shifting
       v(2,2) = scaling
 
       if (max_modes > 2) then
         do orig = 3,max_modes
-          v(1,orig) = ply_beta(orig-1) * v(1,orig-2)                        &
-            &           + ply_alpha(orig-1) * shifting * v(1,orig-1)        &
-            &           - scaling * ply_alpha_beta(2,orig-1) * v(2, orig-1)
+          v(1,orig) = ply_beta(orig-1) * v(1,orig-2)                    &
+            &       + ply_alpha(orig-1) * shifting * v(1,orig-1)        &
+            &       - scaling * ply_alpha_beta(2,orig-1) * v(2, orig-1)
           do m = 2,orig
             if (m < max_modes) then
-              v(m,orig) = ply_beta(orig-1) * v(m,orig-2)                  &
-                & + ply_alpha(orig-1) * shifting * v(m,orig-1)            &
-                & - scaling * ply_alpha_beta(m+1,orig-1) * v(m+1, orig-1) &
-                & + scaling * ply_alpha_frac(m-1,orig-1) * v(m-1,orig-1)
+              v(m,orig) = ply_beta(orig-1) * v(m,orig-2)                     &
+                &       + ply_alpha(orig-1) * shifting * v(m,orig-1)         &
+                &       - scaling * ply_alpha_beta(m+1,orig-1)               &
+                &                 * v(m+1, orig-1)                           &
+                &       + scaling * ply_alpha_frac(m-1,orig-1) * v(m-1,orig-1)
             else
-              !! Need to skip one summand for v(max_modes,max_modes).
+              ! Need to skip one summand for v(max_modes,max_modes).
               v(m,orig) = scaling * ply_alpha_frac(m-1,orig-1) * v(m-1,orig-1)
             end if
           end do
         end do
       end if
-      !! Fill the lower triangular matrix with help of the entries in upper
-      !! triangular matrix.
+
+      ! Due to the symmetry of the problem (the left subinterval has just
+      ! the shifting with a changed sign), we can fill the other half of
+      ! the matrix by copying the already computed values accordingly with
+      ! a change in sign, as needed (alternatingly).
       do m = 1 , max_modes
         do orig = 1, m-1
-          !!
           if (mod((m+orig),2) /= 0) then
-            v(m ,orig) = - v(orig,m)
+            v(m, orig) = - v(orig, m)
           else
-            v(m ,orig) = v(orig,m)
+            v(m, orig) = v(orig, m)
           end if
         end do
       end do
