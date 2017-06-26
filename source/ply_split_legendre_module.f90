@@ -9,8 +9,8 @@
 !! x and to the respective coordinates in the two halfed elements as xi_left
 !! and xi_right, we compute the modal representation of the original Legendre
 !! polynomial series under these transformations:
-!! x = 0.5 * xi_left - 0.5
-!! x = 0.5 * xi_right + 0.5
+!! \[ x = 0.5 \cdot \xi_{left} - 0.5 \]
+!! \[ x = 0.5 \cdot \xi_{right} + 0.5 \]
 !!
 !! This is needed when refining elements.
 module ply_split_legendre_module
@@ -82,12 +82,14 @@ contains
     ! -------------------------------------------------------------------- !
 
     ! The split matrix looks like this:
-    ! [1.0  --  --     shift=0.5   ]
-    ! | |  0.5  --                 |
-    ! | |   |  0.25             ...|
-    ! |             0.125          |
-    ! | shift=-0.5        0.0625   |
-    ! [    :                    ...]
+    ! indicing: split_matrix(row, column) for the right half.
+    !
+    ! (1,:)   [1.0  --  --     shift=0.5   ]
+    ! (2,:)   | |  0.5  --                 |
+    ! (3,:)   | |   |  0.25             ...|
+    ! (4,:)   |             0.125          |
+    ! (i,:)   | shift=-0.5        0.0625   |
+    !   :     [    :                    ...]
     !
     ! To compute the matrix we use the Clenshaw algorithm to iteratively
     ! compute the modal representation step by step for the right halfinterval
@@ -100,9 +102,10 @@ contains
 
     atleast2: if (nModes > 1) then
 
-      ! In the next step we multiply the previous column by scaling and
-      ! shift all modes one up. (There would also be a down-shifting but
-      ! we now that all higher modes of the previous step are 0 anyway.)
+      ! In the next step (second column) we multiply the previous column
+      ! by scaling and shift all modes one up. (There would also be a
+      ! down-shifting but we now that all higher modes of the previous step are
+      ! 0 anyway.)
       ! Then we add the shifting in the first mode. For the second step
       ! we can easily write this down explicitly:
       split_matrix(1,2) = shifting
@@ -120,7 +123,7 @@ contains
             &                                  * split_matrix(m, orig-1) &
             &                   - scaling  * alpha_beta(m+1, orig-1)     &
             &                                 * split_matrix(m+1, orig-1)
-          do m=2,orig-1
+          do m=2,orig-2
             split_matrix(m, orig) =            beta(orig-1)                  &
               &                                  * split_matrix(m, orig-2)   &
               &                   + shifting * alpha(orig-1)                 &
@@ -128,10 +131,15 @@ contains
               &                   - scaling  * alpha_beta(m+1, orig-1)       &
               &                                  * split_matrix(m+1, orig-1) &
               &                   + scaling  * alpha_frac(m-1, orig-1)       &
-              &                              * split_matrix(m-1,orig-1)
+              &                              * split_matrix(m-1, orig-1)
           end do
+          ! Skip all terms from beyond the diagonal (they are 0).
+          m = orig-1
+          split_matrix(m, orig) = shifting * alpha(orig-1)                 &
+            &                                  * split_matrix(m, orig-1)   &
+            &                   + scaling  * alpha_frac(m-1, orig-1)       &
+            &                              * split_matrix(m-1, orig-1)
           m = orig
-          ! Skip all terms from above the diagonal (they are 0).
           split_matrix(m, orig) = scaling  * alpha_frac(m-1, orig-1) &
             &                              * split_matrix(m-1,orig-1)
         end do
