@@ -461,7 +461,7 @@ contains
 
                 childData(child_dofpos) = childData(child_dofpos)         &
                   &                         + temp_Data(jMode)            &
-                  &                         * transform_matrix(iMode,jMode)
+                  &                         * transform_matrix(jMode,iMode)
 
               end do
             end do
