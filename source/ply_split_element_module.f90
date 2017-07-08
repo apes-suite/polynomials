@@ -45,7 +45,6 @@ contains
 
   ! ------------------------------------------------------------------------ !
   !> Initialization of the module.
-  !!
   !! This needs to be performed before any call of the actual transformation
   !! [[ply_split_element_1D]].
   !!
@@ -75,16 +74,76 @@ contains
 
 
   ! ------------------------------------------------------------------------ !
-  !> Project a polynomial representation in elements in one dimension.
+  !> Project a polynomial representation in elements in one dimension to its
+  !! two halves in that direction.
   !!
   !! For each parent element the projection on the two respective child elements
   !! (half intervals) are computed for one dimension.
-  subroutine ply_split_element_1D(parent_data, child_data)
+  !!
+  !>@note Preliminary data layout and interface planning.
+  !! It might be that we should rather split the index into the direction
+  !! in which we perform the operation and all the other directions normal
+  !! to that. For a dense matrix this may allow the compiler to detect
+  !! the matrix multiply. However, here for the triangular matrix it is not
+  !! so sure, whether this would be possible.
+  !!@endnote
+  !!
+  !! As we need to perform this operation in all dimensions, it would be good
+  !! to shift the indices around. When doing this, we can stick to the same
+  !! implementation for all directions, without the need to put any logic in
+  !! here to decide on the current direction.
+  !! In 3D we would end up with this chain:
+  !! (x,y,z) -> split_element for Z -> (z,x,y)
+  !!         -> split_element for Y -> (y,z,x)
+  !!         -> split_element for X -> (x,y,z)
+  !! Thus, the logic is that we perform the split on the last dimension, and
+  !! cycle the indices in the output.
+  !!
+  !! We can generalize this to arbitrary dimensions.
+  !! In 2D it would look like this:
+  !! (x,y) -> split_element for Y -> (y,x)
+  !!       -> split_element for X -> (x,y)
+  !! And in 1D, we just need to perform one transformation:
+  !! (x) -> split_element for X -> (x)
+  !!
+  !! As we allow for a changed number of polynomial degrees in the input and
+  !! output, we need to take care of different lengths for each direction.
+  !! Thus, we need: the dimensionality, two 1D arrays with the length of this
+  !! dimensionality to provide the number of degrees of freedom for each
+  !! direction (once for the input, and once for the output).
+  !!
+  !! We need: nDofs in the direction where the transformation is to be done
+  !!          and the nDofs for all normal directions.
+  subroutine ply_split_element_1D( nDims, inLen, outLen, parent_data, &
+    &                              child_data                         )
     ! -------------------------------------------------------------------- !
+    !> Number of dimensions of the polynomial data.
+    integer, intent(in) :: nDims
+
+    !> Number degrees of freedom for each direction in parent_Data.
+    !!
+    !! The first index of parent_data needs to have a length equal to the
+    !! product of all inLen components.
+    !! The splitting operation will be done in the last dimension.
+    integer, intent(in) :: inLen(nDims)
+
+    !> Number degrees of freedom for each direction in child_Data.
+    !!
+    !! The first index of child_data needs to have a length equal to the
+    !! product of all outLen components.
+    !! The data will be cyclicly exchanged. Thus, the last dimension in
+    !! parent_data corresponds to the first in one in child_data and all
+    !! other components are shifted once to the right.
+    integer, intent(in) :: outLen(nDims)
+
     !> Polynomial representation in the parent elements.
     !!
     !! The first index are the degrees of freedom in elements, the second index
     !! are the elements.
+    !! In the first index the shape of data has to be in the form
+    !! (inLen(1), inLen(2), ... , inLen(nDims)).
+    !! The splitting operation is performed on the last dimension in that
+    !! data.
     real(kind=rk), intent(in) :: parent_data(:,:)
 
     !> Computed projection of the polynomial representation in the child
@@ -93,16 +152,93 @@ contains
     !! Again, the first index refers to the degrees of freedom, while the
     !! second index are the elements. There need to be twice as many elements
     !! as in the parent_data.
+    !! Left childs are stored in iChild = (iParent*2 - 1), and the right
+    !! childs in iParent*2.
+    !!
+    !! In the first index the shape of the data has to be in the form
+    !! (outLen(1), outLen(2), ... , outLen(nDims)), the data is rotated
+    !! in comparison to parent_data and the splitted direction has to be
+    !! the first one in child_data (while it was the last in parent_data),
+    !! and all other dimensions are shifted by one to the right.
     real(kind=rk), intent(out) :: child_data(:,:)
     ! -------------------------------------------------------------------- !
+    integer :: iDir
+    integer :: iParent, Lchild, Rchild
+    integer :: parentMode, childMode
+    integer :: maxrow
+    integer :: indep
+    integer :: nIndeps
+    integer :: nParents
+    integer :: parentpos, childpos
     ! -------------------------------------------------------------------- !
+
+    nParents = size(parent_data,2)
 
     ! Use split_legendre to compute the two child_data elements for each
     ! parent_data element.
     ! We store the left childs in iChild = (iParent*2 - 1), and the right
     ! childs in iParent*2.
 
+    child_data = 0.0_rk
+
+    ! The number of independent modes (in normal directions) is given
+    ! by the product of the length in all directions, except the last one.
+    nIndeps = 1
+    do iDir=1,nDims-1
+      nIndeps = nIndeps*inLen(iDir)
+    end do
+
+    oldmodes: do parentMode=1,inLen(nDims)
+      ! Maximal number modes to compute, as this is a triangular matrix
+      ! it is limited by the diagonal (parentMode). However, it may be
+      ! that the targe polynomial space in the output is smaller, in this
+      ! case we cap the computations and no more than outLen(1) entries
+      ! are to be computed.
+      maxrow = min(parentMode, outLen(1))
+
+      elemloop: do iParent=1,nParents
+        Rchild = iParent*2
+        Lchild = Rchild - 1
+        newmodes: do childMode=1,maxrow
+
+          do indep=1,nIndeps
+            parentpos = indep + nIndeps*(parentMode-1)
+            childpos = childmode + (indep-1)*outLen(1)
+            child_data(childpos, Lchild) = child_data(childpos, Lchild) &
+              &                          + split_legendre( parentmode,  &
+              &                                            childmode )  &
+              &                            * parent_data(parentpos, iParent)
+            child_data(childpos, Rchild) = child_data(childpos, Rchild) &
+              &                          + split_legendre( childmode,   &
+              &                                            parentmode ) &
+              &                            * parent_data(parentpos, iParent)
+          end do
+
+        end do newmodes
+      end do elemloop
+
+    end do oldmodes
+
   end subroutine ply_split_element_1D
+  ! ======================================================================== !
+
+
+  ! !!!!!!! !
+  ! testing !
+  ! !!!!!!! !
+
+  ! ------------------------------------------------------------------------ !
+  !> Testing routine for the functions of this module.
+  subroutine ply_split_element_test(nModes, success)
+    ! -------------------------------------------------------------------- !
+    !> Number of modes in the (1D) polynomials to use in the check.
+    integer, intent(in) :: nModes
+
+    !> Indication whether the tests were completed successfully.
+    integer, intent(out) :: success
+    ! -------------------------------------------------------------------- !
+    ! -------------------------------------------------------------------- !
+  end subroutine ply_split_element_test
   ! ======================================================================== !
 
 end module ply_split_element_module
