@@ -25,8 +25,10 @@ module ply_split_element_module
 
   private
 
-  public :: ply_split_element_1D
+  public :: ply_split_element_singleD
+  public :: ply_split_element_2D
   public :: ply_split_element_init
+
   public :: ply_split_element_test
 
   !> Precomputed matrix to hold the transformation operation to project
@@ -116,8 +118,8 @@ contains
   !!
   !! We need: nDofs in the direction where the transformation is to be done
   !!          and the nDofs for all normal directions.
-  subroutine ply_split_element_1D( nDims, inLen, outLen, parent_data, &
-    &                              child_data                         )
+  subroutine ply_split_element_singleD( nDims, inLen, outLen, parent_data, &
+    &                                   child_data                         )
     ! -------------------------------------------------------------------- !
     !> Number of dimensions of the polynomial data.
     integer, intent(in) :: nDims
@@ -221,7 +223,58 @@ contains
 
     end do oldmodes
 
-  end subroutine ply_split_element_1D
+  end subroutine ply_split_element_singleD
+  ! ======================================================================== !
+
+
+  ! ------------------------------------------------------------------------ !
+  !> Split two-dimensional elements of degree parent_degree into four elements
+  !! with polynomials of degree child_degree.
+  subroutine ply_split_element_2D( parent_degree, child_degree, parent_data, &
+    &                              child_data )
+    ! -------------------------------------------------------------------- !
+    !> Polynomial degree in the parent element.
+    integer, intent(in) :: parent_degree
+
+    !> Polynomial degree in the child elements.
+    integer, intent(in) :: child_degree
+
+    !> Polynomial data in the parent element. The first index describes the
+    !! degrees of freedom. The second index refers to the elements to split.
+    real(kind=rk), intent(in) :: parent_data(:,:)
+
+    !> Polynomial data in the child elements. The first index describes the
+    !! degrees of freedom. The second index refers to the elements, there
+    !! needs to be four times as many elements than in the parent_data.
+    !!
+    !! Elements follow the ordering of the Z space filling curve.
+    real(kind=rk), intent(out) :: child_data(:,:)
+    ! -------------------------------------------------------------------- !
+    real(kind=rk), allocatable :: ysplit(:,:)
+    integer :: pardofs
+    integer :: childdofs
+    ! -------------------------------------------------------------------- !
+
+    pardofs = parent_degree + 1
+    childdofs = child_degree + 1
+
+    allocate(ysplit(childdofs*pardofs, 2))
+
+    call ply_split_element_singleD( nDims       = 2,                     &
+      &                             inLen       = [pardofs, pardofs],    &
+      &                             outLen      = [childdofs, pardofs],  &
+      &                             parent_data = parent_data,           &
+      &                             child_data  = ysplit                 )
+
+    call ply_split_element_singleD( nDims       = 2,                       &
+      &                             inLen       = [childdofs, pardofs],    &
+      &                             outLen      = [childdofs, childdofs],  &
+      &                             parent_data = ysplit,                  &
+      &                             child_data  = child_data               )
+
+    deallocate(ysplit)
+
+  end subroutine ply_split_element_2D
   ! ======================================================================== !
 
 
@@ -285,11 +338,11 @@ contains
       end do
       do childmodes=1,parentModes-1
         allocate(childelem(childmodes,2))
-        call ply_split_element_1D( nDims       = 1,             &
-          &                        inLen       = [parentModes], &
-          &                        outLen      = [childModes],  &
-          &                        parent_data = rootelem,      &
-          &                        child_data  = childelem      )
+        call ply_split_element_singleD( nDims       = 1,             &
+          &                             inLen       = [parentModes], &
+          &                             outLen      = [childModes],  &
+          &                             parent_data = rootelem,      &
+          &                             child_data  = childelem      )
         success = success                                          &
           &       .and. ( 0.5_rk*(childelem(1,1) + childelem(1,2)) &
           &               - rootelem(1,1) < tolerance              )
@@ -297,11 +350,11 @@ contains
       end do
       do childmodes=parentmodes,nModes
         allocate(childelem(childmodes,2))
-        call ply_split_element_1D( nDims       = 1,             &
-          &                        inLen       = [parentModes], &
-          &                        outLen      = [childModes],  &
-          &                        parent_data = rootelem,      &
-          &                        child_data  = childelem      )
+        call ply_split_element_singleD( nDims       = 1,             &
+          &                             inLen       = [parentModes], &
+          &                             outLen      = [childModes],  &
+          &                             parent_data = rootelem,      &
+          &                             child_data  = childelem      )
         do iElem=1,2
           do iPoint=1,nModes
             childval = sum( childelem(:,iElem)             &
@@ -321,6 +374,145 @@ contains
 
 
   ! ------------------------------------------------------------------------ !
+  !> Testing the 2D splitting.
+  !!
+  subroutine ply_split_element_2D_test(nModes, success)
+    ! -------------------------------------------------------------------- !
+    !> Number of modes in the (1D) polynomials to use in the check.
+    integer, intent(in) :: nModes
+
+    !> Indication whether the tests were completed successfully.
+    logical, intent(out) :: success
+    ! -------------------------------------------------------------------- !
+    integer :: parentModes, childmodes
+    integer :: iPoint
+    integer :: iElem
+    integer :: iMode
+    real(kind=rk) :: xi(nModes,2)
+    real(kind=rk) :: x_southwest(nModes,2)
+    real(kind=rk) :: x_southeast(nModes,2)
+    real(kind=rk) :: x_northwest(nModes,2)
+    real(kind=rk) :: x_northeast(nModes,2)
+    real(kind=rk) :: legchild(nModes, nModes, 2)
+    real(kind=rk) :: legsouthwest(nModes, nModes, 2)
+    real(kind=rk) :: legsoutheast(nModes, nModes, 2)
+    real(kind=rk) :: legnorthwest(nModes, nModes, 2)
+    real(kind=rk) :: legnortheast(nModes, nModes, 2)
+    real(kind=rk) :: rootvaly(nModes, 4)
+    real(kind=rk) :: rootval(nModes, 4)
+    real(kind=rk) :: childval
+    real(kind=rk) :: childvaly(nModes)
+    real(kind=rk), allocatable :: rootelem(:,:)
+    real(kind=rk), allocatable :: childelem(:,:)
+    real(kind=rk) :: tolerance
+    ! -------------------------------------------------------------------- !
+
+    call ply_split_element_init(nModes)
+
+    tolerance = 8*epsilon(1.0_rk)*nmodes**2
+    success = .true.
+
+    ! Some random points to check the resulting child polynomials.
+    call random_number(xi)
+
+    legchild(:,:,1) = legendre_1D(xi(:,1), nModes-1)
+    legchild(:,:,2) = legendre_1D(xi(:,2), nModes-1)
+
+    ! The corresponding positions in the left and right half of the root
+    ! element.
+    x_southwest = 0.5_rk*xi - 0.5_rk
+    x_northeast = 0.5_rk*xi + 0.5_rk
+
+    x_southeast(:,1) = 0.5_rk*xi(:,1) + 0.5_rk
+    x_southeast(:,2) = 0.5_rk*xi(:,2) - 0.5_rk
+
+    x_northwest(:,1) = 0.5_rk*xi(:,1) - 0.5_rk
+    x_northwest(:,2) = 0.5_rk*xi(:,2) + 0.5_rk
+
+    legsouthwest(:,:,1) = legendre_1D(x_southwest(:,1), nModes-1)
+    legsouthwest(:,:,2) = legendre_1D(x_southwest(:,2), nModes-1)
+
+    legsoutheast(:,:,1) = legendre_1D(x_southeast(:,1), nModes-1)
+    legsoutheast(:,:,2) = legendre_1D(x_southeast(:,2), nModes-1)
+
+    legnorthwest(:,:,1) = legendre_1D(x_northwest(:,1), nModes-1)
+    legnorthwest(:,:,2) = legendre_1D(x_northwest(:,2), nModes-1)
+
+    legnortheast(:,:,1) = legendre_1D(x_northeast(:,1), nModes-1)
+    legnortheast(:,:,2) = legendre_1D(x_northeast(:,2), nModes-1)
+
+    do parentmodes=1,nModes
+      allocate(rootelem(parentModes**2,1))
+      call random_number(rootelem)
+      do iPoint=1,nModes
+        do iMode=1,parentmodes
+          rootvaly(iMode,1) = sum( rootelem((iMode-1)*parentmodes+1    &
+            &                               :iMode*parentmodes,1)      &
+            &                      * legsouthwest(:parentModes,iPoint, &
+            &                                     1)                   )
+          rootvaly(iMode,2) = sum( rootelem((iMode-1)*parentmodes+1    &
+            &                               :iMode*parentmodes,1)      &
+            &                      * legsoutheast(:parentModes,iPoint, &
+            &                                     1)                   )
+          rootvaly(iMode,3) = sum( rootelem((iMode-1)*parentmodes+1    &
+            &                               :iMode*parentmodes,1)      &
+            &                      * legnorthwest(:parentModes,iPoint, &
+            &                                     1)                   )
+          rootvaly(iMode,4) = sum( rootelem((iMode-1)*parentmodes+1    &
+            &                               :iMode*parentmodes,1)      &
+            &                      * legnortheast(:parentModes,iPoint, &
+            &                                     1)                   )
+        end do
+        rootval(iPoint,1) = sum( rootvaly(:parentmodes,1)              &
+          &                      * legsouthwest(:parentModes,iPoint,2) )
+        rootval(iPoint,2) = sum( rootvaly(:parentmodes,2)              &
+          &                      * legsoutheast(:parentModes,iPoint,2) )
+        rootval(iPoint,3) = sum( rootvaly(:parentmodes,3)              &
+          &                      * legnorthwest(:parentModes,iPoint,2) )
+        rootval(iPoint,4) = sum( rootvaly(:parentmodes,4)              &
+          &                      * legnortheast(:parentModes,iPoint,2) )
+      end do
+      do childmodes=1,parentModes-1
+        allocate(childelem(childmodes**2,4))
+        call ply_split_element_2D( parent_degree = parentModes-1, &
+          &                        child_degree  = childModes-1,  &
+          &                        parent_data   = rootelem,      &
+          &                        child_data    = childelem      )
+        success = success                             &
+          &       .and. ( 0.25_rk*sum(childelem(1,:)) &
+          &               - rootelem(1,1) < tolerance )
+        deallocate(childelem)
+      end do
+      childmodes = parentmodes
+      allocate(childelem(childmodes**2,4))
+      call ply_split_element_2D( parent_degree = parentModes-1, &
+        &                        child_degree  = childModes-1,  &
+        &                        parent_data   = rootelem,      &
+        &                        child_data    = childelem      )
+      do iElem=1,4
+        do iPoint=1,nModes
+          do iMode=1,childmodes
+            childvaly(iMode) = sum( childelem((iMode-1)*childmodes+1   &
+              &                               :iMode*childmodes,iElem) &
+              &                     * legchild(:childmodes,iPoint,1)   )
+          end do
+          childval = sum( childvaly(:childmodes)           &
+            &             * legchild(:childmodes,iPoint,2) )
+          success = success &
+            &       .and. ( abs(rootval(iPoint,iElem) - childval) &
+            &               < tolerance                           )
+        end do
+      end do
+      deallocate(childelem)
+      deallocate(rootelem)
+    end do
+
+  end subroutine ply_split_element_2D_test
+  ! ======================================================================== !
+
+
+
+  ! ------------------------------------------------------------------------ !
   !> Testing routine for the functions of this module.
   subroutine ply_split_element_test(success)
     ! -------------------------------------------------------------------- !
@@ -335,6 +527,13 @@ contains
 
     if (.not. success) then
       write(*,*) 'Check for 1D splitting FAILED!'
+      RETURN
+    end if
+
+    call ply_split_element_2D_test(nModes = 20, success = success)
+
+    if (.not. success) then
+      write(*,*) 'Check for 2D splitting FAILED!'
       RETURN
     end if
 
