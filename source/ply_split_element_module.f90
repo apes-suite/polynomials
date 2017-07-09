@@ -19,6 +19,7 @@
 module ply_split_element_module
   use env_module, only: rk
   use ply_split_legendre_module, only: ply_split_legendre_matrix
+  use ply_modg_basis_module, only: legendre_1d
 
   implicit none
 
@@ -26,6 +27,7 @@ module ply_split_element_module
 
   public :: ply_split_element_1D
   public :: ply_split_element_init
+  public :: ply_split_element_test
 
   !> Precomputed matrix to hold the transformation operation to project
   !! Legendre polynomials to its two half intervals.
@@ -228,16 +230,114 @@ contains
   ! !!!!!!! !
 
   ! ------------------------------------------------------------------------ !
-  !> Testing routine for the functions of this module.
-  subroutine ply_split_element_test(nModes, success)
+  !> Testing the 1D splitting.
+  !!
+  subroutine ply_split_element_1D_test(nModes, success)
     ! -------------------------------------------------------------------- !
     !> Number of modes in the (1D) polynomials to use in the check.
     integer, intent(in) :: nModes
 
     !> Indication whether the tests were completed successfully.
-    integer, intent(out) :: success
+    logical, intent(out) :: success
+    ! -------------------------------------------------------------------- !
+    integer :: parentModes, childmodes
+    integer :: iPoint
+    integer :: iElem
+    real(kind=rk) :: xi(nModes)
+    real(kind=rk) :: x_left(nModes)
+    real(kind=rk) :: x_right(nModes)
+    real(kind=rk) :: legchild(nModes, nModes)
+    real(kind=rk) :: legleft(nModes, nModes)
+    real(kind=rk) :: legright(nModes, nModes)
+    real(kind=rk) :: rootval(nModes, 2)
+    real(kind=rk) :: childval
+    real(kind=rk), allocatable :: rootelem(:,:)
+    real(kind=rk), allocatable :: childelem(:,:)
+    real(kind=rk) :: tolerance
+    ! -------------------------------------------------------------------- !
+
+    call ply_split_element_init(nModes)
+
+    tolerance = 8*epsilon(1.0_rk)*nmodes**2
+    success = .true.
+
+    ! Some random points to check the resulting child polynomials.
+    call random_number(xi)
+
+    legchild = legendre_1D(xi, nModes-1)
+
+    ! The corresponding positions in the left and right half of the root
+    ! element.
+    x_right = 0.5_rk*xi + 0.5_rk
+    x_left  = 0.5_rk*xi - 0.5_rk
+
+    legleft = legendre_1D(x_left, nModes-1)
+    legright = legendre_1D(x_right, nModes-1)
+
+    do parentmodes=1,nModes
+      allocate(rootelem(parentModes,1))
+      call random_number(rootelem)
+      do iPoint=1,nModes
+        rootval(iPoint,1) = sum( rootelem(:,1)                  &
+          &                    * legleft(:parentModes,iPoint) )
+        rootval(iPoint,2) = sum( rootelem(:,1)                   &
+          &                     * legright(:parentModes,iPoint) )
+      end do
+      do childmodes=1,parentModes-1
+        allocate(childelem(childmodes,2))
+        call ply_split_element_1D( nDims       = 1,             &
+          &                        inLen       = [parentModes], &
+          &                        outLen      = [childModes],  &
+          &                        parent_data = rootelem,      &
+          &                        child_data  = childelem      )
+        success = success                                          &
+          &       .and. ( 0.5_rk*(childelem(1,1) + childelem(1,2)) &
+          &               - rootelem(1,1) < tolerance              )
+        deallocate(childelem)
+      end do
+      do childmodes=parentmodes,nModes
+        allocate(childelem(childmodes,2))
+        call ply_split_element_1D( nDims       = 1,             &
+          &                        inLen       = [parentModes], &
+          &                        outLen      = [childModes],  &
+          &                        parent_data = rootelem,      &
+          &                        child_data  = childelem      )
+        do iElem=1,2
+          do iPoint=1,nModes
+            childval = sum( childelem(:,iElem)             &
+                            * legchild(:childmodes,iPoint) )
+            success = success &
+              &       .and. ( abs(rootval(iPoint,iElem) - childval) &
+              &               < tolerance                           )
+          end do
+        end do
+        deallocate(childelem)
+      end do
+      deallocate(rootelem)
+    end do
+
+  end subroutine ply_split_element_1D_test
+  ! ======================================================================== !
+
+
+  ! ------------------------------------------------------------------------ !
+  !> Testing routine for the functions of this module.
+  subroutine ply_split_element_test(success)
+    ! -------------------------------------------------------------------- !
+    !> Indication whether the tests were completed successfully.
+    logical, intent(out) :: success
     ! -------------------------------------------------------------------- !
     ! -------------------------------------------------------------------- !
+
+    call ply_split_element_init(80)
+
+    call ply_split_element_1D_test(nModes = 30, success = success)
+
+    if (.not. success) then
+      write(*,*) 'Check for 1D splitting FAILED!'
+      RETURN
+    end if
+
   end subroutine ply_split_element_test
   ! ======================================================================== !
 
