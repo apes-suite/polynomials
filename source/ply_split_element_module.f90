@@ -93,6 +93,20 @@ contains
   !! so sure, whether this would be possible.
   !!@endnote
   !!
+  !>@note After discussions with Stephan Walter, it looks like the separate
+  !! indices would most likely be better.
+  !! Maybe, using explicit shaped arrays and therby allowing more dimensions
+  !! in the input, while keeping the interface to two dimensions for all
+  !! cases (the normal direction and all independent degrees of freedom). 
+  !! For vectorization on x86 it also is necessary to have a stride-1 access
+  !! only in reading and writing.
+  !! The rotation of data might not be the best option because of this.
+  !! Instead, it may be that we need to have different routines for each
+  !! direction.
+  !! Or, maybe, we need to use the elements as first index and vectorize
+  !! over those.
+  !!@endnote
+  !!
   !! As we need to perform this operation in all dimensions, it would be good
   !! to shift the indices around. When doing this, we can stick to the same
   !! implementation for all directions, without the need to put any logic in

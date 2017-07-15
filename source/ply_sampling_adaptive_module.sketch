@@ -1,0 +1,208 @@
+?? include "ply_dof_module.inc"
+!> Adaptive sampling of polynomial data.
+!!
+!! Sketch of algorithm:
+!! * First we need to create polynomial representations for all requested
+!!   variables in the elements of the requested subtree. We also need to
+!!   create a new variable system that allows later extraction from the
+!!   final data with a get_element routine.
+!!
+!! * Then for each level, we need to do:
+!! ** Identify the elements that need refinement
+!! ** Create new mesh
+!! ** Split data accordingly
+!! ** Restrict new mesh to tracking shape
+module ply_sampling_adaptive_module
+  use tem_varsys_module, only: tem_varsys_type, tem_varSys_init
+  use ply_split_element_module, only: ply_split_element_init
+
+  type ply_sampling_adaptive_type
+    !> Maximal number of levels by which any mesh element should be refined.
+    !!
+    !! A setting of 0 results in no sampling, and the original mesh elements
+    !! will be used with the integral mean value (first degree of freedom).
+    !! Higher levels provide a limit for the refinement of the mesh.
+    !! Note, that even for large settings here, the overall mesh depth is
+    !! restricted by the global limit, due to the available space in the
+    !! integers representing the treeIDs.
+    integer :: max_nlevels = 0
+
+    !> Maximum allowed oscillation of the solution.
+    !! For adaptive subsampling only.
+    real(kind=rk) :: eps_osci
+
+    !> Factor to Reduce dofs for every sampling level.
+    !! Can be used to avoid too drastic increase of memory consumption.
+    !! For adaptive subsampling only.
+    real(kind=rk) :: dofReducFactor
+
+    !> Indicator for the limitation of memory consumption.
+    logical :: adaptiveDofReduction
+
+    !> Absolute upper bound level to refine to.
+    integer :: AbsUpperBoundLevel
+  end type ply_sampling_adaptive_type
+
+
+contains
+
+
+  !> Sample data described by varsys in orig_mesh according to the tracking
+  !! object trackInst with adaptive refinements.
+  !!
+  !! Only works for Q-Polynomials.
+  subroutine ply_sample_adaptive( me, ndims, orig_mesh, orig_bcs, varsys, &
+    &                             var_degree, trackInst, track_config,    &
+    &                             time, new_mesh, resvars                 )
+    ! -------------------------------------------------------------------- !
+    !> A ply_sampling_type to describe the sampling method.
+    type(ply_sampling_adaptive_type), intent(in) :: me
+
+    !> The original mesh to be refined.
+    type(treelmesh_type), intent(in) :: orig_mesh
+
+    !> Boundary conditions for the original mesh.
+    type(tem_BC_prop_type), intent(in) :: orig_bcs
+
+    type(tem_varsys_type), intent(in) :: varsys
+
+    !> Maximal polynomial degree for each variable.
+    !!
+    !! Needs to be matching the variable definition in the variable system.
+    !! @todo Needs to be changed to be an information per element per variable!
+    !!       Possibly by defining a variable in the varsys, providing the
+    !!       degree.
+    integer, intent(in) :: var_degree(:)
+
+    !> Number of dimensions in the polynomial representation.
+    integer, intent(in) :: ndims
+
+    type(tem_tracking_instance_type), intent(in) :: trackInst
+
+    type(tem_tracking_config_type), intent(in) :: trackConfig
+
+    type(tem_time_type), intent(in) :: time
+
+    !> The new mesh with the refined elements.
+    type(treelmesh_type), intent(out) :: new_mesh
+
+    !> Resulting system of variables describing the data in the arrays of
+    !! subsampled elements.
+    type(tem_varsys_type), intent(out) :: resvars
+    ! -------------------------------------------------------------------- !
+    real(kind=rk), allocatable :: elemdat(:)
+    real(kind=rk), pointer :: vardat(:,:) => NULL()
+    real(kind=rk), pointer :: prevdat(:,:) => NULL()
+    real(kind=rk), allocatable :: variation(:,:)
+    integer, allocatable :: first(:,:)
+    integer, allocatable :: pdeg(:,:)
+    integer :: nVars
+    integer :: nDofs
+    integer :: nSacalars
+    integer :: nMaxModes
+    integer :: maxdofs
+    integer :: varpos
+    integer :: elempos
+    integer :: iVar
+    integer :: iScalar
+    integer :: iComponent
+    integer :: nOrigElems
+    ! -------------------------------------------------------------------- !
+
+    nVars = trackInst%varmap%varPos%nVals
+
+    nScalars = sum( varsys%method%val(trackInst%varmap%varPos%val(:nVars)) &
+      &                   %nComponents                                     )
+
+    nMaxModes = maxval(var_degree+1)
+    maxdofs = nMaxModes**nDims
+
+    call ply_split_element_init(maxModes)
+
+    call tem_varSys_init( me         = resvars,       &
+      &                   systemName = 'sampledVars', &
+      &                   length     = nVars          )
+
+    if (trackInst%subtree%useGlobalMesh) then
+      nOrigElems = orig_mesh%nElems
+      allocate( elempos(nOrigElems) )
+      elempos = [ (i, i=1,nOrigElems) ]
+    else
+      nOrigElems = trackInst%subtree%nElems
+      allocate( elempos(nOrigElems) )
+      elempos = trackInst%subtree%map2global
+    end if
+
+    allocate(vardat(maxdofs*nOrigElems,nScalars))
+    allocate(first(nOrigElems+1,nScalars))
+    allocate(pdeg(nOrigElems,nScalars))
+    allocate(variation(nOrigElems,nScalars))
+
+
+    iScalar = 1
+    do iVar=1,nVars
+      varpos = trackInst%varmap%varPos%val(iVar)
+      nComponents = varsys%method%val(varpos)%nComponents
+      nDofs = (var_degree(iVar)+1)**nDims
+      isScalar: if (nComponents == 1) then
+        ! If there is only one component, we can directly copy the data
+        ! into vardat.
+        call varSys%method%val(varpos)%get_element(         &
+          &    varSys  = varSys,                            &
+          &    elempos = elempos,                           &
+          &    time    = time,                              &
+          &    tree    = orig_mesh,                         &
+          &    nElems  = nOrigElems,                        &
+          &    nDofs   = vardofs(iVar),                     &
+          &    res     = vardat(:ndofs*nOrigElems, iScalar) )
+      else isScalar
+        ! If the variable is not scalar, we need to take care of the
+        ! component data and separate them for vardat.
+        ! To avoid overly large memory consumption, we do this element by
+        ! element.
+        allocate(elemDat(nComponents*ndofs))
+        do iElem=1,nOrigElems
+          call varSys%method%val(varpos)%get_element( &
+            &    varSys  = varSys,                    &
+            &    elempos = elempos(iElem:iElem),      &
+            &    time    = time,                      &
+            &    tree    = orig_mesh,                 &
+            &    nElems  = 1,                         &
+            &    nDofs   = vardofs(iVar),             &
+            &    res     = elemdat                    )
+          do iComponent=1,nComponents
+            vardat(1+nDofs*(iElem-1):nDofs*iElem, iScalar+iComponent-1) &
+              & = vardat(iComponent::nComponents)
+          end do
+        end do
+        deallocate(elemDat)
+      end if isScalar
+
+      ! For each element we store, the position of its first degree of freedom
+      ! (the last is given by the first of the next element), and the
+      ! polynomial degree in each element.
+      ! This is redundant, but convenient.
+      first(1,iScalar:iScalar+nComponents-1) = 1
+      do iElem=1,nOrigElems
+        first(iElem+1,iScalar:iScalar+nComponents-1)     &
+          & = first(iElem,iScalar:iScalar+nComponents-1) + nDofs
+        pdeg(iElem,iScalar:iScalar+nComponents-1) = var_degree(iVar)
+        ! Now get the spectral variation (sum of absolute values of all
+        ! higher modes).
+        do iComponent=0,nComponents-1
+          variation(iElem,iScalar+iComponent)                    &
+            & = sum( abs(vardat(first(iElem)+1:first(iElem+1)-1, &
+            &                   iScalar+iComponent))             )
+        end do
+      end do
+      iScalar = iScalar + nComponents
+    end do
+
+    call tem_create_tree_from_sub( intree  = orig_mesh,         &
+      &                            subtree = trackInst%subtree, &
+      &                            newtree = new_mesh           )
+
+
+  end subroutine ply_sample_adaptive
+
+end module ply_sampling_adaptive_module
