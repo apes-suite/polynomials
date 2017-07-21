@@ -11,7 +11,7 @@ module ply_poly_project_module
   use tem_logging_module,        only: logUnit
   use tem_tools_module,          only: tem_horizontalSpacer
   use tem_debug_module,          only: dbgUnit
-
+  use tem_precice_module,        only: precice
   use ply_modg_basis_module,     only: evalLegendreTensPoly, scalProdLeg
   use ply_dof_module,            only: Q_space, P_space
   use ply_prj_header_module,     only: ply_prj_header_type,        &
@@ -41,10 +41,10 @@ module ply_poly_project_module
     &                                    ply_l2p_trafo_2d, &
     &                                    ply_l2p_trafo_1d
 
-  use ply_nodes_module,        only: init_cheb_nodes, init_cheb_nodes_2d,     &
-                                   & init_cheb_nodes_1d, init_gauss_nodes,    &
-                                   & init_gauss_nodes_2d, init_gauss_nodes_1d,&
-                                   & ply_facenodes_type
+  use ply_nodes_module,   only: init_cheb_nodes, init_cheb_nodes_2d,     &
+                              & init_cheb_nodes_1d, init_gauss_nodes,    &
+                              & init_gauss_nodes_2d, init_gauss_nodes_1d,&
+                              & ply_facenodes_type, init_equi_nodes
 
   use ply_fxt_module, only: ply_fxt_type, ply_init_fxt,                    &
     &                       ply_fxt_m2n_1D,ply_fxt_m2n_3D, ply_fxt_m2n_2D, &
@@ -534,7 +534,7 @@ contains
           &    faces = me%body_3d%faces,                      &
           &    nQuadPointsPerDir = me%nQuadPointsPerDir       )
 
-             end if
+      end if
 
     case('l2p')
       !> Fill the L2 projection datatype
@@ -596,22 +596,49 @@ contains
       call tem_abort()
 
     end select
-       ! Routine to build up list of edges  
-      if (scheme_dim >= 2) then
+    ! Routine to build up list of edges for nearest-projection interpolation in
+    ! precice
+    if (precice%use_NP_interpolation) then
+      if (scheme_dim == 2) then
         call build_faceNodes_edges_2D(               &
           & edges             = me%edges,            &
           & nEdges            = me%nEdges,           &
           & nQuadPointsPerDir = me%nQuadPointsPerDir )
+        write(*,*) 'Done initializing projection: Edges'
       end if
-      if (scheme_dim >= 3) then
-        !Routine to build up list of edges and triangles 
+      if (scheme_dim == 3) then
+      ! Routine to build up list of edges and triangles 
         call build_faceNodes_triangles_3D(           &
           & triangles         = me%triangles,        &
           & nTriangles        = me%nTriangles,       &
           & edges             = me%edges,            &
           & nEdges            = me%nEdges,           &
           & nQuadPointsPerDir = me%nQuadPointsPerDir )
+        write(*,*) 'Done initializing projection: Edges and Triangles'
       end if
+    end if
+      ! Routine to build the equidistant points for the 
+      ! interpolation in preCICE 
+    if (precice%use_EQ_points) then 
+      if (scheme_dim == 2) then
+        call init_equi_nodes(                        &
+          & nPoly             = me%oversamp_degree,  &
+          & faces             = me%body_2d%faces,    &  
+          & nDir              = scheme_dim,          &
+          & nQuadPointsPerDir = me%nQuadPointsPerDir )
+        write(*,*) 'Done initializing projection: EquiPoints for 2D'
+      end if
+      ! Routine to build the equidistant points for the radial Basis function
+      ! interpolation in preCICE 
+      if (scheme_dim == 3) then
+        call init_equi_nodes(                        &
+          & nPoly             = me%oversamp_degree,  &
+          & faces             = me%body_3d%faces,    &  
+          & nDir              = scheme_dim,          &
+          & nQuadPointsPerDir = me%nQuadPointsPerDir )
+        write(*,*) 'Done initializing projection: EquiPoints for 3D'
+      end if 
+    end if
   end subroutine ply_poly_project_fillbody
   !****************************************************************************!
 
