@@ -34,7 +34,7 @@ module ply_poly_project_module
   use ply_nodes_module,            only: init_cheb_nodes,    &
     &                                    init_cheb_nodes_2d, &
     &                                    init_cheb_nodes_1d, &
-    &                                    init_equi_nodes,    &
+ !   &                                    init_equi_nodes,    &
     &                                    ply_facenodes_type
   use ply_fxt_module,              only: ply_fxt_type,   &
     &                                    ply_init_fxt,   &
@@ -47,15 +47,6 @@ module ply_poly_project_module
   use tem_precice_module,          only: precice_available, &
    &                                     precice
 
-  !!use ply_nodes_module,   only: init_cheb_nodes, init_cheb_nodes_2d,     &
-  !!                            & init_cheb_nodes_1d, init_gauss_nodes,    &
-  !!                            & init_gauss_nodes_2d, init_gauss_nodes_1d,&
-  !!                            & ply_facenodes_type, init_equi_nodes
-
-  !!use ply_fxt_module, only: ply_fxt_type, ply_init_fxt,                    &
-  !!  &                       ply_fxt_m2n_1D,ply_fxt_m2n_3D, ply_fxt_m2n_2D, &
-  !!  &                       ply_fxt_n2m_1D,ply_fxt_n2m_3D, ply_fxt_n2m_2D, &
-  !!  &                       ply_fxt_type
 
   implicit none
 
@@ -132,18 +123,12 @@ module ply_poly_project_module
 
     !> projection header consits of general information like which kind
     !! of projection is used
-!!    type(ply_prj_header_type) :: header
     
     !> In the body datatype, there is for each dimension the main data
     !! for the projection method stored
     type(ply_prj_body_type)   :: body_1d
     type(ply_prj_body_type)   :: body_2d
     type(ply_prj_body_type)   :: body_3d
-
-    integer :: nEdges
-    integer, allocatable :: edges(:,:)
-    integer :: nTriangles
-    integer, allocatable :: triangles(:,:)
 
   end type ply_poly_project_type
 
@@ -174,116 +159,6 @@ module ply_poly_project_module
   public :: ply_prj_body_type
 
 contains
-
-  !****************************************************************************!
-  !> Routine to generate the face edges, through given nQuadPoints per dircetion
-  !! for the 2D testcase. Since we have a 2D case, we have just lines (edges) to
-  !!connect the nQuadPoints. d1 is the first coupling domain and d2 the second.
-  !!_______ 
-  !!|d1 |d2|
-  !!|___|__|
-  subroutine build_faceNodes_edges_2D( edges, nEdges, nQuadPointsPerDir )
-    !--------------------------------------------------------------------------!
-    integer, allocatable, intent(out) :: edges(:,:)
-    integer, intent(out) :: nEdges
-    integer, intent(in) :: nQuadPointsPerDir
-    !--------------------------------------------------------------------------!
-    integer :: ii !loop incides
-    integer :: iEdge ! initial edge
-    !--------------------------------------------------------------------------!
-
-    nEdges = nQuadPointsPerDir - 1
-    allocate(edges(nEdges,2))
-
-    iEdge = 1
-    do ii = 1, nEdges
-      edges (iEdge,1) = ii
-      edges (iEdge,2) = ii+1
-      iEdge = iEdge + 1
-    end do
-
-  end subroutine build_faceNodes_edges_2D
-  !****************************************************************************!
-
-
-  !****************************************************************************!
-  !> Routine to generate the face edges as well as triangles, through given
-  !! nQuadPoints per dircetion and the necessary edges. For the coupling in 3D
-  !! the coupling face is a plane. From every square two triangles can be 
-  !!created. 
-  subroutine build_faceNodes_triangles_3D( triangles, nTriangles, edges, &
-    &                                      nEdges, nQuadPointsPerDir )
-    !--------------------------------------------------------------------------!
-    integer, allocatable, intent(out) :: triangles(:,:)
-    integer, intent(out) :: nTriangles
-    integer, allocatable, intent(out) :: edges(:,:)
-    integer, intent(out) :: nEdges
-    integer, intent(in) :: nQuadPointsPerDir
-    !--------------------------------------------------------------------------!
-    integer :: ii, jj !loop incides
-    integer :: iEdge ! initial edge
-    integer :: iTriangle !initial triangle
-    integer :: edgeID_1, edgeID_2, edgeID_3 !local edgeID created per point
-    integer :: nEdgesPerDir !number of edges per direction
-    integer :: offset
-    !--------------------------------------------------------------------------!
-    nTriangles = 2*(nQuadPointsPerDir-1)**2
-    nEdges = ( (nQuadPointsPerDir-1)*nQuadPointsPerDir ) * 2 &
-      &    + (nQuadPointsPerDir-1)**2
-    nEdgesPerDir = (nQuadPointsPerDir-1)*3+1
-    allocate(edges(nEdges,2))
-    allocate(triangles(nTriangles,3))
-    
-    iTriangle = 0
-    iEdge = 0
-    do jj = 1, nQuadPointsPerDir
-      do ii = 1, nQuadPointsPerDir     
-        ! define the vertical edges and give them an ID
-        if (ii <= nQuadPointsPerDir .and. jj <= nQuadPointsPerDir-1) then
-          iEdge = iEdge + 1
-          edges(iEdge,1) = (jj-1)*nQuadPointsPerDir+ii
-          edges(iEdge,2) = jj*nQuadPointsPerDir+ii
-          edgeID_1 = iEdge
-        end if 
-
-        ! define the horizantal edges and give them an ID
-        if (jj <= nQuadPointsPerDir .and. ii <= nQuadPointsPerDir-1) then 
-          iEdge = iEdge + 1
-          edges(iEdge,1) = (jj-1)*nQuadPointsPerDir+ii
-          edges(iEdge,2) = (jj-1)*nQuadPointsPerDir+ii+1
-          edgeID_2 = iEdge
-        end if  
-
-        ! creat diagonal edges, which are needed for the triangels 
-        if (ii <= nQuadPointsPerDir-1 .and. jj <= nQuadPointsPerDir-1) then
-          iEdge = iEdge + 1
-          edges(iEdge,1) = (jj-1)*nQuadPointsPerDir+ii
-          edges(iEdge,2) = jj*nQuadPointsPerDir+ii+1
-          edgeID_3 = iEdge
-          ! creat two triangles per quad, each of them needs three edges
-          iTriangle = iTriangle + 2
-          triangles(iTriangle-1, 1) = edgeID_3
-          triangles(iTriangle-1, 2) = edgeID_1
-          if (jj == nQuadPointsPerDir-1) then
-            if (ii == 1) then
-              offset = 1
-            else
-              offset = offset + 2
-            end if
-            triangles(iTriangle-1, 3) = edgeID_2 + nEdgesPerDir - offset
-          else
-            triangles(iTriangle-1, 3) = edgeID_2 + nEdgesPerDir
-          end if
-          triangles(iTriangle, 1) = edgeID_3
-          triangles(iTriangle, 2) = edgeID_1 + 3
-          triangles(iTriangle, 3) = edgeID_2
-        end if  
-      end do
-    end do
-
-  end subroutine build_faceNodes_triangles_3D
-  !****************************************************************************!
-
 
   !**************************************************************************!
   subroutine Copy_poly_project(left,right)
@@ -606,49 +481,6 @@ contains
       call tem_abort()
 
     end select
-    ! Routine to build up list of edges for nearest-projection interpolation in
-    ! precice
-    if (precice%use_NP_interpolation) then
-      if (scheme_dim == 2) then
-        call build_faceNodes_edges_2D(               &
-          & edges             = me%edges,            &
-          & nEdges            = me%nEdges,           &
-          & nQuadPointsPerDir = me%nQuadPointsPerDir )
-        write(*,*) 'Done initializing projection: Edges'
-      end if
-      if (scheme_dim == 3) then
-      ! Routine to build up list of edges and triangles 
-        call build_faceNodes_triangles_3D(           &
-          & triangles         = me%triangles,        &
-          & nTriangles        = me%nTriangles,       &
-          & edges             = me%edges,            &
-          & nEdges            = me%nEdges,           &
-          & nQuadPointsPerDir = me%nQuadPointsPerDir )
-        write(*,*) 'Done initializing projection: Edges and Triangles'
-      end if
-    end if
-      ! Routine to build the equidistant points for the 
-      ! interpolation in preCICE 
-    if (precice%use_EQ_points) then 
-      if (scheme_dim == 2) then
-        call init_equi_nodes(                        &
-          & nPoly             = me%oversamp_degree,  &
-          & faces             = me%body_2d%faces,    &  
-          & nDir              = scheme_dim,          &
-          & nQuadPointsPerDir = me%nQuadPointsPerDir )
-        write(*,*) 'Done initializing projection: EquiPoints for 2D'
-      end if
-      ! Routine to build the equidistant points for the radial Basis function
-      ! interpolation in preCICE 
-      if (scheme_dim == 3) then
-        call init_equi_nodes(                        &
-          & nPoly             = me%oversamp_degree,  &
-          & faces             = me%body_3d%faces,    &  
-          & nDir              = scheme_dim,          &
-          & nQuadPointsPerDir = me%nQuadPointsPerDir )
-        write(*,*) 'Done initializing projection: EquiPoints for 3D'
-      end if 
-    end if
   end subroutine ply_poly_project_fillbody
   !****************************************************************************!
 
