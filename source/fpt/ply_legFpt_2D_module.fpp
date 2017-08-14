@@ -51,12 +51,9 @@ contains
    !> The resulting point values (Chebyshev nodes).
    real(kind=rk), intent(inout) :: pntVal(:)
    ! --------------------------------------------------------------------- !
-   integer :: iFunc, iFuncX, iFuncY, funcIndex
    integer :: striplen, iStrip, n, iAlph, nIndeps
-   integer :: iDof
    real(kind=rk), dimension(:), allocatable :: alph
    real(kind=rk), dimension(:), allocatable :: gam
-   real(kind=rk) :: normFactor
    ! --------------------------------------------------------------------- !
 
    striplen = fpt%legToChebParams%striplen
@@ -160,11 +157,9 @@ contains
     !> The Legendre coefficients.
     real(kind=rk), intent(inout) :: legCoeffs(:)
    ! --------------------------------------------------------------------- !
-    integer :: iFunc, iFuncX, iFuncY, funcIndex, iDof
     integer :: iStrip, striplen, nIndeps, iAlph, n, n_squared
     real(kind=rk), dimension(:), allocatable :: alph
     real(kind=rk), dimension(:), allocatable :: gam
-    real(kind=rk) :: normFactor, inv_ndofs
    ! --------------------------------------------------------------------- !
 
     striplen = fpt%chebToLegParams%striplen

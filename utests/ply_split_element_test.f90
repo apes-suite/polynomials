@@ -1,5 +1,4 @@
 program ply_split_element_test_prog
-  use env_module, only: rk
   use ply_split_element_module, only: ply_split_element_test
 
   implicit none

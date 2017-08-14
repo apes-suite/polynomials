@@ -43,8 +43,6 @@ contains
    real(kind=rk), intent(inout) :: legCoeffs(:)
    real(kind=rk), intent(inout) :: pntVal(:)
    ! --------------------------------------------------------------------- !
-   integer :: iFuncX, iFuncY, iFuncZ, funcIndex
-   integer :: iFunc, iDof
    integer :: n, n_squared, n_cubed
    integer :: nIndeps
    ! The normfactor has to be positive for odd sum of exponents and negative
@@ -54,18 +52,9 @@ contains
    !  the power can be avoided completely by normfactor = 1 - 2*mod(i+j+k-1,2)
    !  and the real multiplication can be avoided by putting this into a lookup
    !  table.)
-   real(kind=rk), parameter :: normFactor(0:1) = [ -0.125_rk, 0.125_rk ]
    integer :: iStrip
-   integer :: strip_ub
    integer :: striplen
-   integer :: stride
-   integer :: alph_lb, alph_ub, iAlph
-   integer :: iDim
-   integer :: itest
-   integer :: linesPerStrip
-   integer :: jPerStrip
-   integer :: linesInAlph
-   integer :: iIndex
+   integer :: iAlph
    real(kind=rk), allocatable :: alph(:)
    real(kind=rk), allocatable :: gam(:)
    ! --------------------------------------------------------------------- !
@@ -240,7 +229,6 @@ contains
     real(kind=rk), intent(inout) :: pntVal(:)
     real(kind=rk), intent(inout) :: legCoeffs(:)
    ! --------------------------------------------------------------------- !
-    integer :: iFunc, iDof, iFuncX, iFuncY, iFuncZ, funcIndex
     integer :: striplen
     integer :: iStrip
     integer :: iAlph
@@ -248,7 +236,6 @@ contains
     integer :: n_squared
     integer :: n_cubed
     integer :: nIndeps
-    real(kind=rk) :: normFactor(0:1)
     real(kind=rk), dimension(:), allocatable :: alph
     real(kind=rk), dimension(:), allocatable :: gam
    ! --------------------------------------------------------------------- !

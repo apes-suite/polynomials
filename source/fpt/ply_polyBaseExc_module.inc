@@ -142,7 +142,7 @@
 
           do indep = strip_lb + 1, strip_ub
             iFun = (indep - 1) * n
-	    iVal = iFun + row_off
+            iVal = iFun + row_off
             gam(iVal) = gam(iVal)                                 &
               & + matrix(m, iDiag)     * alph(iFun + col_off)     &
               & + matrix(m, iDiag + 1) * alph(iFun + col_off + 2)

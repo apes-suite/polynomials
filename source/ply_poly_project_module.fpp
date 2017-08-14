@@ -269,8 +269,6 @@ contains
     integer :: oversampling_order
     ! the number of volume quadrature points per spatial direction
     integer :: numQuadPointsPerDir
-    ! projection need to be done for each nScalar
-    integer :: nvars = 1
     real(kind=rk) :: log_order, rem_log
     real(kind=rk) :: over_factor
     integer :: lb_log

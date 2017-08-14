@@ -98,8 +98,8 @@ contains
     ! -------------------------------------------------------------------- !
     real(kind=rk), allocatable :: workData(:)
     real(kind=rk), allocatable :: newWorkData(:)
-    integer :: nVars, nDofs, nComponents, nChildDofs, nChilds
-    integer :: iVar, max_modes
+    integer :: nVars, nDofs, nComponents, nChildDofs
+    integer :: iVar
     ! -------------------------------------------------------------------- !
 
     nVars = size(varDofs)
@@ -393,15 +393,13 @@ contains
     !> The new data representation for all child cell of the parent cell.
     real(kind=rk), allocatable, intent(out) :: childData(:)
     ! -------------------------------------------------------------------- !
-    integer :: iDimension, iSubElem, iIndep, iComponent, iMode, jMode, i, j
+    integer :: iDimension, iIndep, iComponent, iMode, jMode
     integer :: nSubElems, nIndeps, lMode, kMode, iChildElem_prev
     integer :: nChildElems_prev, nChildElems_cur
-    integer :: child_dofPos, dofPos, childElem
+    integer :: child_dofPos, childElem
     integer :: parent_modes, child_modes
     integer :: lower_bound, upper_bound, stride
     real(kind=rk), allocatable :: temp_data(:)
-    real(kind=rk), allocatable :: temp_childData_prev(:)
-    real(kind=rk), allocatable :: temp_childData(:)
     real(kind=rk), allocatable :: childData_prev(:)
     ! -------------------------------------------------------------------- !
     parent_modes = nint(real(nParentDofs,kind=rk)        &

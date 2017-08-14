@@ -923,12 +923,10 @@ contains
 !'  integer, intent(in) :: strip_ub
 
     ! -------------------------------------------------------------------- !
-    real(kind=rk) :: normFactor
     integer :: j, r, i, l, k, h, n, s, m, numberOfBlocks
-    integer :: iStrip, iFun, indep, iDof
+    integer :: iStrip, iFun, indep
     integer :: iVal
     integer :: odd
-    integer :: strip_lb
     integer :: striplen
     integer :: strip_ub
     integer :: remainder, nDiagonals, nBlockDiagonals

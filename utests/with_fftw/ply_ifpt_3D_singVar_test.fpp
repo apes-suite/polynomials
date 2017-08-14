@@ -10,7 +10,6 @@ program ply_ifpt_3D_singVar_test
   use ply_legFpt_module,        only: ply_legFpt_type, ply_init_legFPT
   use ply_legFpt_3D_module,     only: ply_pntToLeg_3D
   use ply_modg_basis_module,    only: legendre_1D
-  use ply_dof_module,           only: Q_space
 
   implicit none
 
@@ -45,7 +44,7 @@ contains
     integer :: pointIndex, funcIndex, iPolyX, iPolyY, iPolyZ
     real(kind=rk), allocatable :: legCoeffs(:), legCoeffsRef(:)
     real(kind=rk), allocatable :: pntVal(:)
-    real(kind=rk), allocatable :: chebPnt(:,:), chebPnt1D(:)
+    real(kind=rk), allocatable :: chebPnt1D(:)
     real(kind=rk), allocatable :: legValChebPnt(:,:)
     real(kind=rk) :: rfac
     type(ply_legFpt_type) :: fpt
