@@ -15,7 +15,7 @@ module ply_sampled_tracking_module
   use tem_bc_prop_module,     only: tem_bc_prop_type
   use tem_comm_env_module,    only: tem_comm_env_type
   use tem_logging_module,     only: logunit
-  use tem_reduction_module,   only: tem_reduction_init
+  use tem_reduction_spatial_module, only: tem_reduction_spatial_init
   use tem_simControl_module,  only: tem_simControl_type
   use tem_solveHead_module,   only: tem_solveHead_type
   use tem_stencil_module,     only: tem_stencilHeader_type
@@ -189,16 +189,16 @@ contains
 
       ! Init spatial reduction
       me%tracking%instance(iTrack)%output_file%ascii%isReduce &
-        & = me%tracking%config(iConfig)%reduction_config%active
+        & = me%tracking%config(iConfig)%redSpatial_config%active
 
-      if ( me%tracking%config(iConfig)%reduction_config%active ) then
-        call tem_reduction_init( &
-          & me               = me%tracking%instance(iTrack)%output_file      &
-          &                                                %ascii%reduce,    &
-          & reduction_config = me%tracking%config(iConfig)%reduction_config, &
-          & varSys           = varSys,                                       &
-          & varPos           = me%tracking%instance(iTrack)%varMap%varPos    &
-          &                                                %val(:nVars)      )
+      if ( me%tracking%config(iConfig)%redSpatial_config%active ) then
+        call tem_reduction_spatial_init(                                       &
+          & me                = me%tracking%instance(iTrack)%output_file       &
+          &                                                 %ascii%redSpatial, &
+          & redSpatial_config = me%tracking%config(iConfig)%redSpatial_config, &
+          & varSys            = varSys,                                        &
+          & varPos            = me%tracking%instance(iTrack)%varMap%varPos     &
+          &                                                 %val(:nVars)       )
       end if
 
       if (me%tracking%config(iConfig)%output_config%useGetPoint) then
