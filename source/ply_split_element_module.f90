@@ -26,11 +26,40 @@ module ply_split_element_module
   private
 
   public :: ply_split_element_singleD
+  public :: ply_split_element
+  public :: ply_split_element_1D
   public :: ply_split_element_2D
   public :: ply_split_element_3D
   public :: ply_split_element_init
 
   public :: ply_split_element_test
+
+  abstract interface
+    !> Split elements of degree parent_degree into elements with polynomials of
+    !! degree child_degree.
+    subroutine ply_split_element( parent_degree, child_degree, parent_data, &
+      &                           child_data )
+      ! -------------------------------------------------------------------- !
+      import :: rk
+      !> Polynomial degree in the parent element.
+      integer, intent(in) :: parent_degree
+
+      !> Polynomial degree in the child elements.
+      integer, intent(in) :: child_degree
+
+      !> Polynomial data in the parent element. The first index describes the
+      !! degrees of freedom. The second index refers to the elements to split.
+      real(kind=rk), intent(in) :: parent_data(:,:)
+
+      !> Polynomial data in the child elements. The first index describes the
+      !! degrees of freedom. The second index refers to the elements, there
+      !! needs to be four times as many elements than in the parent_data.
+      !!
+      !! Elements follow the ordering of the Z space filling curve.
+      real(kind=rk), intent(out) :: child_data(:,:)
+      ! -------------------------------------------------------------------- !
+    end subroutine ply_split_element
+  end interface
 
   !> Precomputed matrix to hold the transformation operation to project
   !! Legendre polynomials to its two half intervals.
@@ -210,7 +239,7 @@ contains
     oldmodes: do parentMode=1,inLen(nDims)
       ! Maximal number modes to compute, as this is a triangular matrix
       ! it is limited by the diagonal (parentMode). However, it may be
-      ! that the targe polynomial space in the output is smaller, in this
+      ! that the target polynomial space in the output is smaller, in this
       ! case we cap the computations and no more than outLen(1) entries
       ! are to be computed.
       maxrow = min(parentMode, outLen(1))
@@ -239,6 +268,46 @@ contains
     end do oldmodes
 
   end subroutine ply_split_element_singleD
+  ! ======================================================================== !
+
+
+  ! ------------------------------------------------------------------------ !
+  !> Split one-dimensional elements of degree parent_degree into two elements
+  !! with polynomials of degree child_degree.
+  subroutine ply_split_element_1D( parent_degree, child_degree, parent_data, &
+    &                              child_data )
+    ! -------------------------------------------------------------------- !
+    !> Polynomial degree in the parent element.
+    integer, intent(in) :: parent_degree
+
+    !> Polynomial degree in the child elements.
+    integer, intent(in) :: child_degree
+
+    !> Polynomial data in the parent element. The first index describes the
+    !! degrees of freedom. The second index refers to the elements to split.
+    real(kind=rk), intent(in) :: parent_data(:,:)
+
+    !> Polynomial data in the child elements. The first index describes the
+    !! degrees of freedom. The second index refers to the elements, there
+    !! needs to be four times as many elements than in the parent_data.
+    !!
+    !! Elements follow the ordering of the Z space filling curve.
+    real(kind=rk), intent(out) :: child_data(:,:)
+    ! -------------------------------------------------------------------- !
+    integer :: pardofs
+    integer :: childdofs
+    ! -------------------------------------------------------------------- !
+
+    pardofs = parent_degree + 1
+    childdofs = child_degree + 1
+
+    call ply_split_element_singleD( nDims       = 2,            &
+      &                             inLen       = [pardofs],    &
+      &                             outLen      = [childdofs],  &
+      &                             parent_data = parent_data,  &
+      &                             child_data  = child_data    )
+
+  end subroutine ply_split_element_1D
   ! ======================================================================== !
 
 
