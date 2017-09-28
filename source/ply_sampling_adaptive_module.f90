@@ -37,7 +37,8 @@ module ply_sampling_adaptive_module
     &                           tem_bc_prop_sublist
   use tem_logging_module, only: logunit
   use tem_refining_module, only: tem_refine_global_subtree
-  use tem_subtree_type_module, only: tem_subtree_type
+  use tem_subtree_type_module, only: tem_subtree_type, &
+    &                                tem_destroy_subtree
   use tem_subTree_module, only: tem_subTree_from,      &
     &                           tem_create_subTree_of, &
     &                           tem_create_tree_from_sub
@@ -500,6 +501,7 @@ contains
           &                             new_bcs         = curbcs,         &
           &                             restrict_to_sub = .false.         )
 
+        call tem_destroy_subtree(refine_subtree)
       end if
 
       ! Apply the same reduction factor for all variables.
@@ -508,6 +510,7 @@ contains
 
       do iScalar=1,nScalars
         maxdeg(iScalar) = maxval(var(iScalar)%degree)
+        ReducableElems(iScalar) = var(iScalar)%nDeviating*nChildren
       end do
 
       if (me%adaptiveDofReduction .and. need2refine) then
@@ -523,13 +526,20 @@ contains
           ! `totaldofs = newelems + reducableElems*((r*(maxdeg+1))**nDims - 1)`
           ! Where `r` is the dof reduction factor. Solving for this factor we
           ! get:
-          ReducableElems(iScalar) = var(iScalar)%nDeviating*nChildren
-          memprefac = ( 1 + real(origsize(iScalar) - newelems, kind=rk) &
-            &               / ReducableElems(iScalar) )**(1.0_rk/nDims) &
-            &         / real(maxdeg(iScalar)+1, kind=rk)
-          ! Do not increase the number of dofs, even if memory would allow it.
-          ! (limit factor to 1).
-          memprefac = min(memprefac, 1.0_rk)
+          if (newelems < origsize(iScalar)) then
+            memprefac = ( real(1 + origsize(iScalar) - newelems, kind=rk) &
+              &               / ReducableElems(iScalar) )**(1.0_rk/nDims) &
+              &         / real(maxdeg(iScalar)+1, kind=rk)
+            ! Do not increase the number of dofs, even if memory would allow it.
+            ! (limit factor to 1).
+            memprefac = min(memprefac, 1.0_rk)
+          else
+            ! Even a single degree of freedom per element exceeds the original
+            ! memory. We can not increase the factor and maintain more degrees
+            ! of freedom without increasing the memory demand, thus we stick to
+            ! the configured reduction factor.
+            memprefac = reduction_factor(iScalar)
+          end if
 
           ! Reduction factor has to be at least as large as given by the user,
           ! but if possible we'll use a larger factor and preserve more modes
