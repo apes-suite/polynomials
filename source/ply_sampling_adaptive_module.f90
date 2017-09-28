@@ -582,12 +582,12 @@ contains
         if (.not.need2refine) then
           ! No need to refine the mesh, just copy the first degree of freedom
           ! in each element and skip to next variable.
-          do iElem=1,oldmesh%nElems
-            iNewElem = iNewElem+1
+          do iElem=1,curmesh%nElems
             firstdof = var(iScalar)%first(iNewElem)
             oldfirst = prev(iScalar)%first(iElem)
             var(iScalar)%first(iNewElem+1) = firstdof + 1
             var(iScalar)%dat(firstdof) = prev(iScalar)%dat(oldfirst)
+            iNewElem = iNewElem+1
           end do
           CYCLE variables
         end if
