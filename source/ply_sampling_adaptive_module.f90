@@ -389,12 +389,12 @@ contains
 
       ! Otherwise we need to create a new boundary property with just the
       ! elements of the subtree.
-      call tem_bc_prop_sublist( tree     = orig_mesh,                      &
-        &                       bc       = orig_bcs,                       &
-        &                       header   = curmesh%global%property(bcpos), &
-        &                       property = curmesh%property(bcpos),        &
-        &                       sublist  = trackInst%subtree%map2global,   &
-        &                       sub_bc   = curbcs                          )
+      call tem_bc_prop_sublist( tree     = orig_mesh,                        &
+        &                       bc       = orig_bcs,                         &
+        &                       header   = orig_mesh%global%property(bcpos), &
+        &                       property = orig_mesh%property(bcpos),        &
+        &                       sublist  = trackInst%subtree%map2global,     &
+        &                       sub_bc   = curbcs                            )
 
     end if
 
