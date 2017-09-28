@@ -301,7 +301,7 @@ contains
     pardofs = parent_degree + 1
     childdofs = child_degree + 1
 
-    call ply_split_element_singleD( nDims       = 2,            &
+    call ply_split_element_singleD( nDims       = 1,            &
       &                             inLen       = [pardofs],    &
       &                             outLen      = [childdofs],  &
       &                             parent_data = parent_data,  &
