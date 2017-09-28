@@ -526,7 +526,8 @@ contains
           ! `totaldofs = newelems + reducableElems*((r*(maxdeg+1))**nDims - 1)`
           ! Where `r` is the dof reduction factor. Solving for this factor we
           ! get:
-          if (newelems < origsize(iScalar)) then
+          if ( (newelems <= origsize(iScalar))     &
+            &  .and. (reducableElems(iScalar) > 0) ) then
             memprefac = ( real(1 + origsize(iScalar) - newelems, kind=rk) &
               &               / ReducableElems(iScalar) )**(1.0_rk/nDims) &
               &         / real(maxdeg(iScalar)+1, kind=rk)
@@ -699,7 +700,7 @@ contains
               firstdof = var(iScalar)%first(iNewElem)
               lastdof = var(iScalar)%first(iNewElem+1) - 1
               oldfirst = prev(iScalar)%first(iElem)
-              oldlast = prev(iScalar)%first(iElem)
+              oldlast = prev(iScalar)%first(iElem+1) - 1
 
               var(iScalar)%dat(firstdof:lastdof) &
                 & = prev(iScalar)%dat(oldfirst:oldlast)
