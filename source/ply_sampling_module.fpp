@@ -169,10 +169,10 @@ contains
         &               key     = 'method',  &
         &               val     = me%method, &
         &               ErrCode = iError,    &
-        &               default = 'fixed'    )
+        &               default = 'adaptive' )
 
       if ( btest(iError, aoterr_Fatal) ) then
-        write(logunit(1),*) 'ERROR: method for ply_sampling needs to be an' &
+        write(logunit(1),*) 'ERROR: method for ply_sampling needs to be a' &
           &                 // ' string!'
         write(logunit(1),*) 'You provided a method but not in a form that' &
           &                 // ' could be interpreted as a string.'
@@ -188,6 +188,11 @@ contains
         write(logunit(1),'(a,i0,a)') 'Sampling configured to be fixed with ', &
           &                          me%max_nlevels, &
           &                          ' levels.'
+        write(logunit(1),*) 'ATTENTION: This refinement method may not support'
+        write(logunit(1),*) '           all features properly. It is a legacy'
+        write(logunit(1),*) '           method, in nearly all cases it should'
+        write(logunit(1),*) '           be better to use the adaptive method'
+        write(logunit(1),*) '           instead.'
 
       case('adaptive')
         write(logunit(1),'(a,i0)') 'ADAPTIVE subsampling up to level ', &
@@ -201,14 +206,16 @@ contains
         write(logunit(1),*) 'ERROR: unknown sampling method: ', trim(me%method)
         write(logunit(1),*) '       The sampling method needs to be one of the'
         write(logunit(1),*) '       following:'
-        write(logunit(1),*) '       * "fixed" - will refine all elements by a'
-        write(logunit(1),*) '                   given number of levels and'
-        write(logunit(1),*) '                   provide the polynomial values'
-        write(logunit(1),*) '                   at the barycenters of those.'
         write(logunit(1),*) '       * "adaptive" - will refine elements'
         write(logunit(1),*) '                      according to the solution.'
         write(logunit(1),*) '                      Only those that actually'
         write(logunit(1),*) '                      vary, will be refined.'
+        write(logunit(1),*) '                      This is the recommended'
+        write(logunit(1),*) '                      default.'
+        write(logunit(1),*) '       * "fixed" - will refine all elements by a'
+        write(logunit(1),*) '                   given number of levels and'
+        write(logunit(1),*) '                   provide the polynomial values'
+        write(logunit(1),*) '                   at the barycenters of those.'
         call tem_abort()
       end select
     end if

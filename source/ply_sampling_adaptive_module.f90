@@ -1,26 +1,21 @@
 !> Adaptive sampling of polynomial data.
 !!
-!! This module implements the sampling of polynomial with data dependent
+!! This module implements the sampling of polynomials with data dependent
 !! refinement.
 !! Elements, where the polynomials vary above a certain threshold, will be
 !! split into their eight children and the polynomial data will be projected
 !! onto those.
 !! The polynomials in the children can be restricted in their order to limit
 !! the memory consumption.
-!! In the end only one degree of freedom will be returned for each element,
-!! these are always the mean of the solution in those (refined) elements.
+!! In the end only one degree of freedom will be returned for each (refined)
+!! element, these are always the mean of the solution in those (refined)
+!! elements.
 !!
-!! Sketch of algorithm:
-!! * First we need to create polynomial representations for all requested
-!!   variables in the elements of the requested subtree. We also need to
-!!   create a new variable system that allows later extraction from the
-!!   final data with a get_element routine.
-!!
-!! * Then for each level, we need to do:
-!! ** Identify the elements that need refinement
-!! ** Create new mesh
-!! ** Split data accordingly
-!! ** Restrict new mesh to tracking shape
+!! The module provides a data type to describe the configuration of the
+!! adaptive sampling: [[ply_sampling_adaptive_type]],
+!! one routine to load this configuration [[ply_sampling_adaptive_load]] and
+!! one routine to actually perform the adaptive sampling
+!! [[ply_sample_adaptive]].
 module ply_sampling_adaptive_module
   use mpi
 
@@ -77,6 +72,7 @@ module ply_sampling_adaptive_module
   public :: ply_sampling_adaptive_type
   public :: ply_sampling_adaptive_load
 
+
   !> Configuration of the adaptive sampling.
   !!
   !! The main setting is max_nlevels, which states the maximum number of
@@ -123,6 +119,9 @@ module ply_sampling_adaptive_module
 
 contains
 
+
+  ! ------------------------------------------------------------------------- !
+  !> Load the configuration for adaptive subsampling.
   subroutine ply_sampling_adaptive_load(me, conf, parent)
     ! -------------------------------------------------------------------- !
     !> Sampling definition to load.
@@ -149,7 +148,7 @@ contains
       &               key     = 'tolerance', &
       &               val     = me%eps_osci, &
       &               ErrCode = iError,      &
-      &               default = 0.1_rk       )
+      &               default = 0.0_rk       )
     write(logunit(1),*) '  Using a tolerance of ', me%eps_osci
 
     call aot_get_val( L       = conf,                  &
@@ -208,8 +207,11 @@ contains
     end if
 
   end subroutine ply_sampling_adaptive_load
+  ! ------------------------------------------------------------------------- !
+  ! ------------------------------------------------------------------------- !
 
 
+  ! ------------------------------------------------------------------------- !
   !> Sample data described by varsys in orig_mesh according to the tracking
   !! object trackInst with adaptive refinements.
   !!
@@ -646,6 +648,13 @@ contains
             end if
 
             do iChild=1,nChildren
+              ! todo: Filter modes
+              ! if (filter_tolerance > 0 .and. targetdeg > 1) then
+              !   ! only filter highest modes if there is a tolerance and there
+              !   ! is more than one mode to filter.
+              !   sum abs of modes from last backwards until filter tolerance
+              !   is reached and cut off modes above that.
+              ! end if
               var(iScalar)%degree(iNewElem) = targetdeg
               var(iScalar)%first(iNewElem+1) = firstdof + iChild*ndofs
               iNewElem = iNewElem+1
@@ -862,5 +871,46 @@ contains
     end do
 
   end subroutine get_sampled_element
+  ! ------------------------------------------------------------------------- !
+  ! ------------------------------------------------------------------------- !
+
+
+  ! ------------------------------------------------------------------------- !
+  pure function sum_abs_mode(iMode, degree, nDims, dat) result(modesum)
+    ! -------------------------------------------------------------------- !
+    integer, intent(in) :: iMode
+    integer, intent(in) :: degree
+    integer, intent(in) :: nDims
+    real(kind=rk), intent(in) :: dat(:)
+    real(kind=rk) :: modesum
+    ! -------------------------------------------------------------------- !
+    integer :: nModes
+    integer :: jMode, kMode
+    ! -------------------------------------------------------------------- !
+    nModes = (degree+1)
+
+    select case(nDims)
+    case (1)
+      modesum = abs(dat(iMode))
+    case (2)
+      modesum = abs(dat(iMode+(iMode-1)*nModes))
+      do jMode=1,iMode-1
+        modesum = modesum + abs(dat(iMode+(jMode-1)*nModes)) &
+          &               + abs(dat(jMode+(iMode-1)*nModes))
+      end do
+    case (3)
+      modesum = abs(dat(iMode+((iMode-1)+(iMode-1)*nModes)*nModes))
+      do jMode=1,iMode-1
+        modesum = modesum + abs(dat(iMode+((iMode-1)+(jMode-1)*nModes)*nModes)) &
+          &               + abs(dat(iMode+((jMode-1)+(iMode-1)*nModes)*nModes)) &
+          &               + abs(dat(jMode+((iMode-1)+(iMode-1)*nModes)*nModes))
+        do kMode=1,kMode-1
+          modesum = modesum + abs(dat(iMode+((jMode-1)+(kMode-1)*nModes)*nModes)) &
+            &               + abs(dat(kMode+((iMode-1)+(jMode-1)*nModes)*nModes)) &
+            &               + abs(dat(jMode+((kMode-1)+(iMode-1)*nModes)*nModes))
+        end do
+      end do
+    end select
+  end function sum_abs_mode
 
 end module ply_sampling_adaptive_module
