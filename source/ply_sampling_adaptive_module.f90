@@ -379,25 +379,27 @@ contains
 
     bcpos = tem_bc_prop_pos(orig_mesh)
 
-    ! Take care of the boundary properties
-    if (trackInst%subtree%useGlobalMesh) then
+    if (bcpos > 0) then
+      ! Take care of the boundary properties
+      if (trackInst%subtree%useGlobalMesh) then
 
-      ! For global meshes we can just reuse the original boundary property.
-      curbcs = orig_bcs
-      curbcs%header => curmesh%global%property(bcpos)
-      curbcs%property => curmesh%property(bcpos)
+        ! For global meshes we can just reuse the original boundary property.
+        curbcs = orig_bcs
+        curbcs%header => curmesh%global%property(bcpos)
+        curbcs%property => curmesh%property(bcpos)
 
-    else
+      else
 
-      ! Otherwise we need to create a new boundary property with just the
-      ! elements of the subtree.
-      call tem_bc_prop_sublist( tree     = orig_mesh,                        &
-        &                       bc       = orig_bcs,                         &
-        &                       header   = orig_mesh%global%property(bcpos), &
-        &                       property = orig_mesh%property(bcpos),        &
-        &                       sublist  = trackInst%subtree%map2global,     &
-        &                       sub_bc   = curbcs                            )
+        ! Otherwise we need to create a new boundary property with just the
+        ! elements of the subtree.
+        call tem_bc_prop_sublist( tree     = orig_mesh,                        &
+          &                       bc       = orig_bcs,                         &
+          &                       header   = orig_mesh%global%property(bcpos), &
+          &                       property = orig_mesh%property(bcpos),        &
+          &                       sublist  = trackInst%subtree%map2global,     &
+          &                       sub_bc   = curbcs                            )
 
+      end if
     end if
 
     ! All preparations done, we now have an array holding the original
