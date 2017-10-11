@@ -4,9 +4,7 @@
 module ply_oversample_module
 
   use env_module,               only: rk
-  use ply_dof_module,           only: nextModgCoeffPTens,    &
-    &                                 nextModgCoeffPTens2D,  &
-    &                                 Q_space, P_space
+  use ply_dof_module,           only: Q_space, P_space
   use ply_poly_project_module,  only: ply_poly_project_type
 
   implicit none
@@ -165,7 +163,7 @@ contains
           &                     + (iDegZ-1)*(oversamp_degree+1) &
           &                   ) * (oversamp_degree+1)
         modalCoeffs(dofOverSamp,:) = state(dof,:)
-        call nextModgCoeffPTens(iDegX, iDegY, iDegZ, poly_proj%min_degree)
+?? copy :: nextModgCoeffPTens(iDegX, iDegY, iDegZ)
       end do
       !$OMP END SINGLE
     end if
@@ -233,7 +231,7 @@ contains
           &                     + (iDegZ-1)*(oversamp_degree+1) &
           &                   ) * (oversamp_degree+1)
         state(dof,:) = modalCoeffs(dofOverSamp,:)
-        call nextModgCoeffPTens(iDegX, iDegY, iDegZ, poly_proj%min_degree)
+?? copy :: nextModgCoeffPTens(iDegX, iDegY, iDegZ)
       end do
       !$OMP END SINGLE
     end if
@@ -310,7 +308,7 @@ contains
 ?? copy :: posOfModgCoeffPTens2D(iDegX, iDegY, dof)
         dofOverSamp = iDegX + (iDegY-1)*(oversamp_degree+1)
         modalCoeffs(dofOverSamp,1:nPVars) = state(dof,1:nPVars)
-        call nextModgCoeffPTens2D(iDegX, iDegY)
+?? copy :: nextModgCoeffPTens2D(iDegX, iDegY)
       end do
       !$OMP END SINGLE
 
@@ -381,7 +379,7 @@ contains
 ?? copy :: posOfModgCoeffPTens2D(iDegX, iDegY, dof)
         dofOverSamp = iDegX + (iDegY-1)*(oversamp_degree+1)
         state(dof,1:nPVars) = modalCoeffs(dofOverSamp,1:nPVars)
-        call nextModgCoeffPTens2D(iDegX, iDegY)
+?? copy :: nextModgCoeffPTens2D(iDegX, iDegY)
       end do
       !$OMP END SINGLE
 

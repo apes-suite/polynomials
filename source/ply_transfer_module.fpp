@@ -7,11 +7,8 @@
 module ply_transfer_module
   use env_module,     only: rk
 
-  use ply_dof_module, only: P_Space,              &
-    &                       Q_space,              &
-    &                       nextModgCoeffPTens2D, &
-    &                       nextModgCoeffPTens
-
+  use ply_dof_module, only: P_Space, &
+    &                       Q_space
 
   implicit none
 
@@ -144,7 +141,7 @@ contains
           outdat(out_pos) = indat(in_pos)
           ! Ensure, that next iteration is in the minord range
           do istep=iDof,indofs
-            call nextModgCoeffPTens2D(in_X, in_Y)
+?? copy :: nextModgCoeffPTens2D(in_X, in_Y)
             if ((in_X <= minord) .and. (in_Y <= minord)) EXIT
           end do
           if ( (in_X > minord) .or. (in_Y > minord) &
@@ -168,7 +165,7 @@ contains
           outdat(out_pos) = indat(in_pos)
           ! Ensure, that next iteration is in the target range
           do istep=iDof,outdofs
-            call nextModgCoeffPTens2D(out_X, out_Y)
+?? copy :: nextModgCoeffPTens2D(out_X, out_Y)
             if ((out_X <= minord) .and. (out_Y <= minord)) EXIT
           end do
           if ( (out_X > minord) .or. (out_Y > minord) &
@@ -279,7 +276,7 @@ contains
           outdat(out_pos) = indat(in_pos)
           ! Ensure, that next iteration is in the target range
           do istep=iDof,indofs
-            call nextModgCoeffPTens(in_X, in_Y, in_Z, indegree)
+?? copy :: nextModgCoeffPTens(in_X, in_Y, in_Z)
             if ( (in_X <= minord) .and. (in_Y <= minord) &
               &                   .and. (in_Z <= minord) ) EXIT
           end do
@@ -305,7 +302,7 @@ contains
           outdat(out_pos) = indat(in_pos)
           ! Ensure, that next iteration is in the target range
           do istep=iDof,outdofs
-            call nextModgCoeffPTens(out_X, out_Y, out_Z, outdegree)
+?? copy :: nextModgCoeffPTens(out_X, out_Y, out_Z)
             if ((out_X <= minord) .and. (out_Y <= minord) &
               &                   .and. (out_Z <= minord) ) EXIT
           end do
@@ -464,8 +461,7 @@ contains
         do iMode=1,nInDofs
 ?? copy :: posOfModgCoeffPTens( iX, iY, iZ, iPos )
           outdat(iPos) = indat(iMode)
-          call nextModgCoeffPTens2D( ansFuncX  = iX, &
-            &                        ansFuncY  = iY  )
+?? copy :: nextModgCoeffPTens2D( iX, iY )
         end do
 
       end select i2_out_d
@@ -488,8 +484,7 @@ contains
         do iMode=1,nOutDofs
 ?? copy :: posOfModgCoeffPTens( iX, iY, iZ, iPos )
           outdat(iMode) = indat(iPos)
-          call nextModgCoeffPTens2D( ansFuncX  = iX, &
-            &                        ansFuncY  = iY  )
+?? copy :: nextModgCoeffPTens2D( iX, iY )
         end do
 
       case(3) i3_out_d

@@ -152,3 +152,112 @@
   ?result? = ((?maxPolyDegree?)+1)
 ?? end text getDofsPTens1D
 
+! The x, y and z ansatz degrees are turned into the degrees of the next
+! ansatz function in the layered P list
+! You must provide:
+! * Ansatz function index in x direction. First ansatz function has index 1.
+! * Ansatz function index in y direction. First ansatz function has index 1.
+! * Ansatz function index in z direction. First ansatz function has index 1.
+?? text :: nextModgCoeffPTens(ansFuncX, ansFuncY, ansFuncZ)
+  ! - ansatz indices are arranged in layers. Within each layer, the total
+  !   degree remains constant.
+  ! - within each layer, we have blocks. Within a block, ansFuncZ is
+  !   constant, y counts up and x accordingly down.
+  ! - within each block, we have items. Each item represents one particular
+  !   combination of ansFuncX, -Y, and -Z degrees.
+
+  if (?ansFuncX? .ne. 1) then
+    ! next item
+    ?ansFuncX? = ?ansFuncX? - 1
+    ?ansFuncY? = ?ansFuncY? + 1
+  elseif (?ansFuncY? .ne. 1) then
+    ! next block
+    ?ansFuncX? = ?ansFuncY? - 1
+    ?ansFuncY? = 1
+    ?ansFuncZ? = ?ansFuncZ? + 1
+  else
+    ! next layer
+    ?ansFuncX? = ?ansFuncZ? + 1
+    ?ansFuncY? = 1
+    ?ansFuncZ? = 1
+  end if
+?? end text nextModgCoeffPTens
+
+! The x and y ansatz degrees are turned into the degrees of the next
+! ansatz function in the layered P list
+! You must provide:
+! * Ansatz function index in x direction. First ansatz function has index 1.
+! * Ansatz function index in y direction. First ansatz function has index 1.
+?? text :: nextModgCoeffPTens2D(ansFuncX, ansFuncY)
+  ! - ansatz indices are arranged in layers. Within each layer, the total
+  !   degree remains constant.
+  ! - within each layer, we have blocks. Within a block, ansFuncZ is
+  !   constant, y counts up and x accordingly down.
+  ! - within each block, we have items. Each item represents one particular
+  !   combination of ansFuncX, -Y, and -Z degrees.
+  if (?ansFuncX? .ne. 1) then
+    ! next item
+    ?ansFuncX? = ?ansFuncX? - 1
+    ?ansFuncY? = ?ansFuncY? + 1
+  else
+    ! next layer
+    ?ansFuncX? = ?ansFuncY? + 1
+    ?ansFuncY? = 1
+  end if
+?? end text nextModgCoeffPTens2D
+
+! The x ansatz degree is turned into the degree of the next
+! ansatz function in the layered P list
+! You must provide:
+! * Ansatz function index in x direction. First ansatz function has index 1.
+?? text :: nextModgCoeffPTens1D(ansFuncX)
+  ?ansFuncX? = ?ansFuncX? + 1
+?? end text nextModgCoeffPTens1D
+
+! The x, y and z ansatz degrees are turned into the degrees of the next
+! ansatz function in the linearized Q tensor
+! You must provide:
+! * Ansatz function index in x direction. First ansatz function has index 1.
+! * Ansatz function index in y direction. First ansatz function has index 1.
+! * Ansatz function index in z direction. First ansatz function has index 1.
+! * Maximal polynomial degree
+?? text :: nextModgCoeffQTens(ansFuncX, ansFuncY, ansFuncZ, maxdegree)
+  if (?ansFuncX? .ne. (?maxdegree? + 1)) then
+    ! next X index
+    ?ansFuncX? = ?ansFuncX? + 1
+  elseif (?ansFuncY? .ne. (?maxdegree? + 1)) then
+    ! next y index
+    ?ansFuncX? = 1
+    ?ansFuncY? = ?ansFuncY? + 1
+  else
+    ! next Z index
+    ?ansFuncX? = 1
+    ?ansFuncY? = 1
+    ?ansFuncZ? = ?ansFuncZ? + 1
+  end if
+?? end text nextModgCoeffQTens
+
+! The x and y ansatz degrees are turned into the degrees of the next
+! ansatz function in the linearized Q tensor
+! You must provide:
+! * Ansatz function index in x direction. First ansatz function has index 1.
+! * Ansatz function index in y direction. First ansatz function has index 1.
+! * Maximal polynomial degree
+?? text :: nextModgCoeffQTens2D(ansFuncX, ansFuncY, maxdegree)
+  if (?ansFuncX? .ne. (?maxdegree? + 1)) then
+    ! next X index
+    ?ansFuncX? = ?ansFuncX? + 1
+  else
+    ! next y index
+    ?ansFuncX? = 1
+    ?ansFuncY? = ?ansFuncY? + 1
+  end if
+?? end text nextModgCoeffQTens2D
+
+! The x ansatz degree is turned into the degree of the next
+! ansatz function in the linearized Q tensor
+! You must provide:
+! * Ansatz function index in x direction. First ansatz function has index 1.
+?? text :: nextModgCoeffQTens1D(ansFuncX)
+  ?ansFuncX? = ?ansFuncX? + 1
+?? end text nextModgCoeffQTens1D

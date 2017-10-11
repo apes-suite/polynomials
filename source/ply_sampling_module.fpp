@@ -45,13 +45,7 @@ module ply_sampling_module
     &                                       tem_varSys_getParams_dummy,    &
     &                                       tem_varSys_setParams_dummy
 
-  use ply_dof_module,                 only: q_space, p_space,     &
-    &                                       nextModgCoeffQTens,   &
-    &                                       nextModgCoeffPTens,   &
-    &                                       nextModgCoeffQTens2D, &
-    &                                       nextModgCoeffPTens2D, &
-    &                                       nextModgCoeffQTens1D, &
-    &                                       nextModgCoeffPTens1D
+  use ply_dof_module,                 only: q_space, p_space
   use ply_modg_basis_module,          only: legendre_1D
 
   use ply_poly_transformation_module, only: ply_Poly_Transformation, &
@@ -533,29 +527,20 @@ contains
               if (var_space(iVar) == q_space) then
                 select case(ndims)
                 case (3)
-                  call nextModgCoeffQTens( ansFuncX  = ans(1),            &
-                    &                      ansFuncY  = ans(2),            &
-                    &                      ansFuncZ  = ans(3),            &
-                    &                      maxdegree = var_degree(varpos) )
+?? copy :: nextModgCoeffQTens( ans(1), ans(2), ans(3), var_degree(varpos) )
                 case (2)
-                  call nextModgCoeffQTens2D( ansFuncX  = ans(1),            &
-                    &                        ansFuncY  = ans(2),            &
-                    &                        maxdegree = var_degree(varpos) )
+?? copy :: nextModgCoeffQTens2D( ans(1), ans(2), var_degree(varpos) )
                 case (1)
-                  call nextModgCoeffQTens1D( ansFuncX  = ans(1) )
+?? copy :: nextModgCoeffQTens1D( ans(1) )
                 end select
               else
                 select case(ndims)
                 case (3)
-                  call nextModgCoeffPTens( ansFuncX  = ans(1),            &
-                    &                      ansFuncY  = ans(2),            &
-                    &                      ansFuncZ  = ans(3),            &
-                    &                      maxdegree = var_degree(varpos) )
+?? copy :: nextModgCoeffPTens( ans(1), ans(2), ans(3) )
                 case (2)
-                  call nextModgCoeffPTens2D( ansFuncX  = ans(1), &
-                    &                        ansFuncY  = ans(2)  )
+?? copy :: nextModgCoeffPTens2D( ans(1), ans(2) )
                 case (1)
-                  call nextModgCoeffPTens1D( ansFuncX  = ans(1) )
+?? copy :: nextModgCoeffPTens1D( ans(1) )
                 end select
               end if
               legval = pointval(ans(1), pointCoord(1))

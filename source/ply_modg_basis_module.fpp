@@ -5,8 +5,7 @@
 module ply_modg_basis_module
   use env_module,                   only: rk
 
-  use ply_dof_module,               only: nextModgCoeffPTens, &
-    &                                     Q_space, P_space
+  use ply_dof_module,               only: Q_space, P_space
   use ply_space_integration_module, only: ply_gaussLegPoints
 
   implicit none
@@ -492,7 +491,7 @@ contains
           polyVal(ansPos, :) = polyValX(iAnsX,:)     &
             &                    * polyValY(iAnsY,:) &
             &                    * polyValZ(iAnsZ,:)
-          call nextModgCoeffPTens(iAnsX, iAnsY, iAnsZ, maxPolyDegree)
+?? copy :: nextModgCoeffPTens(iAnsX, iAnsY, iAnsZ)
         end do
     end select
 
