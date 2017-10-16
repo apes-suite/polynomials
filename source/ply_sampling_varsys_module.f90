@@ -273,15 +273,30 @@ contains
   !!
   !! The computation is done for the current data found in `var%dat`, any
   !! previous computations of these flags will be discarded by this routine.
-  subroutine ply_sampling_var_compute_elemdev(var, threshold)
+  subroutine ply_sampling_var_compute_elemdev(var, threshold, min_mean)
     ! -------------------------------------------------------------------- !
+    !> Variable data to compute the deviation for.
     type(ply_sampling_var_type), intent(inout) :: var
+
+    !> Relative threshold to use as decision whether an element has a high
+    !! deviation or not.
+    !!
+    !! If the absolute value of higher modes sums to a larger value than
+    !! threshold times the first mode (integral mean), the element is marked
+    !! as deviating.
     real(kind=rk), intent(in) :: threshold
+
+    !> A minimal mean value to use as comparison (to cut off changes that are
+    !! too close to 0).
+    !!
+    !! This should be small but has to be larger than 0.
+    real(kind=rk), intent(in) :: min_mean
     ! -------------------------------------------------------------------- !
     real(kind=rk) :: variation
     real(kind=rk) :: absmean
     integer :: iElem
     integer :: nElems
+    integer :: ndofs
     ! -------------------------------------------------------------------- !
 
     if (allocated(var%deviates)) deallocate(var%deviates)
@@ -291,10 +306,10 @@ contains
       nElems = size(var%first)-1
       allocate(var%deviates(nElems))
       do iElem=1,nElems
-        absmean = max(abs(var%dat(var%first(iElem))), epsilon(variation))
-        variation = sum( abs(var%dat(var%first(iElem)+1:var%first(iElem+1)-1)) &
-          &            ) / absmean
-        var%deviates(iElem) = (variation > threshold)
+        ndofs = var%first(iElem+1) - var%first(iElem) - 1
+        absmean = max( abs(var%dat(var%first(iElem))), min_mean )
+        variation = sum( abs(var%dat(var%first(iElem)+1:var%first(iElem+1)-1)) )
+        var%deviates(iElem) = (variation > threshold*absmean)
         if (var%deviates(iElem)) var%nDeviating = var%nDeviating + 1
       end do
     end if

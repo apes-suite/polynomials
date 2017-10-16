@@ -266,6 +266,8 @@ contains
 
     real(kind=rk), allocatable :: elemdat(:)
     real(kind=rk), allocatable :: reduction_factor(:)
+    real(kind=rk), allocatable :: maxmean(:)
+    real(kind=rk), allocatable :: minmean(:)
     real(kind=rk) :: memprefac
     real(kind=rk) :: variation
 
@@ -283,7 +285,7 @@ contains
     integer :: nComponents
     integer :: nDofs
     integer :: nOldDofs
-    integer :: nOrigElems
+    integer :: nElems
     integer :: newElems
     integer :: refinedElems
 
@@ -355,14 +357,23 @@ contains
       &                                 time          = time        )
 
     nScalars = size(var)
+    nElems = orig_mesh%nElems
     allocate(maxdeg(nScalars))
     allocate(reduction_factor(nScalars))
     allocate(origsize(nScalars))
     allocate(reducableelems(nScalars))
+    allocate(maxmean(nScalars))
+    allocate(minmean(nScalars))
 
     do iScalar=1,nScalars
       origsize(iScalar) = size(var(iScalar)%dat)
+      maxmean(iScalar) = maxval(var(iScalar)%dat(var(iScalar)%first(:nElems)))
     end do
+
+    ! If the maximal mean of the variable across all elements is too close to
+    ! 0, lift it to ensure some safeguard.
+    maxmean = max( maxmean, 256*epsilon(maxmean(1)) )
+    minmean = maxmean * me%eps_osci
 
 
     ! Create a mesh describing the original selection of elements to sample.
@@ -412,8 +423,9 @@ contains
       newElems = 0
 
       do iScalar=1,nScalars
-        call ply_sampling_var_compute_elemdev( var       = var(iScalar), &
-          &                                    threshold = me%eps_osci   )
+        call ply_sampling_var_compute_elemdev( var       = var(iScalar),    &
+          &                                    threshold = me%eps_osci,     &
+          &                                    min_mean  = minmean(iScalar) )
       end do
 
       if (allocated(reached_limit)) deallocate(reached_limit)
