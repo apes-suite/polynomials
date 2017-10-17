@@ -303,6 +303,7 @@ contains
     integer :: iRefElem
     integer :: iNewElem
     integer :: iChild
+    integer :: elemlevel
 
     integer :: iError
 
@@ -442,18 +443,22 @@ contains
       ! later on independent of the variation of the data.
       do iElem=1,curmesh%nElems
 
-        reached_limit(iElem) = lastrefine                                 &
-          &                    .or. ( (me%AbsUpperBoundLevel > 0)         &
-          &                    .and. ( tem_levelOf(curmesh%treeID(iElem)) &
-          &                            >= me%AbsUpperBoundLevel - 1 )     ) 
+        elemlevel = tem_levelOf(curmesh%treeID(iElem))
+        reached_limit(iElem) = lastrefine                                     &
+          &                    .or. ( (me%AbsUpperBoundLevel > 0)             &
+          &                    .and. (elemlevel >= me%AbsUpperBoundLevel - 1) ) 
 
         ! Now get the spectral variation (sum of absolute values of all
         ! higher modes).
         is_varying(iElem) = .false.
-        do iScalar=1,nScalars
-          is_varying(iElem) = is_varying(iElem) &
-            &                 .or. var(iScalar)%deviates(iElem)
-        end do
+        ! Only consider refining, if absupperboundlevel is not reached.
+        if ( (elemlevel < me%AbsUpperBoundLevel) &
+          & .or. (me%AbsUpperBoundLevel == 0)    ) then
+          do iScalar=1,nScalars
+            is_varying(iElem) = is_varying(iElem) &
+              &                 .or. var(iScalar)%deviates(iElem)
+          end do
+        end if
 
         if ( is_varying(iElem) ) then
           ! At least one of the variables in the data has a variation above
