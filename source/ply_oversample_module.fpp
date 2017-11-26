@@ -25,7 +25,7 @@ contains
   !! Please note, that the oversampled representation is always a Q-Space
   !! polynomial.
   subroutine ply_convert2oversample( state, poly_proj, nDim, modalCoeffs, &
-    &                                nScalars                             )
+    &                                nScalars, ensure_positivity          )
     ! -------------------------------------------------------------------- !
     !> Description of the projection method.
     type(ply_poly_project_type), intent(in) :: poly_proj
@@ -46,6 +46,12 @@ contains
     !! to this subroutine, all variables of argument state will be considered
     !! by this routine.
     integer, intent(in), optional :: nScalars
+
+    !> Only use modes up to the point, where we are sure that the resulting
+    !! polynomial will be positive everywhere.
+    !! This is an array of logicals for each variable, if not given, the
+    !! default is false (no positivity ensured).
+    logical, intent(in), optional :: ensure_positivity(:)
     ! -------------------------------------------------------------------- !
     select case(nDim)
     case(1)
@@ -105,7 +111,8 @@ contains
   !! nonlinear operations.
   !! Please note, that the oversampled representation is always a Q-Space
   !! polynomial.
-  subroutine ply_convert2oversample_3d( state, poly_proj, modalCoeffs )
+  subroutine ply_convert2oversample_3d( state, poly_proj, modalCoeffs, &
+    &                                   ensure_positivity              )
     ! -------------------------------------------------------------------- !
     !> Description of the projection method.
     type(ply_poly_project_type), intent(in) :: poly_proj
@@ -118,12 +125,23 @@ contains
     !! These are always Q-Polynomial representations, as projections only work
     !! with those.
     real(kind=rk), intent(inout) :: modalCoeffs(:,:)
+
+    !> Only use modes up to the point, where we are sure that the resulting
+    !! polynomial will be positive everywhere.
+    !! This is an array of logicals for each variable, if not given, the
+    !! default is false (no positivity ensured).
+    logical, intent(in), optional :: ensure_positivity(:)
     ! -------------------------------------------------------------------- !
     integer :: oversamp_degree
     integer :: nScalars
     integer :: iVar
     integer :: mpd1, mpd1_square, mpd1_cube
     integer :: iDegX, iDegY, iDegZ, idof, dof, dofOverSamp
+    real(kind=rk) :: ordersum(3*(poly_proj%min_degree + 1)-2)
+    real(kind=rk) :: varsum
+    integer :: iOrd
+    integer :: maxorders
+    integer :: ord_lim
     ! -------------------------------------------------------------------- !
     ! Information for the oversampling loop
     oversamp_degree = poly_proj%oversamp_degree
@@ -131,14 +149,53 @@ contains
     mpd1_square = mpd1**2
     mpd1_cube = mpd1**3
     nScalars = size(modalCoeffs,2)
+    maxorders = 3*(poly_proj%min_degree + 1)-2
 
     !$OMP WORKSHARE
     modalCoeffs = 0.0_rk
     !$OMP END WORKSHARE
 
     if (poly_proj%basisType == Q_Space) then
-      !$OMP DO
-      do iVar=1,nScalars
+      posQ: if (present(ensure_positivity)) then
+        varQ: do iVar=1,nScalars
+          ord_lim = maxorders
+          if (ensure_positivity(iVar)) then
+            ordersum = 0.0_rk
+            !$OMP SINGLE
+            do dof = 1, mpd1_cube
+              iDegZ = (dof-1)/mpd1_square + 1
+              iDegY = (dof-1-(iDegZ-1)*mpd1_square)/mpd1+1
+              iDegX = mod(dof-1,mpd1)+1
+              iOrd = iDegX+iDegY+iDegZ-2
+              ordersum(iOrd) = ordersum(iOrd) + abs(state(dof,iVar))
+            end do
+            varsum = 0.0_rk
+            do iOrd=2,maxorders
+              varsum = varsum + ordersum(iOrd)
+              if (varsum >= ordersum(1)) then
+                 ord_lim = iOrd-1
+                 EXIT
+              end if
+            end do
+            !$OMP END SINGLE
+          end if
+          !$OMP DO
+          do dof = 1, mpd1_cube
+            iDegZ = (dof-1)/mpd1_square + 1
+            iDegY = (dof-1-(iDegZ-1)*mpd1_square)/mpd1+1
+            iDegX = mod(dof-1,mpd1)+1
+            iOrd = iDegX+iDegY+iDegZ-2
+            if (iOrd <= ord_lim) then
+              dofOverSamp = iDegX + ( iDegY-1  &
+                &                     + (iDegZ-1)*(oversamp_degree+1) &
+                &                   ) * (oversamp_degree+1)
+              modalCoeffs(dofOverSamp,iVar) = state(dof,iVar)
+            end if
+          end do
+          !$OMP END DO
+        end do varQ
+      else posQ
+        !$OMP DO
         do dof = 1, mpd1_cube
           iDegZ = (dof-1)/mpd1_square + 1
           iDegY = (dof-1-(iDegZ-1)*mpd1_square)/mpd1+1
@@ -146,26 +203,72 @@ contains
           dofOverSamp = iDegX + ( iDegY-1  &
             &                     + (iDegZ-1)*(oversamp_degree+1) &
             &                   ) * (oversamp_degree+1)
-          modalCoeffs(dofOverSamp,iVar) = state(dof,iVar)
+          do iVar=1,nScalars
+            modalCoeffs(dofOverSamp,iVar) = state(dof,iVar)
+          end do
         end do
-      end do
-      !$OMP END DO
+        !$OMP END DO
+      end if posQ
 
     else !P_Space
 
-      iDegX = 1
-      iDegY = 1
-      iDegZ = 1
-      !$OMP SINGLE
-      do idof = 1, poly_proj%body_3d%min_dofs
+      posP: if (present(ensure_positivity)) then
+        varP: do iVar=1,nScalars
+          ord_lim = maxorders
+          if (ensure_positivity(iVar)) then
+            iDegX = 1
+            iDegY = 1
+            iDegZ = 1
+            ordersum = 0.0_rk
+            !$OMP SINGLE
+            do idof = 1, poly_proj%body_3d%min_dofs
 ?? copy :: posOfModgCoeffPTens(iDegX, iDegY, iDegZ, dof)
-        dofOverSamp = iDegX + ( iDegY-1  &
-          &                     + (iDegZ-1)*(oversamp_degree+1) &
-          &                   ) * (oversamp_degree+1)
-        modalCoeffs(dofOverSamp,:) = state(dof,:)
+              iOrd = iDegX+iDegY+iDegZ-2
+              ordersum(iOrd) = ordersum(iOrd) + abs(state(dof,iVar))
 ?? copy :: nextModgCoeffPTens(iDegX, iDegY, iDegZ)
-      end do
-      !$OMP END SINGLE
+            end do
+            varsum = 0.0_rk
+            do iOrd=2,maxorders
+              varsum = varsum + ordersum(iOrd)
+              if (varsum >= ordersum(1)) then
+                 ord_lim = iOrd-1
+                 EXIT
+              end if
+            end do
+            !$OMP END SINGLE
+          end if
+          iDegX = 1
+          iDegY = 1
+          iDegZ = 1
+          !$OMP SINGLE
+          do idof = 1, poly_proj%body_3d%min_dofs
+            iOrd = iDegX+iDegY+iDegZ-2
+            if (iOrd > ord_lim) EXIT
+?? copy :: posOfModgCoeffPTens(iDegX, iDegY, iDegZ, dof)
+            dofOverSamp = iDegX + ( iDegY-1  &
+              &                     + (iDegZ-1)*(oversamp_degree+1) &
+              &                   ) * (oversamp_degree+1)
+            modalCoeffs(dofOverSamp,iVar) = state(dof,iVar)
+?? copy :: nextModgCoeffPTens(iDegX, iDegY, iDegZ)
+          end do
+          !$OMP END SINGLE
+        end do varP
+      else posP
+        iDegX = 1
+        iDegY = 1
+        iDegZ = 1
+        !$OMP SINGLE
+        do idof = 1, poly_proj%body_3d%min_dofs
+?? copy :: posOfModgCoeffPTens(iDegX, iDegY, iDegZ, dof)
+          dofOverSamp = iDegX + ( iDegY-1  &
+            &                     + (iDegZ-1)*(oversamp_degree+1) &
+            &                   ) * (oversamp_degree+1)
+          modalCoeffs(dofOverSamp,:) = state(dof,:)
+?? copy :: nextModgCoeffPTens(iDegX, iDegY, iDegZ)
+        end do
+        !$OMP END SINGLE
+      end if posP
+
     end if
 
   end subroutine ply_convert2oversample_3d
@@ -248,7 +351,7 @@ contains
   !! Please note, that the oversampled representation is always a Q-Space
   !! polynomial.
   subroutine ply_convert2oversample_2d( state, poly_proj, modalCoeffs, &
-    &                                   nScalars                       )
+    &                                   nScalars, ensure_positivity    )
     ! -------------------------------------------------------------------- !
     !> Description of the projection method.
     type(ply_poly_project_type), intent(in) :: poly_proj
@@ -266,10 +369,22 @@ contains
     !! to this subroutine, all variables of argument state will be considered
     !! by this routine.
     integer, intent(in), optional :: nScalars
+
+    !> Only use modes up to the point, where we are sure that the resulting
+    !! polynomial will be positive everywhere.
+    !! This is an array of logicals for each variable, if not given, the
+    !! default is false (no positivity ensured).
+    logical, intent(in), optional :: ensure_positivity(:)
     ! -------------------------------------------------------------------- !
     integer :: oversamp_degree
     integer :: mpd1, mpd1_square
     integer :: iDegX, iDegY, iDegZ, idof, dof, dofOverSamp, nPVars
+    integer :: iVar
+    real(kind=rk) :: ordersum(2*(poly_proj%min_degree + 1)-1)
+    real(kind=rk) :: varsum
+    integer :: iOrd
+    integer :: maxorders
+    integer :: ord_lim
     ! -------------------------------------------------------------------- !
     ! Information for the oversampling loop
     if(present(nScalars)) then
@@ -277,6 +392,7 @@ contains
     else
       nPVars = size(state,2)
     end if
+    maxorders = 2*(poly_proj%min_degree + 1)-1
 
     ! Information for the oversampling loop
     oversamp_degree = poly_proj%oversamp_degree
@@ -289,28 +405,102 @@ contains
     !$OMP END WORKSHARE
 
     if (poly_proj%basisType == Q_Space) then
-      !$OMP DO
-      do dof = 1, mpd1_square
-        iDegX = mod(dof-1,mpd1)+1
-        iDegY = (dof-1)/mpd1+1
-        dofOverSamp = 1 + (iDegX-1) + (iDegY-1)*(oversamp_degree+1)
-        modalCoeffs(dofOverSamp,1:nPVars) = state(dof,1:nPVars)
-      end do
-      !$OMP END DO
+      posQ: if (present(ensure_positivity)) then
+        varQ: do iVar=1,nPVars
+          ord_lim = maxorders
+          if (ensure_positivity(iVar)) then
+            ordersum = 0.0_rk
+            !$OMP SINGLE
+            do dof = 1, mpd1_square
+              iDegX = mod(dof-1,mpd1)+1
+              iDegY = (dof-1)/mpd1+1
+              iOrd = iDegX+iDegY-1
+              ordersum(iOrd) = ordersum(iOrd) + abs(state(dof,iVar))
+            end do
+            varsum = 0.0_rk
+            do iOrd=2,maxorders
+              varsum = varsum + ordersum(iOrd)
+              if (varsum >= ordersum(1)) then
+                 ord_lim = iOrd-1
+                 EXIT
+              end if
+            end do
+            !$OMP END SINGLE
+          end if
+          !$OMP DO
+          do dof = 1, mpd1_square
+            iDegX = mod(dof-1,mpd1)+1
+            iDegY = (dof-1)/mpd1+1
+            iOrd = iDegX+iDegY-1
+            if (iOrd <= ord_lim) then
+              dofOverSamp = 1 + (iDegX-1) + (iDegY-1)*(oversamp_degree+1)
+              modalCoeffs(dofOverSamp,iVar) = state(dof,iVar)
+            end if
+          end do
+          !$OMP END DO
+        end do varQ
+      else posQ
+        !$OMP DO
+        do dof = 1, mpd1_square
+          iDegX = mod(dof-1,mpd1)+1
+          iDegY = (dof-1)/mpd1+1
+          dofOverSamp = 1 + (iDegX-1) + (iDegY-1)*(oversamp_degree+1)
+          modalCoeffs(dofOverSamp,1:nPVars) = state(dof,1:nPVars)
+        end do
+        !$OMP END DO
+      end if posQ
 
     else !P_Space
 
-      !$OMP SINGLE
-      iDegX = 1
-      iDegY = 1
-      iDegZ = 0 ! not used in posOfModgCoeffPTens_2D, nextModgCoeffPTens
-      do idof = 1, poly_proj%body_2d%min_dofs
+      posP: if (present(ensure_positivity)) then
+        varP: do iVar=1,nPVars
+          ord_lim = maxorders
+          if (ensure_positivity(iVar)) then
+            !$OMP SINGLE
+            iDegX = 1
+            iDegY = 1
+            ordersum = 0.0_rk
+            do idof = 1, poly_proj%body_2d%min_dofs
 ?? copy :: posOfModgCoeffPTens2D(iDegX, iDegY, dof)
-        dofOverSamp = iDegX + (iDegY-1)*(oversamp_degree+1)
-        modalCoeffs(dofOverSamp,1:nPVars) = state(dof,1:nPVars)
+              iOrd = iDegX+iDegY-1
+              ordersum(iOrd) = ordersum(iOrd) + abs(state(dof,iVar))
 ?? copy :: nextModgCoeffPTens2D(iDegX, iDegY)
-      end do
-      !$OMP END SINGLE
+            end do
+            varsum = 0.0_rk
+            do iOrd=2,maxorders
+              varsum = varsum + ordersum(iOrd)
+              if (varsum >= ordersum(1)) then
+                 ord_lim = iOrd-1
+                 EXIT
+              end if
+            end do
+            !$OMP END SINGLE
+          end if
+          !$OMP SINGLE
+          iDegX = 1
+          iDegY = 1
+          do idof = 1, poly_proj%body_2d%min_dofs
+            iOrd = iDegX+iDegY-1
+            if (iOrd > ord_lim) EXIT
+?? copy :: posOfModgCoeffPTens2D(iDegX, iDegY, dof)
+            dofOverSamp = iDegX + (iDegY-1)*(oversamp_degree+1)
+            modalCoeffs(dofOverSamp,1:nPVars) = state(dof,1:nPVars)
+?? copy :: nextModgCoeffPTens2D(iDegX, iDegY)
+          end do
+          !$OMP END SINGLE
+        end do varP
+      else posP
+        !$OMP SINGLE
+        iDegX = 1
+        iDegY = 1
+        do idof = 1, poly_proj%body_2d%min_dofs
+?? copy :: posOfModgCoeffPTens2D(iDegX, iDegY, dof)
+          dofOverSamp = iDegX + (iDegY-1)*(oversamp_degree+1)
+          modalCoeffs(dofOverSamp,1:nPVars) = state(dof,1:nPVars)
+?? copy :: nextModgCoeffPTens2D(iDegX, iDegY)
+        end do
+        !$OMP END SINGLE
+      end if posP
 
     end if
 
@@ -395,7 +585,7 @@ contains
   !! The additional modes might be necessary for proper dealing with
   !! nonlinear operations.
   subroutine ply_convert2oversample_1d( state, poly_proj, modalCoeffs, &
-    &                                   nScalars                       )
+    &                                   nScalars,  ensure_positivity   )
     ! -------------------------------------------------------------------- !
     !> Description of the projection method.
     type(ply_poly_project_type), intent(in) :: poly_proj
@@ -410,28 +600,59 @@ contains
     !! to this subroutine, all variables of argument state will be considered
     !! by this routine.
     integer, intent(in), optional :: nScalars
+
+    !> Only use modes up to the point, where we are sure that the resulting
+    !! polynomial will be positive everywhere.
+    !! This is an array of logicals for each variable, if not given, the
+    !! default is false (no positivity ensured).
+    logical, intent(in), optional :: ensure_positivity(:)
     ! -------------------------------------------------------------------- !
     integer :: iVar, iPoint, iVP, nPVars
+    integer :: nVars
+    real(kind=rk) :: varsum
     ! -------------------------------------------------------------------- !
     ! Information for the oversampling loop
     if(present(nScalars)) then
-      nPVars = (poly_proj%maxPolyDegree+1)*nScalars
+      nVars = nScalars
     else
-      nPVars = (poly_proj%maxPolyDegree+1)*size(state,2)
+      nVars = size(state,2)
     end if
+    nPVars = (poly_proj%maxPolyDegree+1)*nVars
 
     ! Initialize oversampled space correct to 0
     !$OMP WORKSHARE
     ModalCoeffs(:,:) = 0.0_rk
     !$OMP END WORKSHARE
 
-    !$OMP DO
-    do iVP = 1,nPVars
-      iVar = (iVP-1)/(poly_proj%min_degree+1) + 1
-      iPoint = iVP - (iVar-1)*(poly_proj%min_degree+1)
-      ModalCoeffs(iPoint,iVar) = state(iPoint,iVar)
-    end do
-    !$OMP END DO
+    if (present(ensure_positivity)) then
+      do iVar = 1,nVars
+        if (ensure_positivity(iVar)) then
+          varSum = 0.0_rk
+          ModalCoeffs(1,iVar) = state(1,iVar)
+          !$OMP DO
+          do iPoint=2,poly_proj%min_degree+1
+            varSum = varSum + abs(state(iPoint,iVar))
+            if (varSum >= ModalCoeffs(1,iVar)) EXIT
+            ModalCoeffs(iPoint,iVar) = state(iPoint,iVar)
+          end do
+          !OMP END DO
+        else
+          !$OMP DO
+          do iPoint=1,poly_proj%min_degree+1
+            ModalCoeffs(iPoint,iVar) = state(iPoint,iVar)
+          end do
+          !$OMP END DO
+        end if
+      end do
+    else
+      !$OMP DO
+      do iVP = 1,nPVars
+        iVar = (iVP-1)/(poly_proj%min_degree+1) + 1
+        iPoint = iVP - (iVar-1)*(poly_proj%min_degree+1)
+        ModalCoeffs(iPoint,iVar) = state(iPoint,iVar)
+      end do
+      !$OMP END DO
+    end if
 
   end subroutine ply_convert2oversample_1d
   ! ************************************************************************ !
