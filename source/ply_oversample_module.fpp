@@ -55,11 +55,14 @@ contains
     ! -------------------------------------------------------------------- !
     select case(nDim)
     case(1)
-      call ply_convert2oversample_1d(state, poly_proj, modalCoeffs, nScalars)
+      call ply_convert2oversample_1d(state, poly_proj, modalCoeffs, nScalars, &
+        &                            ensure_positivity                        )
     case(2)
-      call ply_convert2oversample_2d(state, poly_proj, modalCoeffs, nScalars)
+      call ply_convert2oversample_2d(state, poly_proj, modalCoeffs, nScalars, &
+        &                            ensure_positivity                        )
     case(3)
-      call ply_convert2oversample_3d(state, poly_proj, modalCoeffs)
+      call ply_convert2oversample_3d(state, poly_proj, modalCoeffs, &
+        &                            ensure_positivity              )
     end select
   end subroutine ply_convert2oversample
   ! ************************************************************************ !
