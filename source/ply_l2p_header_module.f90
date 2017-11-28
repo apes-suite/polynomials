@@ -108,9 +108,17 @@ contains
       &               val     = me%nodes_header%lobattoPoints, &
       &               ErrCode = iError,                        &
       &               default = .false.                        )
+    if (me%nodes_header%lobattoPoints) then
+      write(logUnit(1),*) 'ERROR in loading projection: L2P does not ' &
+        &                 // 'support Lobatto points'
+      write(logUnit(1),*) 'But you configured to use Lobatto Points!'
+      write(logUnit(1),*) 'Aborting, you probably need to recompile with' &
+        &                 // ' FFTW support to use FPT with Lobatto points'
+      call tem_abort()
+    end if
     if (me%factor .le. 0) then
       write(logUnit(1),*) 'ERROR in loading projection: factor for ' &
-        & // 'projection has to be larger than 0!'
+        &                 // 'projection has to be larger than 0!'
       write(logUnit(1),*) 'But it is set to ', me%factor
       call tem_abort()
     end if
