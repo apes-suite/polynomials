@@ -131,6 +131,7 @@ contains
 
     !> Only use modes up to the point, where we are sure that the resulting
     !! polynomial will be positive everywhere.
+    !!
     !! This is an array of logicals for each variable, if not given, the
     !! default is false (no positivity ensured).
     logical, intent(in), optional :: ensure_positivity(:)
@@ -160,8 +161,8 @@ contains
 
     if (poly_proj%basisType == Q_Space) then
       posQ: if (present(ensure_positivity)) then
+        ord_lim = maxorders
         varQ: do iVar=1,nScalars
-          ord_lim = maxorders
           if (ensure_positivity(iVar)) then
             ordersum = 0.0_rk
             !$OMP SINGLE
@@ -173,7 +174,7 @@ contains
               ordersum(iOrd) = ordersum(iOrd) + abs(state(dof,iVar))
             end do
             varsum = 0.0_rk
-            do iOrd=2,maxorders
+            do iOrd=2,ord_lim
               varsum = varsum + ordersum(iOrd)
               if (varsum >= ordersum(1)) then
                  ord_lim = iOrd-1
@@ -182,6 +183,8 @@ contains
             end do
             !$OMP END SINGLE
           end if
+        end do varQ
+        do iVar=1,nScalars
           !$OMP DO
           do dof = 1, mpd1_cube
             iDegZ = (dof-1)/mpd1_square + 1
@@ -196,7 +199,7 @@ contains
             end if
           end do
           !$OMP END DO
-        end do varQ
+        end do
       else posQ
         !$OMP DO
         do dof = 1, mpd1_cube
@@ -216,8 +219,8 @@ contains
     else !P_Space
 
       posP: if (present(ensure_positivity)) then
+        ord_lim = maxorders
         varP: do iVar=1,nScalars
-          ord_lim = maxorders
           if (ensure_positivity(iVar)) then
             iDegX = 1
             iDegY = 1
@@ -231,7 +234,7 @@ contains
 ?? copy :: nextModgCoeffPTens(iDegX, iDegY, iDegZ)
             end do
             varsum = 0.0_rk
-            do iOrd=2,maxorders
+            do iOrd=2,ord_lim
               varsum = varsum + ordersum(iOrd)
               if (varsum >= ordersum(1)) then
                  ord_lim = iOrd-1
@@ -240,6 +243,8 @@ contains
             end do
             !$OMP END SINGLE
           end if
+        end do varP
+        do iVar=1,nScalars
           iDegX = 1
           iDegY = 1
           iDegZ = 1
@@ -255,7 +260,7 @@ contains
 ?? copy :: nextModgCoeffPTens(iDegX, iDegY, iDegZ)
           end do
           !$OMP END SINGLE
-        end do varP
+        end do
       else posP
         iDegX = 1
         iDegY = 1
@@ -409,8 +414,8 @@ contains
 
     if (poly_proj%basisType == Q_Space) then
       posQ: if (present(ensure_positivity)) then
+        ord_lim = maxorders
         varQ: do iVar=1,nPVars
-          ord_lim = maxorders
           if (ensure_positivity(iVar)) then
             ordersum = 0.0_rk
             !$OMP SINGLE
@@ -421,7 +426,7 @@ contains
               ordersum(iOrd) = ordersum(iOrd) + abs(state(dof,iVar))
             end do
             varsum = 0.0_rk
-            do iOrd=2,maxorders
+            do iOrd=2,ord_lim
               varsum = varsum + ordersum(iOrd)
               if (varsum >= ordersum(1)) then
                  ord_lim = iOrd-1
@@ -430,6 +435,8 @@ contains
             end do
             !$OMP END SINGLE
           end if
+        end do varQ
+        do iVar=1,nPVars
           !$OMP DO
           do dof = 1, mpd1_square
             iDegX = mod(dof-1,mpd1)+1
@@ -441,7 +448,7 @@ contains
             end if
           end do
           !$OMP END DO
-        end do varQ
+        end do
       else posQ
         !$OMP DO
         do dof = 1, mpd1_square
@@ -456,8 +463,8 @@ contains
     else !P_Space
 
       posP: if (present(ensure_positivity)) then
+        ord_lim = maxorders
         varP: do iVar=1,nPVars
-          ord_lim = maxorders
           if (ensure_positivity(iVar)) then
             !$OMP SINGLE
             iDegX = 1
@@ -470,7 +477,7 @@ contains
 ?? copy :: nextModgCoeffPTens2D(iDegX, iDegY)
             end do
             varsum = 0.0_rk
-            do iOrd=2,maxorders
+            do iOrd=2,ord_lim
               varsum = varsum + ordersum(iOrd)
               if (varsum >= ordersum(1)) then
                  ord_lim = iOrd-1
@@ -479,6 +486,8 @@ contains
             end do
             !$OMP END SINGLE
           end if
+        end do varP
+        do iVar=1,nPVars
           !$OMP SINGLE
           iDegX = 1
           iDegY = 1
@@ -491,7 +500,7 @@ contains
 ?? copy :: nextModgCoeffPTens2D(iDegX, iDegY)
           end do
           !$OMP END SINGLE
-        end do varP
+        end do
       else posP
         !$OMP SINGLE
         iDegX = 1
@@ -612,6 +621,7 @@ contains
     ! -------------------------------------------------------------------- !
     integer :: iVar, iPoint, iVP, nPVars
     integer :: nVars
+    integer :: ord_lim
     real(kind=rk) :: varsum
     ! -------------------------------------------------------------------- !
     ! Information for the oversampling loop
@@ -628,24 +638,26 @@ contains
     !$OMP END WORKSHARE
 
     if (present(ensure_positivity)) then
+      ord_lim = poly_proj%min_degree+1
       do iVar = 1,nVars
         if (ensure_positivity(iVar)) then
           varSum = 0.0_rk
-          ModalCoeffs(1,iVar) = state(1,iVar)
-          !$OMP DO
-          do iPoint=2,poly_proj%min_degree+1
+          !$OMP SINGLE
+          do iPoint=2,ord_lim
             varSum = varSum + abs(state(iPoint,iVar))
-            if (varSum >= ModalCoeffs(1,iVar)) EXIT
-            ModalCoeffs(iPoint,iVar) = state(iPoint,iVar)
+            if (varSum >= state(1,iVar)) then
+              ord_lim = iPoint - 1
+              EXIT
+            end if
           end do
-          !OMP END DO
-        else
-          !$OMP DO
-          do iPoint=1,poly_proj%min_degree+1
-            ModalCoeffs(iPoint,iVar) = state(iPoint,iVar)
-          end do
-          !$OMP END DO
+          !$OMP SINGLE
         end if
+      end do
+      do iVar=1,nVars
+        !$OMP DO
+        do iPoint=1,ord_lim
+          ModalCoeffs(iPoint,iVar) = state(iPoint,iVar)
+        end do
       end do
     else
       !$OMP DO
