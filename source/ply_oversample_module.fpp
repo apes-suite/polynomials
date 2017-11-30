@@ -650,7 +650,7 @@ contains
               EXIT
             end if
           end do
-          !$OMP SINGLE
+          !$OMP END SINGLE
         end if
       end do
       do iVar=1,nVars
