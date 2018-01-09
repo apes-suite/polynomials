@@ -198,7 +198,7 @@ def build(bld):
            source = ['peons/approximate_1D_jump.f90'],
            use = ['FFTW3', 'NAG', 'tem_objs', 'ply_objs', 'fftw_mod_obj',
                   bld.env.mpi_mem_c_obj, 'fxtp_wrap_obj', 'fxtp_obj',
-                  'fxtp_wrapper', 'aotus'],
+                  'PRECICE', 'fxtp_wrapper', 'aotus'],
            target = 'approximate_1D_jump')
 
        test_dep = ['FFTW3', 'NAG', 'tem_objs', bld.env.mpi_mem_c_obj,
@@ -214,6 +214,7 @@ def build(bld):
          target   = 'ply_utest_objs')
 
        test_dep.append('ply_utest_objs')
+       test_dep.append('PRECICE')
 
        utests(bld = bld, use = test_dep)
 
