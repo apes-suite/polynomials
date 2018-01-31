@@ -15,6 +15,8 @@ module ply_LegPolyProjection_module
 
   private
 
+  public :: gauleg
+
   ! ************************************************************************ !
   !> Parameter to specify Legendre polynomials as the degrees of freedoms
   !! of the elements. The multidimensional polynomias are build as
