@@ -357,8 +357,22 @@ contains
       &                                 var           = var,        &
       &                                 time          = time        )
 
+    ! Create a mesh describing the original selection of elements to sample.
+    ! We use two pointers to hold the current and the previous mesh information:
+    ! curmesh, curbcs and oldmesh, oldbcs respectively
+
+    allocate(curmesh)
+    allocate(curbcs)
+
+    call tem_create_tree_from_sub( intree     = orig_mesh,         &
+      &                            subtree    = trackInst%subtree, &
+      &                            newtree    = curmesh,           &
+      &                            keep_props = .true.             )
+
+    bcpos = tem_bc_prop_pos(orig_mesh)
+
     nScalars = size(var)
-    nElems = orig_mesh%nElems
+    nElems = curmesh%nElems
     allocate(maxdeg(nScalars))
     allocate(reduction_factor(nScalars))
     allocate(origsize(nScalars))
@@ -376,20 +390,6 @@ contains
     maxmean = max( maxmean, 256*epsilon(maxmean(1)) )
     minmean = maxmean * me%eps_osci
 
-
-    ! Create a mesh describing the original selection of elements to sample.
-    ! We use two pointers to hold the current and the previous mesh information:
-    ! curmesh, curbcs and oldmesh, oldbcs respectively
-
-    allocate(curmesh)
-    allocate(curbcs)
-
-    call tem_create_tree_from_sub( intree     = orig_mesh,         &
-      &                            subtree    = trackInst%subtree, &
-      &                            newtree    = curmesh,           &
-      &                            keep_props = .true.             )
-
-    bcpos = tem_bc_prop_pos(orig_mesh)
 
     if (bcpos > 0) then
       ! Take care of the boundary properties
