@@ -119,6 +119,7 @@ module ply_modg_basis_module
 
   public :: init_modg_multilevelCoeffs, evalLegendreTensPoly, scalProdLeg, &
     &       scalProdDualLeg, scalProdDualLegDiff, ply_modg_refine_type,    &
+    &       ply_modg_covolume_type,                                        &
     &       faceValLeftBndAns, faceValLeftBndTest,                         &
     &       faceValRightBndTest, ply_modg_basis_type, legendre_1D,         &
     &       faceValLeftBndTestGrad, faceValRightBndTestGrad,               &
