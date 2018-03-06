@@ -125,7 +125,7 @@ module ply_modg_basis_module
     &       faceValLeftBndTestGrad, faceValRightBndTestGrad,               &
     &       faceValLeftBndgradTest, faceValRightBndgradTest,               &
     &       faceValLeftBndDiffAns, faceValRightBndDiffAns,                 &
-    &       init_modg_covolumeCoeffs, integrateLeg
+    &       init_modg_covolumeCoeffs, integrateLeg, ply_modg_covolume_type
 
 contains
 
