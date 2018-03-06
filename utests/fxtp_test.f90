@@ -50,10 +50,11 @@ program fxtp_test
   write(*,*) 'trafo:', nodal
   write(*,*) 'Should be the same as orig.'
 
-  if (all(abs(nodal - nodal_orig) < 2.*epsilon(1.0_c_double))) then
+  if (all(abs(nodal - nodal_orig) < 8.*epsilon(1.0_c_double))) then
     write(*,*) 'PASSED'
   else
     write(*,*) 'Data does not match after conversion:'
+    write(*,*) 'max error:', maxval(abs(nodal - nodal_orig))
     write(*,*) 'FAILED'
   end if
 
