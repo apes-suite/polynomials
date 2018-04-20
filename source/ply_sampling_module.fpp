@@ -6,7 +6,7 @@
 module ply_sampling_module
   use mpi
 
-  use iso_c_binding,                  only: c_f_pointer, c_loc
+  use iso_c_binding,                  only: c_f_pointer, c_loc, c_null_ptr
   use env_module,                     only: labelLen, rk, long_k
 
   use aotus_module,                   only: flu_state,   &
@@ -684,7 +684,7 @@ contains
         deallocate(p%dat)
       end if
       deallocate(p)
-      fun%method_data = c_loc(p)
+      fun%method_data = c_null_ptr
     end if
 
   end subroutine ply_sampling_free_methodData
