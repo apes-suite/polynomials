@@ -119,10 +119,7 @@ contains
     ! now transform to the Chebyshev nodes
     allocate(pntVal( (maxPolyDegree+1)**2 ))
     write(logUnit(1),*) 'Calculating FPT ...'
-    !$OMP PARALLEL &
-    !$OMP DEFAULT(shared)
     call ply_legToPnt_2D( fpt = fpt, legCoeffs = legCoeffs, pntVal = pntVal )
-    !$OMP END PARALLEL
     write(logUnit(1),*) 'Finished'
 
     !!do iPoint = 1, (maxPolyDegree+1)**3

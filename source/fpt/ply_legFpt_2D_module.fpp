@@ -5,7 +5,6 @@
 module ply_legFpt_2D_module
   use, intrinsic :: iso_c_binding
 
-  !$ use omp_lib
 
   use fftw_wrap
 

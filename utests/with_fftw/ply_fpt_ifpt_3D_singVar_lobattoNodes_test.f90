@@ -71,25 +71,19 @@ contains
     allocate(pntVal( (maxPolyDegree+1)**3, nVars )) 
     legCoeffsIn = legCoeffs
     write(logUnit(10),*) 'Calculating FPT ...'
-    !$OMP PARALLEL &
-    !$OMP DEFAULT(shared) private(iVar)
     do iVar=1,nVars
       call ply_legToPnt_3D( fpt = fpt, legCoeffs = legCoeffsIn(:,iVar), &
         &                   pntVal = pntVal(:,iVar) )
     end do
-    !$OMP END PARALLEL
     write(logUnit(10),*) 'Finished'
 
     ! now transform back to Legendre coefficients
     allocate(legVal( (maxPolyDegree+1)**3,nVars )) 
     write(logUnit(10),*) 'Calculating inverse FPT ...'
-    !$OMP PARALLEL &
-    !$OMP DEFAULT(shared) private(iVar)
     do iVar=1,nVars
       call ply_pntToLeg_3D( fpt = fpt, pntVal = pntVal(:,iVar), &
         &                   legCoeffs = legVal(:,iVar)          )
     end do
-    !$OMP END PARALLEL
     write(logUnit(10),*) 'Finished'
   
 

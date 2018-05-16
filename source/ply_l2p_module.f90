@@ -243,7 +243,6 @@ contains
 
     if (nDofs > 1) then
 
-      !$OMP DO
       do iStrip=0,nIndeps-1,vlen
 
         ! Calculate the upper bound of the current strip
@@ -266,13 +265,10 @@ contains
 
         end do ! iRow = 1, nRows
       end do ! iStrip
-      !$OMP END DO
 
     else
 
-      !$OMP WORKSHARE
       projected = matrix(nDofs,1) * original
-      !$OMP END WORKSHARE
 
     end if
 
@@ -345,9 +341,7 @@ contains
     ! As we reuse the original array in Y-direction to store the projected
     ! values, thus we need to copy those back into the projected array.
 
-    !$OMP WORKSHARE
     projected = original
-    !$OMP END WORKSHARE
 
   end subroutine ply_l2p_trafo_2D
   ! ************************************************************************ !

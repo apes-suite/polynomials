@@ -501,8 +501,6 @@ contains
     integer :: iVar
     !--------------------------------------------------------------------------!
 
-    !$OMP PARALLEL &
-    !$OMP DEFAULT(SHARED)
     select case(trim(me%kind))
     case ('l2p')
       ! for the projection modal to nodal, we do not need to distingusih
@@ -577,7 +575,6 @@ contains
         end do
       end select
     end select
-    !$OMP END PARALLEL
 
   end subroutine ply_poly_project_m2n_multivar
   !****************************************************************************!

@@ -117,10 +117,7 @@ contains
 
     ! now transform to the Chebyshev nodes
     write(logUnit(10),*) 'Calculating FPT ...'
-    !$OMP PARALLEL &
-    !$OMP DEFAULT(shared)
     call ply_pntToLeg_3D( fpt = fpt, pntVal = pntVal, legCoeffs = legCoeffs )
-    !$OMP END PARALLEL
     write(logUnit(10),*) 'Finished'
 
     !!do iPoint = 1, (maxPolyDegree+1)**3

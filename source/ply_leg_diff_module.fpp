@@ -58,7 +58,6 @@ contains
       endif
     endif
 
-    !$OMP DO
     do iDeg = 1, (mpd+1)**2
       iDeg1 = (iDeg-1)/(mpd+1) + 1      !! do IDeg1 = 1, mPd+1
       iDeg2 = iDeg - (iDeg1-1)*(mpd+1)  !! do IDeg2 = 1, mPd=1   !! iDeg2 = mod(iDeg-1,mpd+1)+1
@@ -117,10 +116,8 @@ contains
         end do
       end do
     end do
-    !$OMP END DO
 
     ! Scale the results due to the Jacobians of the mappings
-    !$OMP DO
     do dofpos=1,(mpd+1)**3
       ideg3 = (dofpos-1)/(mpd+1)**2 + 1
       iDeg = dofpos - (ideg3-1)*(mpd+1)**2
@@ -131,7 +128,6 @@ contains
         &                         * (2.0_rk/elemLength)         &
         &                         * (2.0_rk*leg(iDir) - 1.0_rk)
     end do
-    !$OMP END DO
 
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
    ! Uncollapsed version of the scaling !
@@ -192,7 +188,6 @@ contains
       endif
     endif
 
-    !$OMP DO
     do iDeg1 = 1, mPd+1
       iDeg2 =  mPd+1
       leg = (/iDeg1, iDeg2/)
@@ -249,10 +244,8 @@ contains
         end do
       end do
     end do
-    !$OMP END DO
 
     ! Scale the results due to the Jacobians of the mappings
-    !$OMP DO
     do iDeg1 = 1, mPd+1
       do iDeg2 = 1, mPd+1
         leg = (/iDeg1, iDeg2/)
@@ -263,7 +256,6 @@ contains
           &                         * (2.0_rk*leg(iDir) - 1.0_rk)
       end do
     end do
-    !$OMP END DO
 
   end subroutine calcDiff_leg_2d_normal
   ! ************************************************************************ !

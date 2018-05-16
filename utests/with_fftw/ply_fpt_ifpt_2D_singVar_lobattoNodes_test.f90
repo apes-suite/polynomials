@@ -68,20 +68,14 @@ contains
     allocate(pntVal( (maxPolyDegree+1)**2))
     legCoeffsIn = legCoeffs ! Duplicate input vector to make sure that it is not modified in the trafo
     write(logUnit(10),*) 'Calculating FPT ...'
-    !$OMP PARALLEL &
-    !$OMP DEFAULT(shared)
     call ply_legToPnt_2D( fpt = fpt, legCoeffs = legCoeffsIn, pntVal = pntVal )
-    !$OMP END PARALLEL
     write(logUnit(10),*) 'Finished'
 
     ! now transform back to Legendre coefficients
     allocate(legVal( (maxPolyDegree+1)**2 ))
     write(logUnit(10),*) 'Calculating inverse FPT ...'
-    !$OMP PARALLEL &
-    !$OMP DEFAULT(shared)
     call ply_pntToLeg_2D( fpt = fpt, pntVal = pntVal, legCoeffs = legVal )
     write(logUnit(10),*) 'Finished'
-    !$OMP END PARALLEL
 
     !!do iDof = 1, (maxPolyDegree+1)**2
     !!  write(*,*) 'Leg coeff ', iDof, ' has error: ', legVal(iDof) - legCoeffs(iDof)

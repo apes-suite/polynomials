@@ -1100,11 +1100,8 @@ contains
     remainder = n - s*(params%nBlocks-1)
 
     ! Set the output to zero
-    !$OMP WORKSHARE
     gam = 0.0_rk
-    !$OMP END WORKSHARE
 
-    !$OMP DO
     ! Loop over all strips
     do iStrip = 0,nIndeps-1,striplen
       ! Calculate the upper bound of the current strip
@@ -1201,7 +1198,6 @@ contains
 
       end do
     end do ! iStrip
-    !$OMP END DO
 
   end subroutine ply_fpt_exec_striped
   ! ************************************************************************ !
