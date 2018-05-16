@@ -107,6 +107,18 @@ module ply_polyBaseExc_module
     !> Length of stripes to use in the matrix operation.
     integer :: striplen
 
+    !> Remaining columns close to the diagonal after subdividing
+    !! the matrix into blocks
+    integer :: remainder
+
+    !> Number of full diagonals that need to be considered close
+    !! the diagonal of the matrix.
+    integer :: nDiagonals
+
+    !> Number of diagonals in triangle blocks, that remain between
+    !! blocks and full diagonals.
+    integer :: nBlockDiagonals
+
     !> The number of modal coefficients to convert
     integer :: n
 
@@ -140,6 +152,7 @@ module ply_polyBaseExc_module
   public :: ply_fpt_init
   public :: ply_fpt_exec_striped
   public :: ply_fpt_exec
+  public :: ply_fpt_single
   public :: ply_trafo_params_type
   public :: ply_legToCheb_param, ply_chebToLeg_param
   public :: ply_lambda
@@ -300,11 +313,13 @@ contains
     ! The remainder are the first diagonals close to the main diagonal and have
     ! at least the length of one block.
     remainder = n - s * (params%nBlocks-1)
+    params%remainder = remainder
 
     ! The non-zero diagonals within the remainder (only every second diagonal).
     ! Obviously it is beneficial to have an even remainder, as otherwise there
     ! is an additional diagonal to take into account.
     diagonals = (remainder + mod(remainder,2)) / 2
+    params%nDiagonals = diagonals
 
     !HK: All approximation related initializations are actually only required
     !HK: if params%nBlocks > 2, maybe we should check this here. However, the
@@ -470,6 +485,7 @@ contains
     !           \
     ! Number of diagonals in each block:
     blockdiagonals = (s+remainder + mod(s+remainder,2)) / 2 - diagonals
+    params%nBlockDiagonals = blockdiagonals
 
     allocate( params%adapter(s, blockdiagonals, params%nBlocks-1) )
 
@@ -489,7 +505,7 @@ contains
     !                              \7,7|       |7,7| 0 |
     !                                 -|
     ! Take care: The virtual source matrix is zero-based in all dimensions, the
-    ! target array is one-based, thus we have to transform the indizes as
+    ! target array is one-based, thus we have to transform the indices as
     ! well.
     if (trafo == ply_legToCheb_param) then
 
@@ -899,43 +915,32 @@ contains
   subroutine ply_fpt_exec( alph, gam, params, nIndeps )
     ! -------------------------------------------------------------------- !
     !> Number of values that can be computed independently.
-    integer :: nIndeps
+    integer, intent(in) :: nIndeps
 
     !> Modal coefficients of the Legendre expansion.
-    !! Size has to be: (1:params%n*indeps,nVars)
+    !! Size has to be: (1:params%n*nIndeps)
     !!
     !! The direction which is to be transformed has to run fastest in
     !! the array.
     real(kind=rk), intent(inout) :: alph(:)
 
     !> Modal coefficients of the Chebyshev expansion.
-    !! Size has to be: (1:indeps*params%n,nVars)
-    !!
-    !! Note, that the resulting array will have changed layout, and the
-    !! transformed direction will run slowest in the array.
+    !! Size has to be: (1:params%n*nIndeps)
     real(kind=rk), intent(out) :: gam(:)
 
     !> The parameters of the fast polynomial transformation.
     type(ply_trafo_params_type), intent(inout) :: params
-
-    !> Lower and upper bound of the strip
-!'  integer, intent(in) :: strip_lb
-!'  integer, intent(in) :: strip_ub
-
     ! -------------------------------------------------------------------- !
-    integer :: j, r, i, l, k, h, n, s, m, numberOfBlocks
-    integer :: iStrip, iFun, indep
+    integer :: j, r, i, l, k, h, n, s, m
+    integer :: iFun, indep
     integer :: iVal
     integer :: odd
-    integer :: striplen
-    integer :: strip_ub
-    integer :: remainder, nDiagonals, nBlockDiagonals
+    integer :: remainder
     integer :: nRows
     integer :: ub_row, row_rem
     integer :: rowsize
     integer :: block_off
     integer :: iBlock
-!'    integer :: iStrip !'should not be necessary anymore
     ! -------------------------------------------------------------------- !
 
     n = params%n
@@ -943,73 +948,59 @@ contains
     s = params%s
     h = params%h
 
-    striplen = params%striplen
-    numberOfBlocks = n/s
-    !' nIndeps = striplen ! min(size(alph),striplen)
+    remainder = params%remainder
 
-    remainder = n - s*(params%nBlocks-1)
-    ! Set the output to zero
-    gam = 0.0_rk
-    ! Loop over all strips
-!'    do iStrip = 0,nIndeps-1,striplen
-!'      ! Calculate the upper bound of the current strip
-       iStrip = 0
-       strip_ub = nIndeps
-!"     strip_ub = min(strip_lb + striplen, nIndeps)
+    indeploop: do indep = 1, nIndeps
 
-!'      do indep = iStrip+1, strip_ub
-      do indep = 1, nIndeps
-        iFun = (indep-1)*params%n            ! todo check this assignment
-        ! Calculate bs for all columns
-        blockSizeLoop: do l = 0,h
-          rowsize = s * 2**l
-          nRows = (params%nBlocks - 1) / (2**l) - 1
-          ub_row = 3 - mod(nRows,2)
-          row_rem = mod(n-remainder, rowsize) + remainder + iFun
-          blockColLoop: do j = 2, nRows+1, 1+mod(nRows,2)
-            do r = 0, k-1
-              params%b(l)%col(j)%coeff(r,0) = 0.0_rk
-              params%b(l)%col(j)%coeff(r,1) = 0.0_rk
-              do m = 0, rowsize-1
-                odd = mod(row_rem + m + (j-1)*rowsize,2)
-                params%b(l)%col(j)%coeff(r,odd) &
-                  &  = params%b(l)%col(j)%coeff(r,odd) &
-                  &    + params%u(l,r)%dat(m) &
-                  &      * alph(row_rem + m + (j-1)*rowsize + 1) !todo check
-              end do
+      iFun = (indep-1)*n
+
+      ! Set the output to zero
+      gam(iFun+1:iFun+n) = 0.0_rk
+
+      ! Calculate bs for all columns
+      blockSizeLoop: do l = 0,h
+        rowsize = s * 2**l
+        nRows = (params%nBlocks - 1) / (2**l) - 1
+        ub_row = 3 - mod(nRows,2)
+        row_rem = mod(n-remainder, rowsize) + remainder + iFun
+        blockColLoop: do j = 2, nRows+1, 1+mod(nRows,2)
+          do r = 0, k-1
+            params%b(l)%col(j)%coeff(r,0) = 0.0_rk
+            params%b(l)%col(j)%coeff(r,1) = 0.0_rk
+            do m = 0, rowsize-1
+              odd = mod(row_rem + m + (j-1)*rowsize,2)
+              params%b(l)%col(j)%coeff(r,odd) &
+                &  = params%b(l)%col(j)%coeff(r,odd) &
+                &    + params%u(l,r)%dat(m) &
+                &      * alph(row_rem + m + (j-1)*rowsize + 1)
             end do
-          end do blockColLoop
+          end do
+        end do blockColLoop
 
-          ! Multiply with the blocks that are separated from the diagonal
-          do i = 0, nRows - 1
-            block_off = i*rowsize
-            do j = i+2, i+ub_row - mod(i,2)
-              do m = 0, rowsize - 1
-                odd = mod(m+block_off,2)
-                iVal = (indep-1)*n + m + block_off+1 !todo check this assignment
-                do r = 0, k-1
-                  gam(iVal) = gam(iVal)      &
-                    &       + params%sub(l)%subRow(i)%subCol(j)%rowDat(m)&
-                    &               %coeff(r) &
-                    &         * params%b(l)%col(j)%coeff(r,odd)
-                end do ! r
-              end do ! m
-            end do ! j
-          end do ! i
+        ! Multiply with the blocks that are separated from the diagonal
+        do i = 0, nRows - 1
+          block_off = i*rowsize
+          do j = i+2, i+ub_row - mod(i,2)
+            do m = 0, rowsize - 1
+              odd = mod(m+block_off,2)
+              iVal = iFun + m + block_off+1
+              do r = 0, k-1
+                gam(iVal) = gam(iVal)      &
+                  &       + params%sub(l)%subRow(i)%subCol(j)%rowDat(m)&
+                  &               %coeff(r) &
+                  &         * params%b(l)%col(j)%coeff(r,odd)
+              end do ! r
+            end do ! m
+          end do ! j
+        end do ! i
 
-        end do blockSizeLoop
+      end do blockSizeLoop
 
-        if (params%trafo == ply_legToCheb_param) then
-          ! Divide the first row in gam by 2, if we transform from legendre
-          ! to chebyshev
-          gam((indep-1)*n+1) = 0.5_rk*gam((indep-1)*n+1)
-        end if
-      end do ! indep
-
-      remainder = params%n - params%s*(params%nBlocks-1)
-      nDiagonals = (remainder + mod(remainder,2))/2
-      nBlockDiagonals = (params%s+remainder + mod(params%s+remainder,2)) / 2 &
-        &                - nDiagonals
+      if (params%trafo == ply_legToCheb_param) then
+        ! Divide the first row in gam by 2, if we transform from Legendre
+        ! to Chebyshev
+        gam((indep-1)*n+1) = 0.5_rk*gam((indep-1)*n+1)
+      end if
 
       ! Multiply with the entries near the diagonal
       call ply_calculate_coeff_strip(                &
@@ -1019,11 +1010,11 @@ contains
         & gam              = gam,                    &
         & matrix           = params%diag,            &
         & alph             = alph,                   &
-        & nDiagonals       = nDiagonals,             &
+        & nDiagonals       = params%nDiagonals,      &
         & block_offset     = 0,                      &
         & remainder        = 0,                      &
-        & strip_lb         = iStrip,                 &
-        & strip_ub         = strip_ub,               &
+        & strip_lb         = indep-1,                &
+        & strip_ub         = indep,                  &
         & subblockingWidth = params%subblockingWidth )
 
       ! Multiply with entries in the adapters
@@ -1038,16 +1029,144 @@ contains
           & gam              = gam,                        &
           & matrix           = params%adapter(:,:,iBlock), &
           & alph             = alph,                       &
-          & nDiagonals       = nBlockDiagonals,            &
+          & nDiagonals       = params%nBlockDiagonals,     &
           & block_offset     = block_off,                  &
           & remainder        = remainder,                  &
-          & strip_lb         = iStrip,                     &
-          & strip_ub         = strip_ub,                   &
+          & strip_lb         = indep-1,                    &
+          & strip_ub         = indep,                      &
           & subblockingWidth = params%subblockingWidth     )
 
       end do
 
+    end do indeploop
+
   end subroutine ply_fpt_exec
+  ! ************************************************************************ !
+
+
+  ! ************************************************************************ !
+  !> Convert strip of coefficients of a modal representation in terms of
+  !! Legendre polynomials to modal coefficients in terms of Chebyshev
+  !! polynomials.
+  subroutine ply_fpt_single( alph, gam, params )
+    ! -------------------------------------------------------------------- !
+    !> The parameters of the fast polynomial transformation.
+    type(ply_trafo_params_type), intent(inout) :: params
+
+    !> Modal coefficients of the Legendre expansion.
+    !! Size has to be: params%n
+    !!
+    !! The direction which is to be transformed has to run fastest in
+    !! the array.
+    real(kind=rk), intent(inout) :: alph(params%n)
+
+    !> Modal coefficients of the Chebyshev expansion.
+    !! Size has to be: params%n
+    real(kind=rk), intent(out) :: gam(params%n)
+    ! -------------------------------------------------------------------- !
+    integer :: j, r, i, l, k, h, n, s, m
+    integer :: iVal
+    integer :: odd
+    integer :: remainder
+    integer :: nRows
+    integer :: ub_row, row_rem
+    integer :: rowsize
+    integer :: block_off
+    integer :: iBlock
+    ! -------------------------------------------------------------------- !
+
+    n = params%n
+    k = params%k
+    s = params%s
+    h = params%h
+
+    remainder = params%remainder
+
+    ! Set the output to zero
+    gam = 0.0_rk
+
+    ! Calculate bs for all columns
+    blockSizeLoop: do l = 0,h
+      rowsize = s * 2**l
+      nRows = (params%nBlocks - 1) / (2**l) - 1
+      ub_row = 3 - mod(nRows,2)
+      row_rem = mod(n-remainder, rowsize) + remainder
+      blockColLoop: do j = 2, nRows+1, 1+mod(nRows,2)
+        do r = 0, k-1
+          params%b(l)%col(j)%coeff(r,0) = 0.0_rk
+          params%b(l)%col(j)%coeff(r,1) = 0.0_rk
+          do m = 0, rowsize-1
+            odd = mod(row_rem + m + (j-1)*rowsize,2)
+            params%b(l)%col(j)%coeff(r,odd) &
+              &  = params%b(l)%col(j)%coeff(r,odd) &
+              &    + params%u(l,r)%dat(m) &
+              &      * alph(row_rem + m + (j-1)*rowsize + 1)
+          end do
+        end do
+      end do blockColLoop
+
+      ! Multiply with the blocks that are separated from the diagonal
+      do i = 0, nRows - 1
+        block_off = i*rowsize
+        do j = i+2, i+ub_row - mod(i,2)
+          do m = 0, rowsize - 1
+            odd = mod(m+block_off,2)
+            iVal = m + block_off+1
+            do r = 0, k-1
+              gam(iVal) = gam(iVal)      &
+                &       + params%sub(l)%subRow(i)%subCol(j)%rowDat(m)&
+                &               %coeff(r) &
+                &         * params%b(l)%col(j)%coeff(r,odd)
+            end do ! r
+          end do ! m
+        end do ! j
+      end do ! i
+
+    end do blockSizeLoop
+
+    if (params%trafo == ply_legToCheb_param) then
+      ! Divide the first row in gam by 2, if we transform from Legendre
+      ! to Chebyshev
+      gam(1) = 0.5_rk*gam(1)
+    end if
+
+    ! Multiply with the entries near the diagonal
+    call ply_calculate_coeff_strip(                &
+      & nIndeps          = 1,                      &
+      & n                = params%n,               &
+      & s                = params%n,               &
+      & gam              = gam,                    &
+      & matrix           = params%diag,            &
+      & alph             = alph,                   &
+      & nDiagonals       = params%nDiagonals,      &
+      & block_offset     = 0,                      &
+      & remainder        = 0,                      &
+      & strip_lb         = 0,                      &
+      & strip_ub         = 1,                      &
+      & subblockingWidth = params%subblockingWidth )
+
+    ! Multiply with entries in the adapters
+    do iBlock=1,params%nBlocks-1
+
+      block_off = (iBlock-1)*params%s
+
+      call ply_calculate_coeff_strip(                    &
+        & nIndeps          = 1,                          &
+        & n                = params%n,                   &
+        & s                = params%s,                   &
+        & gam              = gam,                        &
+        & matrix           = params%adapter(:,:,iBlock), &
+        & alph             = alph,                       &
+        & nDiagonals       = params%nBlockDiagonals,     &
+        & block_offset     = block_off,                  &
+        & remainder        = remainder,                  &
+        & strip_lb         = 0,                          &
+        & strip_ub         = 1,                          &
+        & subblockingWidth = params%subblockingWidth     )
+
+    end do
+
+  end subroutine ply_fpt_single
   ! ************************************************************************ !
 
 
@@ -1076,13 +1195,13 @@ contains
     !! transformed direction will run slowest in the array.
     real(kind=rk), intent(out) :: gam(:)
     ! -------------------------------------------------------------------- !
-    integer :: j, r, i, l, k, h, n, s, m, numberOfBlocks
+    integer :: j, r, i, l, k, h, n, s, m
     integer :: iStrip, iFun, indep
     integer :: iVal
     integer :: odd
     integer :: strip_ub
     integer :: striplen
-    integer :: remainder, nDiagonals, nBlockDiagonals
+    integer :: remainder
     integer :: nRows
     integer :: ub_row, row_rem
     integer :: rowsize
@@ -1095,9 +1214,8 @@ contains
     s = params%s
     h = params%h
     striplen = params%striplen
-    numberOfBlocks = n/s
 
-    remainder = n - s*(params%nBlocks-1)
+    remainder = params%remainder
 
     ! Set the output to zero
     gam = 0.0_rk
@@ -1156,11 +1274,6 @@ contains
         end if
       end do ! indep
 
-      remainder = params%n - params%s*(params%nBlocks-1)
-      nDiagonals = (remainder + mod(remainder,2))/2
-      nBlockDiagonals = (params%s+remainder + mod(params%s+remainder,2)) / 2 &
-        &                - nDiagonals
-
       ! Multiply with the entries near the diagonal
       call ply_calculate_coeff_strip(                &
         & nIndeps          = nIndeps,                &
@@ -1169,7 +1282,7 @@ contains
         & gam              = gam,                    &
         & matrix           = params%diag,            &
         & alph             = alph,                   &
-        & nDiagonals       = nDiagonals,             &
+        & nDiagonals       = params%nDiagonals,      &
         & block_offset     = 0,                      &
         & remainder        = 0,                      &
         & strip_lb         = iStrip,                 &
@@ -1189,7 +1302,7 @@ contains
           & gam              = gam,                        &
           & matrix           = params%adapter(:,:,iBlock), &
           & alph             = alph,                       &
-          & nDiagonals       = nBlockDiagonals,            &
+          & nDiagonals       = params%nBlockDiagonals,     &
           & block_offset     = block_off,                  &
           & remainder        = remainder,                  &
           & strip_lb         = iStrip,                     &
