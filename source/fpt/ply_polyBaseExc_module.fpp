@@ -107,6 +107,18 @@ module ply_polyBaseExc_module
     !> Length of stripes to use in the matrix operation.
     integer :: striplen
 
+    !> Remaining columns close to the diagonal after subdividing
+    !! the matrix into blocks
+    integer :: remainder
+
+    !> Number of full diagonals that need to be considered close
+    !! the diagonal of the matrix.
+    integer :: nDiagonals
+
+    !> Number of diagonals in triangle blocks, that remain between
+    !! blocks and full diagonals.
+    integer :: nBlockDiagonals
+
     !> The number of modal coefficients to convert
     integer :: n
 
@@ -300,11 +312,13 @@ contains
     ! The remainder are the first diagonals close to the main diagonal and have
     ! at least the length of one block.
     remainder = n - s * (params%nBlocks-1)
+    params%remainder = remainder
 
     ! The non-zero diagonals within the remainder (only every second diagonal).
     ! Obviously it is beneficial to have an even remainder, as otherwise there
     ! is an additional diagonal to take into account.
     diagonals = (remainder + mod(remainder,2)) / 2
+    params%nDiagonals = diagonals
 
     !HK: All approximation related initializations are actually only required
     !HK: if params%nBlocks > 2, maybe we should check this here. However, the
@@ -470,6 +484,7 @@ contains
     !           \
     ! Number of diagonals in each block:
     blockdiagonals = (s+remainder + mod(s+remainder,2)) / 2 - diagonals
+    params%nBlockDiagonals = blockdiagonals
 
     allocate( params%adapter(s, blockdiagonals, params%nBlocks-1) )
 
@@ -489,7 +504,7 @@ contains
     !                              \7,7|       |7,7| 0 |
     !                                 -|
     ! Take care: The virtual source matrix is zero-based in all dimensions, the
-    ! target array is one-based, thus we have to transform the indizes as
+    ! target array is one-based, thus we have to transform the indices as
     ! well.
     if (trafo == ply_legToCheb_param) then
 
@@ -918,12 +933,12 @@ contains
     !> The parameters of the fast polynomial transformation.
     type(ply_trafo_params_type), intent(inout) :: params
     ! -------------------------------------------------------------------- !
-    integer :: j, r, i, l, k, h, n, s, m, numberOfBlocks
+    integer :: j, r, i, l, k, h, n, s, m
     integer :: iFun, indep
     integer :: iVal
     integer :: odd
     integer :: striplen
-    integer :: remainder, nDiagonals, nBlockDiagonals
+    integer :: remainder
     integer :: nRows
     integer :: ub_row, row_rem
     integer :: rowsize
@@ -936,12 +951,7 @@ contains
     s = params%s
     h = params%h
 
-    striplen = params%striplen
-    numberOfBlocks = n/s
-
-    remainder = n - s*(params%nBlocks-1)
-    nDiagonals = (remainder + mod(remainder,2))/2
-    nBlockDiagonals = (s+remainder + mod(s+remainder,2)) / 2 - nDiagonals
+    remainder = params%remainder
 
     indeploop: do indep = 1, nIndeps
 
@@ -1003,7 +1013,7 @@ contains
         & gam              = gam,                    &
         & matrix           = params%diag,            &
         & alph             = alph,                   &
-        & nDiagonals       = nDiagonals,             &
+        & nDiagonals       = params%nDiagonals,      &
         & block_offset     = 0,                      &
         & remainder        = 0,                      &
         & strip_lb         = indep-1,                &
@@ -1022,7 +1032,7 @@ contains
           & gam              = gam,                        &
           & matrix           = params%adapter(:,:,iBlock), &
           & alph             = alph,                       &
-          & nDiagonals       = nBlockDiagonals,            &
+          & nDiagonals       = params%nBlockDiagonals,     &
           & block_offset     = block_off,                  &
           & remainder        = remainder,                  &
           & strip_lb         = indep-1,                    &
@@ -1062,13 +1072,13 @@ contains
     !! transformed direction will run slowest in the array.
     real(kind=rk), intent(out) :: gam(:)
     ! -------------------------------------------------------------------- !
-    integer :: j, r, i, l, k, h, n, s, m, numberOfBlocks
+    integer :: j, r, i, l, k, h, n, s, m
     integer :: iStrip, iFun, indep
     integer :: iVal
     integer :: odd
     integer :: strip_ub
     integer :: striplen
-    integer :: remainder, nDiagonals, nBlockDiagonals
+    integer :: remainder
     integer :: nRows
     integer :: ub_row, row_rem
     integer :: rowsize
@@ -1081,9 +1091,8 @@ contains
     s = params%s
     h = params%h
     striplen = params%striplen
-    numberOfBlocks = n/s
 
-    remainder = n - s*(params%nBlocks-1)
+    remainder = params%remainder
 
     ! Set the output to zero
     gam = 0.0_rk
@@ -1142,11 +1151,6 @@ contains
         end if
       end do ! indep
 
-      remainder = params%n - params%s*(params%nBlocks-1)
-      nDiagonals = (remainder + mod(remainder,2))/2
-      nBlockDiagonals = (params%s+remainder + mod(params%s+remainder,2)) / 2 &
-        &                - nDiagonals
-
       ! Multiply with the entries near the diagonal
       call ply_calculate_coeff_strip(                &
         & nIndeps          = nIndeps,                &
@@ -1155,7 +1159,7 @@ contains
         & gam              = gam,                    &
         & matrix           = params%diag,            &
         & alph             = alph,                   &
-        & nDiagonals       = nDiagonals,             &
+        & nDiagonals       = params%nDiagonals,      &
         & block_offset     = 0,                      &
         & remainder        = 0,                      &
         & strip_lb         = iStrip,                 &
@@ -1175,7 +1179,7 @@ contains
           & gam              = gam,                        &
           & matrix           = params%adapter(:,:,iBlock), &
           & alph             = alph,                       &
-          & nDiagonals       = nBlockDiagonals,            &
+          & nDiagonals       = params%nBlockDiagonals,     &
           & block_offset     = block_off,                  &
           & remainder        = remainder,                  &
           & strip_lb         = iStrip,                     &
