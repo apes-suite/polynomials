@@ -152,6 +152,7 @@ module ply_polyBaseExc_module
   public :: ply_fpt_init
   public :: ply_fpt_exec_striped
   public :: ply_fpt_exec
+  public :: ply_fpt_single
   public :: ply_trafo_params_type
   public :: ply_legToCheb_param, ply_chebToLeg_param
   public :: ply_lambda
@@ -914,20 +915,17 @@ contains
   subroutine ply_fpt_exec( alph, gam, params, nIndeps )
     ! -------------------------------------------------------------------- !
     !> Number of values that can be computed independently.
-    integer :: nIndeps
+    integer, intent(in) :: nIndeps
 
     !> Modal coefficients of the Legendre expansion.
-    !! Size has to be: (1:params%n*indeps,nVars)
+    !! Size has to be: (1:params%n*nIndeps)
     !!
     !! The direction which is to be transformed has to run fastest in
     !! the array.
     real(kind=rk), intent(inout) :: alph(:)
 
     !> Modal coefficients of the Chebyshev expansion.
-    !! Size has to be: (1:indeps*params%n,nVars)
-    !!
-    !! Note, that the resulting array will have changed layout, and the
-    !! transformed direction will run slowest in the array.
+    !! Size has to be: (1:params%n*nIndeps)
     real(kind=rk), intent(out) :: gam(:)
 
     !> The parameters of the fast polynomial transformation.
@@ -937,7 +935,6 @@ contains
     integer :: iFun, indep
     integer :: iVal
     integer :: odd
-    integer :: striplen
     integer :: remainder
     integer :: nRows
     integer :: ub_row, row_rem
@@ -1044,6 +1041,132 @@ contains
     end do indeploop
 
   end subroutine ply_fpt_exec
+  ! ************************************************************************ !
+
+
+  ! ************************************************************************ !
+  !> Convert strip of coefficients of a modal representation in terms of
+  !! Legendre polynomials to modal coefficients in terms of Chebyshev
+  !! polynomials.
+  subroutine ply_fpt_single( alph, gam, params )
+    ! -------------------------------------------------------------------- !
+    !> The parameters of the fast polynomial transformation.
+    type(ply_trafo_params_type), intent(inout) :: params
+
+    !> Modal coefficients of the Legendre expansion.
+    !! Size has to be: params%n
+    !!
+    !! The direction which is to be transformed has to run fastest in
+    !! the array.
+    real(kind=rk), intent(inout) :: alph(params%n)
+
+    !> Modal coefficients of the Chebyshev expansion.
+    !! Size has to be: params%n
+    real(kind=rk), intent(out) :: gam(params%n)
+    ! -------------------------------------------------------------------- !
+    integer :: j, r, i, l, k, h, n, s, m
+    integer :: iVal
+    integer :: odd
+    integer :: remainder
+    integer :: nRows
+    integer :: ub_row, row_rem
+    integer :: rowsize
+    integer :: block_off
+    integer :: iBlock
+    ! -------------------------------------------------------------------- !
+
+    n = params%n
+    k = params%k
+    s = params%s
+    h = params%h
+
+    remainder = params%remainder
+
+    ! Set the output to zero
+    gam = 0.0_rk
+
+    ! Calculate bs for all columns
+    blockSizeLoop: do l = 0,h
+      rowsize = s * 2**l
+      nRows = (params%nBlocks - 1) / (2**l) - 1
+      ub_row = 3 - mod(nRows,2)
+      row_rem = mod(n-remainder, rowsize) + remainder
+      blockColLoop: do j = 2, nRows+1, 1+mod(nRows,2)
+        do r = 0, k-1
+          params%b(l)%col(j)%coeff(r,0) = 0.0_rk
+          params%b(l)%col(j)%coeff(r,1) = 0.0_rk
+          do m = 0, rowsize-1
+            odd = mod(row_rem + m + (j-1)*rowsize,2)
+            params%b(l)%col(j)%coeff(r,odd) &
+              &  = params%b(l)%col(j)%coeff(r,odd) &
+              &    + params%u(l,r)%dat(m) &
+              &      * alph(row_rem + m + (j-1)*rowsize + 1)
+          end do
+        end do
+      end do blockColLoop
+
+      ! Multiply with the blocks that are separated from the diagonal
+      do i = 0, nRows - 1
+        block_off = i*rowsize
+        do j = i+2, i+ub_row - mod(i,2)
+          do m = 0, rowsize - 1
+            odd = mod(m+block_off,2)
+            iVal = m + block_off+1
+            do r = 0, k-1
+              gam(iVal) = gam(iVal)      &
+                &       + params%sub(l)%subRow(i)%subCol(j)%rowDat(m)&
+                &               %coeff(r) &
+                &         * params%b(l)%col(j)%coeff(r,odd)
+            end do ! r
+          end do ! m
+        end do ! j
+      end do ! i
+
+    end do blockSizeLoop
+
+    if (params%trafo == ply_legToCheb_param) then
+      ! Divide the first row in gam by 2, if we transform from Legendre
+      ! to Chebyshev
+      gam(1) = 0.5_rk*gam(1)
+    end if
+
+    ! Multiply with the entries near the diagonal
+    call ply_calculate_coeff_strip(                &
+      & nIndeps          = 1,                      &
+      & n                = params%n,               &
+      & s                = params%n,               &
+      & gam              = gam,                    &
+      & matrix           = params%diag,            &
+      & alph             = alph,                   &
+      & nDiagonals       = params%nDiagonals,      &
+      & block_offset     = 0,                      &
+      & remainder        = 0,                      &
+      & strip_lb         = 0,                      &
+      & strip_ub         = 1,                      &
+      & subblockingWidth = params%subblockingWidth )
+
+    ! Multiply with entries in the adapters
+    do iBlock=1,params%nBlocks-1
+
+      block_off = (iBlock-1)*params%s
+
+      call ply_calculate_coeff_strip(                    &
+        & nIndeps          = 1,                          &
+        & n                = params%n,                   &
+        & s                = params%s,                   &
+        & gam              = gam,                        &
+        & matrix           = params%adapter(:,:,iBlock), &
+        & alph             = alph,                       &
+        & nDiagonals       = params%nBlockDiagonals,     &
+        & block_offset     = block_off,                  &
+        & remainder        = remainder,                  &
+        & strip_lb         = 0,                          &
+        & strip_ub         = 1,                          &
+        & subblockingWidth = params%subblockingWidth     )
+
+    end do
+
+  end subroutine ply_fpt_single
   ! ************************************************************************ !
 
 

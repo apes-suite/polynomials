@@ -8,6 +8,7 @@ module ply_legFpt_module
   use ply_polyBaseExc_module, only: ply_trafo_params_type, &
     &                               ply_fpt_init,          &
     &                               ply_fpt_exec,          &
+    &                               ply_fpt_single,        &
     &                               ply_legToCheb_param,   &
     &                               ply_chebToLeg_param,   &
     &                               assignment(=)
@@ -221,41 +222,44 @@ contains
     real(kind=rk), intent(inout) :: pntVal(:)
     integer, intent(in) :: nIndeps
     ! -------------------------------------------------------------------- !
+    real(kind=rk) :: cheb(fpt%legToChebParams%n)
     integer :: iDof
     integer :: n
     ! -------------------------------------------------------------------- !
 
     n = fpt%legToChebParams%n
 
-    ! ply_fpt_exec on temp (no memory transpose)
-    call ply_fpt_exec( alph    = legCoeffs,          &
-      &                gam     = pntVal,             &
-      &                nIndeps = nIndeps,            &
-      &                params  = fpt%legToChebParams )
-
-    ! Normalize the coefficients of the Chebyshev polynomials due
-    ! to the unnormalized version of DCT in the FFTW.
     if (.not. fpt%use_lobatto_points) then
 
       do iDof = 1, nIndeps*n, n
-        legCoeffs(iDof) = pntVal(iDof)
-        legCoeffs(iDof+n-1) = pntVal(iDof+n-1)
-        legCoeffs(iDof+1:iDof+n-1:2) = -0.5_rk * pntVal(iDof+1:iDof+n-1:2)
-        legCoeffs(iDof+2:iDof+n-1:2) =  0.5_rk * pntVal(iDof+2:iDof+n-1:2)
-        call fftw_execute_r2r( fpt%planChebToPnt,        &
-          &                    legCoeffs(iDof:iDof+n-1), &
-          &                    pntVal(iDof:iDof+n-1)     )
+        call ply_fpt_single( alph   = legCoeffs(iDof:iDof+n-1), &
+          &                  gam    = cheb,                     &
+          &                  params = fpt%legToChebParams       )
+
+        ! Normalize the coefficients of the Chebyshev polynomials due
+        ! to the unnormalized version of DCT in the FFTW.
+        cheb(2:n:2) = -0.5_rk * cheb(2:n:2)
+        cheb(3:n:2) =  0.5_rk * cheb(3:n:2)
+
+        call fftw_execute_r2r( fpt%planChebToPnt,    &
+          &                    cheb,                 &
+          &                    pntVal(iDof:iDof+n-1) )
       end do
 
     else
 
       do iDof = 1, nIndeps*n, n
-        legCoeffs(iDof) = pntVal(iDof)
-        legCoeffs(iDof+n-1) = pntVal(iDof+n-1)
-        legCoeffs(iDof+1:iDof+n-2) = 0.5_rk * pntVal(iDof+1:iDof+n-2)
-        call fftw_execute_r2r( fpt%planChebToPnt,        &
-          &                    legCoeffs(iDof:iDof+n-1), &
-          &                    pntVal(iDof:iDof+n-1)     )
+        call ply_fpt_single( alph   = legCoeffs(iDof:iDof+n-1), &
+          &                  gam    = cheb,                     &
+          &                  params = fpt%legToChebParams       )
+
+        ! Normalize the coefficients of the Chebyshev polynomials due
+        ! to the unnormalized version of DCT in the FFTW.
+        cheb(2:n-1) = 0.5_rk * cheb(2:n-1)
+
+        call fftw_execute_r2r( fpt%planChebToPnt,    &
+          &                    cheb,                 &
+          &                    pntVal(iDof:iDof+n-1) )
       end do
 
     end if ! lobattoPoints
@@ -274,6 +278,7 @@ contains
     real(kind=rk), intent(inout) :: legCoeffs(:)
     integer, intent(in) :: nIndeps
     ! -------------------------------------------------------------------- !
+    real(kind=rk) :: cheb(fpt%legToChebParams%n)
     real(kind=rk) :: normFactor
     integer :: iDof
     integer :: n
@@ -281,39 +286,43 @@ contains
 
     n = fpt%legToChebParams%n
 
-    ! Normalize the coefficients of the Chebyshev polynomials due
-    ! to the unnormalized version of DCT in the FFTW.
     if (.not. fpt%use_lobatto_Points) then
+
       normFactor = 1.0_rk / real(n,kind=rk)
       do iDof = 1, nIndeps*n, n
-        call fftw_execute_r2r( fpt%planPntToCheb,       &
-          &                    pntVal(iDof:iDof+n-1),   &
-          &                    legCoeffs(iDof:iDof+n-1) )
-        pntVal(iDof) = legCoeffs(iDof) * 0.5_rk * normfactor
-        pntVal(iDof+1:iDof+n-1:2) = -normFactor * legCoeffs(iDof+1:iDof+n-1:2)
-        pntVal(iDof+2:iDof+n-1:2) = normFactor * legCoeffs(iDof+2:iDof+n-1:2)
+        call fftw_execute_r2r( fpt%planPntToCheb,     &
+          &                    pntVal(iDof:iDof+n-1), &
+          &                    cheb                   )
+        ! Normalize the coefficients of the Chebyshev polynomials due
+        ! to the unnormalized version of DCT in the FFTW.
+        cheb(1) = cheb(1) * 0.5_rk * normfactor
+        cheb(2:n:2) = -normFactor * cheb(2:n:2)
+        cheb(3:n:2) =  normFactor * cheb(3:n:2)
+
+        call ply_fpt_single( gam    = legCoeffs(iDof:iDof+n-1), &
+          &                  alph   = cheb,                     &
+          &                  params = fpt%ChebToLegParams       )
       end do
 
     else
 
       normFactor = 0.5_rk / real(n-1,kind=rk)
       do iDof = 1, nIndeps*n, n
-        call fftw_execute_r2r( fpt%planPntToCheb,       &
-          &                    pntVal(iDof:iDof+n-1),   &
-          &                    legCoeffs(iDof:iDof+n-1) )
-        pntVal(iDof) = legCoeffs(iDof) * normFactor
-        pntVal(iDof+1:iDof+n-2)                              &
-          & = 2.0_rk * normFactor * legCoeffs(iDof+1:iDof+n-2)
-        pntVal(iDof+n-1) = legCoeffs(iDof+n-1) * normFactor
+        call fftw_execute_r2r( fpt%planPntToCheb,     &
+          &                    pntVal(iDof:iDof+n-1), &
+          &                    cheb                   )
+        ! Normalize the coefficients of the Chebyshev polynomials due
+        ! to the unnormalized version of DCT in the FFTW.
+        cheb(1) = cheb(1) * normFactor
+        cheb(2:n-1) = 2.0_rk * normFactor * cheb(2:n-1)
+        cheb(n) = cheb(n) * normFactor
+
+        call ply_fpt_single( gam    = legCoeffs(iDof:iDof+n-1), &
+          &                  alph   = cheb,                     &
+          &                  params = fpt%ChebToLegParams       )
       end do
 
     end if ! lobattoPoints
-
-    ! ply_fpt_exec on temp (no memory transpose)
-    call ply_fpt_exec( alph    = pntVal,             &
-      &                gam     = legCoeffs,          &
-      &                nIndeps = nIndeps,            &
-      &                params  = fpt%chebToLegParams )
 
   end subroutine ply_pntToLeg
   ! ************************************************************************ !
