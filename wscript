@@ -41,22 +41,6 @@ def configure(conf):
     conf.setenv('')
 
     if conf.env.LIB_FFTW3:
-       # Check for the OpenMP library of FFTW
-       if conf.options.openmp:
-         if conf.options.fftw_omplibpath:
-           fftw_omplibpath = conf.options.fftw_omplibpath
-         elif fftw_libpath:
-           fftw_omplibpath = fftw_libpath
-
-         conf.setenv('cenv')
-         if fftw_omplibpath:
-           conf.check(lib='fftw3_omp', use='FFTW3', libpath=fftw_omplibpath, uselib_store='FFTW3_OMP', mandatory=True)
-         else:
-           conf.check(lib='fftw3_omp', use='FFTW3', uselib_store='FFTW3_OMP', mandatory=True)
-         
-         conf.all_envs[''].LIB_FFTW3_OMP = conf.env.LIB_FFTW3_OMP
-         conf.setenv('')
-
        # Check for the fftw3.f03 header:
        try:
           conf.check_fc(fragment= "program test\n use, intrinsic :: iso_c_binding\n include 'fftw3.f03'\nend program test",
@@ -156,10 +140,7 @@ def build(bld):
 
     if bld.cmd != 'gendoxy':
        if bld.env.LIB_FFTW3:
-          if bld.env.LIB_FFTW3_OMP:
-             fftwdep = 'FFTW3_OMP FFTW3'
-          else:
-             fftwdep = 'FFTW3'
+          fftwdep = 'FFTW3'
           bld( features = 'fc',
                source = 'external/fftw/fftw_wrap.f90',
                use = fftwdep,
