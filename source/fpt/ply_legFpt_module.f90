@@ -227,10 +227,12 @@ contains
     integer :: n
     ! -------------------------------------------------------------------- !
 
+    !$OMP PARALLEL DEFAULT(SHARED), PRIVATE(n, iDof, cheb)
     n = fpt%legToChebParams%n
 
     if (.not. fpt%use_lobatto_points) then
 
+      !$OMP DO
       do iDof = 1, nIndeps*n, n
         call ply_fpt_single( alph   = legCoeffs(iDof:iDof+n-1), &
           &                  gam    = cheb,                     &
@@ -245,9 +247,11 @@ contains
           &                    cheb,                 &
           &                    pntVal(iDof:iDof+n-1) )
       end do
+      !$OMP END DO
 
     else
 
+      !$OMP DO
       do iDof = 1, nIndeps*n, n
         call ply_fpt_single( alph   = legCoeffs(iDof:iDof+n-1), &
           &                  gam    = cheb,                     &
@@ -261,8 +265,10 @@ contains
           &                    cheb,                 &
           &                    pntVal(iDof:iDof+n-1) )
       end do
+      !$OMP END DO
 
     end if ! lobattoPoints
+    !$OMP END PARALLEL
 
   end subroutine ply_legToPnt
   ! ************************************************************************ !
@@ -284,11 +290,13 @@ contains
     integer :: n
     ! -------------------------------------------------------------------- !
 
+    !$OMP PARALLEL DEFAULT(SHARED), PRIVATE(n, iDof, cheb, normFactor)
     n = fpt%legToChebParams%n
 
     if (.not. fpt%use_lobatto_Points) then
 
       normFactor = 1.0_rk / real(n,kind=rk)
+      !$OMP DO
       do iDof = 1, nIndeps*n, n
         call fftw_execute_r2r( fpt%planPntToCheb,     &
           &                    pntVal(iDof:iDof+n-1), &
@@ -303,10 +311,12 @@ contains
           &                  alph   = cheb,                     &
           &                  params = fpt%ChebToLegParams       )
       end do
+      !$OMP END DO
 
     else
 
       normFactor = 0.5_rk / real(n-1,kind=rk)
+      !$OMP DO
       do iDof = 1, nIndeps*n, n
         call fftw_execute_r2r( fpt%planPntToCheb,     &
           &                    pntVal(iDof:iDof+n-1), &
@@ -321,8 +331,10 @@ contains
           &                  alph   = cheb,                     &
           &                  params = fpt%ChebToLegParams       )
       end do
+      !$OMP END DO
 
     end if ! lobattoPoints
+    !$OMP END PARALLEL
 
   end subroutine ply_pntToLeg
   ! ************************************************************************ !
