@@ -5,13 +5,13 @@ module ply_nodes_module
 
   use tem_aux_module,    only: tem_abort
 
-  use ply_space_integration_module, only: ply_create_surface_gauss_points_cube,   & 
-   &                                      ply_create_surface_gauss_points_cube_2d,& 
-   &                                      ply_create_surface_gauss_points_cube_1d,& 
-   &                                      ply_create_volume_gauss_points_cube,    & 
-   &                                      ply_create_volume_gauss_points_cube_2d, & 
-   &                                      ply_create_volume_gauss_points_cube_1d 
-  
+  use ply_space_integration_module, only: ply_create_surface_gauss_points_cube,   &
+   &                                      ply_create_surface_gauss_points_cube_2d,&
+   &                                      ply_create_surface_gauss_points_cube_1d,&
+   &                                      ply_create_volume_gauss_points_cube,    &
+   &                                      ply_create_volume_gauss_points_cube_2d, &
+   &                                      ply_create_volume_gauss_points_cube_1d
+
    use ply_chebPoint_module,        only: create_volume_cheb_points_cube,           &
    &                                      create_volume_cheb_points_cube_2d,        &
    &                                      create_volume_cheb_points_cube_1d,        &

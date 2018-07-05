@@ -75,7 +75,7 @@ contains
     leg1D_at_gauss = legendre_1D(gaussp1D, degree)
 
     select case(nDims)
-    case(3) 
+    case(3)
       call fxtf_flptld_init( flpt    = fxt%flpt,   &
          &                   degree  = degree,     &
          &                   nPoints = degree+1,   &
@@ -114,13 +114,13 @@ contains
         end do
       end do
 
-    case(2) 
+    case(2)
       call fxtf_flptld_init( flpt    = fxt%flpt,   &
         &                    degree  = degree,     &
         &                    nPoints = degree+1,   &
-        &                    prec    = header%prec )  
- 
-      ! Fill up the nodes and the face with gauss legendre points   
+        &                    prec    = header%prec )
+
+      ! Fill up the nodes and the face with gauss legendre points
       allocate( nodes(nPoints**2, 3) )
       do iPoint=1,nPoints
         lb = (iPoint-1)*nPoints + 1
@@ -145,7 +145,7 @@ contains
         end do
       end do
 
-    case(1) 
+    case(1)
       call fxtf_flptld_init( flpt    = fxt%flpt,   &
         &                    degree  = degree,     &
         &                    nPoints = degree+1,   &
@@ -211,10 +211,12 @@ contains
     ! -------------------------------------------------------------------- !
     integer :: ub, lb, iLine, iColumn, nModesPerDim, msq
     ! -------------------------------------------------------------------- !
+    !$OMP PARALLEL DEFAULT(SHARED), PRIVATE(iLine, lb, ub, iColumn)
 
     nModesPerDim = (oversamp_degree+1)
     msq = nModesPerDim*nModesPerDim
 
+    !$OMP DO
     do iLine = 1, oversamp_degree+1
       lb = (iLine-1) * (oversamp_degree+1) + 1
       ub = lb + oversamp_degree
@@ -222,14 +224,19 @@ contains
         &                   modal_data = modal_data(lb:ub), &
         &                   nodal_data = nodal_data(lb:ub)  )
     end do
+    !$OMP END DO
 
+    !$OMP DO
     do iColumn = 1, oversamp_degree+1
       lb = iColumn
       call fxtf_flptld_m2n( flpt       = fxt%flpt,                             &
         &                   modal_data = nodal_data(lb:msq:oversamp_degree+1), &
         &                   nodal_data = modal_data(lb:msq:oversamp_degree+1)  )
     end do
+    !$OMP END DO
     nodal_data = modal_data
+
+    !$OMP END PARALLEL
 
   end subroutine ply_fxt_m2n_2D
   ! ************************************************************************ !
@@ -251,6 +258,8 @@ contains
     real(kind=rk), pointer :: tmp_in(:), tmp_out(:)
     ! -------------------------------------------------------------------- !
 
+    !$OMP PARALLEL DEFAULT(SHARED), PRIVATE(iLine, lb, ub, tmp_in, tmp_out, iColumn)
+
     nModesPerDim = (oversamp_degree+1)
     msq = nModesPerDim*nModesPerDim
     nTotalDofs =  (oversamp_degree+1)**3
@@ -259,6 +268,7 @@ contains
     tmp_in = -42
     tmp_out = -42
 
+    !$OMP DO
     ! The loop for msq stripes for independent x Dir evaluations
     do iLine = 1, msq
       lb = (iLine-1) * (oversamp_degree+1) + 1
@@ -269,7 +279,9 @@ contains
         &                   nodal_data = tmp_out   )
       nodal_data(lb:ub) = tmp_out
     end do
+    !$OMP END DO
 
+    !$OMP DO
     ! The loop for msq stripes for independent y Dir evaluations
     do iColumn = 1, msq
       lb = int( (iColumn-1 ) / nModesPerDim ) * msq &
@@ -280,15 +292,20 @@ contains
         &                   modal_data = nodal_data(lb:ub:nModesPerDim), &
         &                   nodal_data = modal_data(lb:ub:nModesPerDim)  )
     end do
+    !$OMP END DO
 
     ! The loop for msq stripes for independent z Dir evaluations
     ub = nTotalDofs
+    !$OMP DO
     do iColumn = 1, msq
       lb = iColumn
       call fxtf_flptld_m2n( flpt       = fxt%flpt,              &
         &                   modal_data = modal_data(lb:ub:msq), &
         &                   nodal_data = nodal_data(lb:ub:msq)  )
     end do
+    !$OMP END DO
+
+    !$OMP END PARALLEL
 
   end subroutine ply_fxt_m2n_3D
   ! ************************************************************************ !
@@ -333,10 +350,12 @@ contains
     ! -------------------------------------------------------------------- !
     integer :: ub, lb, iLine, iColumn, nModesPerDim, msq
     ! -------------------------------------------------------------------- !
+    !$OMP PARALLEL DEFAULT(SHARED), PRIVATE(iLine, lb, ub, iColumn)
 
     nModesPerDim = (oversamp_degree+1)
     msq = nModesPerDim*nModesPerDim
 
+    !$OMP DO
     do iLine = 1, oversamp_degree+1
       lb = (iLine-1) * (oversamp_degree+1) + 1
       ub = lb + oversamp_degree
@@ -344,14 +363,21 @@ contains
         &                   nodal_data = nodal_data(lb:ub), &
         &                   modal_data = modal_data(lb:ub)  )
     end do
+    !$OMP END DO
 
+
+    !$OMP DO
     do iColumn = 1, oversamp_degree+1
       lb = iColumn
       call fxtf_flptld_n2m( flpt       = fxt%flpt,                             &
         &                   nodal_data = modal_data(lb:msq:oversamp_degree+1), &
         &                   modal_data = nodal_data(lb:msq:oversamp_degree+1)  )
     end do
+    !$OMP END DO
     modal_data = nodal_data
+
+    !$OMP END PARALLEL
+
   end subroutine ply_fxt_n2m_2D
   ! ************************************************************************ !
 
@@ -370,10 +396,13 @@ contains
     integer :: ub, lb, iLine, iColumn, nModesPerDim, msq, ntotalDofs
     ! -------------------------------------------------------------------- !
 
+    !$OMP PARALLEL DEFAULT(SHARED), PRIVATE(iLine, iColumn, ub, lb)
+
     nModesPerDim = (oversamp_degree+1)
     msq = nModesPerDim*nModesPerDim
     nTotalDofs =  (oversamp_degree+1)**3
 
+    !$OMP DO
     ! The loop for msq stripes for independent x Dir evaluations
     do iLine = 1, msq
       lb = (iLine-1) * (oversamp_degree+1) + 1
@@ -382,7 +411,9 @@ contains
         &                   nodal_data = nodal_data(lb:ub), &
         &                   modal_data = modal_data(lb:ub)  )
     end do
+    !$OMP END DO
 
+    !$OMP DO
     ! The loop for msq stripes for independent y Dir evaluations
     do iColumn = 1, msq
       lb = int( (iColumn-1) / nModesPerDim ) * msq &
@@ -393,15 +424,20 @@ contains
         &                   nodal_data = modal_data(lb:ub:nModesPerDim), &
         &                   modal_data = nodal_data(lb:ub:nModesPerDim)  )
     end do
+    !$OMP END DO
 
     ! The loop for msq stripes for independent z Dir evaluations
     ub = nTotalDofs
+    !$OMP DO
     do iColumn = 1, msq
       lb = iColumn
       call fxtf_flptld_n2m( flpt       = fxt%flpt,              &
         &                   nodal_data = nodal_data(lb:ub:msq), &
         &                   modal_data = modal_data(lb:ub:msq)  )
     end do
+    !$OMP END DO
+
+    !$OMP END PARALLEL
 
   end subroutine ply_fxt_n2m_3D
   ! ************************************************************************ !

@@ -241,8 +241,10 @@ contains
     ! integer, parameter :: vlen = nIndeps
     ! -------------------------------------------------------------------- !
 
+    !$OMP PARALLEL DEFAULT(SHARED), PRIVATE(iStrip, iRow, iCell, iCol)
     if (nDofs > 1) then
 
+      !$OMP DO
       do iStrip=0,nIndeps-1,vlen
 
         ! Calculate the upper bound of the current strip
@@ -265,6 +267,7 @@ contains
 
         end do ! iRow = 1, nRows
       end do ! iStrip
+      !$OMP END DO
 
     else
 
@@ -272,9 +275,10 @@ contains
 
     end if
 
+    !$OMP END PARALLEL
   end subroutine ply_l2_projection
   ! ************************************************************************ !
- 
+
 
   ! ************************************************************************ !
   !> Transformation between modal and nodal values in 1D via L2 projection.

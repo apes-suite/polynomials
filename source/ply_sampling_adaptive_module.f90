@@ -115,7 +115,7 @@ module ply_sampling_adaptive_module
   type sampled_method_data_type
     type(realarray_type), allocatable :: component(:)
   end type sampled_method_data_type
-    
+
 
 contains
 
@@ -446,7 +446,7 @@ contains
         elemlevel = tem_levelOf(curmesh%treeID(iElem))
         reached_limit(iElem) = lastrefine                                     &
           &                    .or. ( (me%AbsUpperBoundLevel > 0)             &
-          &                    .and. (elemlevel >= me%AbsUpperBoundLevel - 1) ) 
+          &                    .and. (elemlevel >= me%AbsUpperBoundLevel - 1) )
 
         ! Now get the spectral variation (sum of absolute values of all
         ! higher modes).
@@ -906,6 +906,7 @@ contains
     integer :: nModes
     integer :: jMode, kMode
     ! -------------------------------------------------------------------- !
+
     nModes = (degree+1)
 
     select case(nDims)
@@ -930,6 +931,7 @@ contains
         end do
       end do
     end select
+
   end function sum_abs_mode
 
 end module ply_sampling_adaptive_module

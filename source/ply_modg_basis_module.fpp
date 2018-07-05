@@ -159,6 +159,8 @@ contains
     integer :: iFunc, jFunc
     ! -------------------------------------------------------------------- !
 
+    !$OMP PARALLEL DEFAULT(SHARED), PRIVATE(jFunc, iFunc)
+
     allocate(GaussPoints(nPoints))
     allocate(GaussPoints_left(nPoints))
     allocate(GaussPoints_right(nPoints))
@@ -198,6 +200,7 @@ contains
 
     allocate( integral%anz_anzShift(1:nFunc, 1:nFunc, 2))
 
+    !$OMP DO
     !loop over anzatz functions
     do jFunc = 1, nFunc
       do iFunc = 1, nFunc
@@ -219,6 +222,9 @@ contains
 
       end do
     end do
+    !$OMP END DO
+
+    !$OMP END PARALLEL
 
   end subroutine init_modg_covolumeCoeffs
   ! ************************************************************************ !
@@ -286,6 +292,7 @@ contains
 
       end do
     end do
+
 
   end subroutine init_modg_multilevelCoeffs
   ! ************************************************************************ !
@@ -417,6 +424,8 @@ contains
     real(kind=rk) :: n_q
     ! -------------------------------------------------------------------- !
 
+    !$OMP PARALLEL DEFAULT(SHARED), PRIVATE(iAns, iAnsX, iAnsY, iAnsZ, n_q, ansPos)
+
     ! allocate the output array
     select case(basisType)
       case(Q_space)
@@ -442,6 +451,7 @@ contains
       polyValX(2,:) = coords(:,1)
       polyValY(2,:) = coords(:,2)
       polyValZ(2,:) = coords(:,3)
+      !$OMP DO
       ! ... higher order polynomials are build recursively
       do iAns = 3, maxPolyDegree+1
         n_q = 1.0_rk / real(iAns-1,kind=rk)
@@ -467,11 +477,13 @@ contains
           &                   * polyValZ(iAns-2,:) )  &
           &                 *n_q
       end do
+      !$OMP END DO
     end if
 
     ! Now, build the complete point value.
     select case(basisType)
       case(Q_space)
+        !$OMP DO
         do iAnsX = 1, maxPolyDegree+1
           do iAnsY = 1, maxPolyDegree+1
             do iAnsZ = 1, maxPolyDegree+1
@@ -483,19 +495,23 @@ contains
             end do
           end do
         end do
+        !$OMP END DO
       case(P_space)
         iAnsX = 1
         iAnsY = 1
         iAnsZ = 1
 ?? copy :: getDofsPTens(maxPolyDegree, ansPosMax)
+        !$OMP DO
         do ansPos = 1, ansPosMax
           polyVal(ansPos, :) = polyValX(iAnsX,:)     &
             &                    * polyValY(iAnsY,:) &
             &                    * polyValZ(iAnsZ,:)
 ?? copy :: nextModgCoeffPTens(iAnsX, iAnsY, iAnsZ)
         end do
+        !$OMP END DO
     end select
 
+    !$OMP END PARALLEL
 
   end subroutine evalLegendreTensPoly
   ! ************************************************************************ !

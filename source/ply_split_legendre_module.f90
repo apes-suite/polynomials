@@ -346,7 +346,7 @@ contains
       write(*,*) 'Beta check failed'
       RETURN
     end if
- 
+
     ! Expected properties for alpha_frac:
     ! * It should be the same as dividing the corresponding values of alpha
     ! * If both modes are identic, it should be one

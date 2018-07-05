@@ -126,7 +126,7 @@ contains
   !! indices would most likely be better.
   !! Maybe, using explicit shaped arrays and therby allowing more dimensions
   !! in the input, while keeping the interface to two dimensions for all
-  !! cases (the normal direction and all independent degrees of freedom). 
+  !! cases (the normal direction and all independent degrees of freedom).
   !! For vectorization on x86 it also is necessary to have a stride-1 access
   !! only in reading and writing.
   !! The rotation of data might not be the best option because of this.
@@ -219,6 +219,7 @@ contains
     integer :: nParents
     integer :: parentpos, childpos
     ! -------------------------------------------------------------------- !
+    !$OMP PARALLEL DEFAULT(SHARED), PRIVATE(iDir, parentMode, iParent, childMode, indep)
 
     nParents = size(parent_data,2)
 
@@ -232,10 +233,13 @@ contains
     ! The number of independent modes (in normal directions) is given
     ! by the product of the length in all directions, except the last one.
     nIndeps = 1
+    !$OMP DO
     do iDir=1,nDims-1
       nIndeps = nIndeps*inLen(iDir)
     end do
+    !$OMP END DO
 
+    !$OMP DO
     oldmodes: do parentMode=1,inLen(nDims)
       ! Maximal number modes to compute, as this is a triangular matrix
       ! it is limited by the diagonal (parentMode). However, it may be
@@ -266,6 +270,9 @@ contains
       end do elemloop
 
     end do oldmodes
+    !$OMP END DO
+
+    !$OMP END PARALLEL
 
   end subroutine ply_split_element_singleD
   ! ======================================================================== !

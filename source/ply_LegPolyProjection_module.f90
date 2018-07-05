@@ -139,6 +139,9 @@ contains
     real(kind=rk), allocatable :: newWorkDat(:)
     integer :: nChildDofs, oneDof
     ! -------------------------------------------------------------------- !
+
+    !$OMP PARALLEL DEFAULT(SHARED), PRIVATE(iVar, nDofs, nComponents, nChilds, nChildDofs, workDat)
+
     if (subsamp%projectionType.ne.ply_QLegendrePoly_prp) then
       call tem_abort( 'ERROR in ply_QPolyProjection: subsampling is ' &
         & // 'only implemented for Q-Legendre-Polynomials'            )
@@ -148,6 +151,7 @@ contains
     allocate(newVarDofs(nVars))
     allocate(newMeshData(nVars))
 
+    !$OMP DO
     varLoop: do iVar=1,nVars
       nDofs = varDofs(iVar)
       nComponents = varcomps(iVar)
@@ -221,6 +225,9 @@ contains
       deallocate(projection_oneDof%projCoeff)
 
     end do varLoop
+    !$OMP END DO
+
+    !$OMP END PARALLEL
 
   end subroutine ply_QPolyProjection
   ! ************************************************************************ !
@@ -262,6 +269,9 @@ contains
     real(kind=rk), allocatable :: projCoeffOneDim(:,:,:)
     real(kind=rk) :: dimexp
     ! -------------------------------------------------------------------- !
+
+    !$OMP PARALLEL DEFAULT(SHARED), PRIVATE(iChild, iParentDof, iChildDof, xShift, yShift, zShift)
+
     select case(dofType)
     case(ply_QLegendrePoly_prp)
       allocate(projection%projCoeff(nDofs, nChildDofs, nChilds))
@@ -274,6 +284,7 @@ contains
       projCoeffOneDim = ply_QLegOneDimCoeff( nint(nDofs**dimexp),     &
         &                                    nint(nChildDofs**dimexp) )
 
+      !$OMP DO
       ! Loop over the children of this element
       childLoop: do iChild = 1, nChilds
 
@@ -326,12 +337,14 @@ contains
           end do childDofLoop
         end do parentDofLoop
       end do childLoop
+      !$OMP END DO
 
     case default
       call tem_abort( 'ERROR in ply_initProjCoeff: initialization of '      &
         & // 'projection coefficients for subsampling is implemented only ' &
         & // 'for Q-Legendre polynomials'                                   )
     end select
+    !$OMP END PARALLEL
     deallocate(projCoeffOneDim)
   end subroutine ply_initQLegProjCoeff
   ! ************************************************************************ !
@@ -576,6 +589,9 @@ contains
     integer :: oneDof, noChilds, childpos
     real(kind=rk), allocatable :: childData(:)
     ! -------------------------------------------------------------------- !
+
+    !$OMP PARALLEL DEFAULT(SHARED), PRIVATE(iParentElem, iElem, lowElemIndex, upElemIndex, iChild, lowChildIndex, upChildIndex)
+
     nChilds = 2**ndims
     nElems = tree%nElems
     nElemsToRefine = count(new_refine_tree)
@@ -592,6 +608,7 @@ contains
 
     if (subsamp%sampling_lvl > 1) then
 
+      !$OMP DO
       elementLoop: do iParentElem=1,nParentElems
         ! Check if the parent cell was already refined...
         if (refine_tree(iParentElem)) then
@@ -683,9 +700,11 @@ contains
         end if
 
       end do elementLoop
+      !$OMP END DO
 
     else
 
+      !$OMP DO
       elemLoop: do iElem=1,nElems
         if (new_refine_tree(iElem)) then
           allocate(childData(nChildDofs*nChilds*nComponents))
@@ -736,7 +755,10 @@ contains
           deallocate(childData)
         end if
       end do elemLoop
+      !$OMP END DO
     end if
+
+    !$OMP END PARALLEL
 
   end subroutine ply_subsampleData
   ! ************************************************************************ !
@@ -775,8 +797,11 @@ contains
     integer :: childDof_pos, parentDof_pos
     real(kind=rk) :: projCoeff
     ! -------------------------------------------------------------------- !
+    !$OMP PARALLEL DEFAULT(SHARED), PRIVATE(iChild, iParentDof, iChildDof, iComp, projCoeff, childDof_pos, parentDof_pos)
+
     childData(:) = 0.0_rk
 
+    !$OMP DO
     childLoop: do iChild = 1, nChilds
       parentDofLoop: do iParentDof = 1, nParentDofs
         childDofLoop: do iChildDof = 1, nChildDofs
@@ -796,6 +821,9 @@ contains
         end do childDofLoop
       end do parentDofLoop
     end do childLoop
+    !$OMP END DO
+
+    !$OMP END PARALLEL
 
   end subroutine ply_projDataToChild
   ! ************************************************************************ !

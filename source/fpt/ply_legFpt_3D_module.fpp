@@ -158,6 +158,7 @@ contains
 
    end do xStripLoop
 
+
   end subroutine ply_legToPnt_3D_singVar
   ! ************************************************************************ !
 
@@ -317,6 +318,7 @@ contains
       legCoeffs((iStrip-1)*n+1 : (iStrip+nIndeps-1)*n) = gam(1:nIndeps*n)
 
     end do xStripLoop
+
 
   end subroutine ply_pntToLeg_3D_singVar
   ! ************************************************************************ !

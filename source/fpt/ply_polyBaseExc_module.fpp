@@ -1048,7 +1048,7 @@ contains
   !> Convert strip of coefficients of a modal representation in terms of
   !! Legendre polynomials to modal coefficients in terms of Chebyshev
   !! polynomials.
-  subroutine ply_fpt_single( alph, gam, params )
+  subroutine ply_fpt_single( alph, gam, params)
     ! -------------------------------------------------------------------- !
     !> The parameters of the fast polynomial transformation.
     type(ply_trafo_params_type), intent(inout) :: params
