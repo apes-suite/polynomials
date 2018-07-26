@@ -217,8 +217,8 @@ contains
   !!
   !! Only works for Q-Polynomials.
   subroutine ply_sample_adaptive( me, ndims, orig_mesh, orig_bcs, varsys,   &
-    &                             var_degree, trackInst, trackConfig, time, &
-    &                             new_mesh, resvars                         )
+    &                             var_degree, lvl_degree, trackInst,        &
+    &                             trackConfig, time, new_mesh, resvars      )
     ! -------------------------------------------------------------------- !
     !> A ply_sampling_type to describe the sampling method.
     type(ply_sampling_adaptive_type), intent(in) :: me
@@ -239,6 +239,9 @@ contains
     !!       Possibly by defining a variable in the varsys, providing the
     !!       degree.
     integer, intent(in) :: var_degree(:)
+
+    !> Maximal polynomial degree for each level.
+    integer, intent(in) :: lvl_degree(:)
 
     !> Number of dimensions in the polynomial representation.
     integer, intent(in) :: ndims
@@ -353,6 +356,7 @@ contains
       &                                 mesh          = orig_mesh,  &
       &                                 nDims         = nDims,      &
       &                                 var_degree    = var_degree, &
+      &                                 lvl_degree    = lvl_degree, &
       &                                 sample_varsys = resvars,    &
       &                                 var           = var,        &
       &                                 time          = time        )

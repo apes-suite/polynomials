@@ -258,8 +258,8 @@ contains
   !!@todo Instead of recreating the sampled varsys and mesh everytime the
   !!      tracking is written, store them in the [[ply_sampled_tracking_type]].
   subroutine ply_sampled_track_output( me, mesh, bc, solver, proc, varSys, &
-    &                                  var_degree, var_space, simControl,  &
-    &                                  time                                )
+    &                                  var_degree, lvl_degree, var_space,  &
+    &                                  simControl, time                    )
     ! -------------------------------------------------------------------- !
     !> Sampled tracking instances.
     type(ply_sampled_tracking_type), intent(inout) :: me
@@ -284,6 +284,9 @@ contains
     !!
     !! Needs to match the size of the variable system.
     integer, intent(in) :: var_degree(:)
+
+    !> Maximal polynomial degree for each level
+    integer, intent(in) :: lvl_degree(:)
 
     !> Maximal polynomial space for each variable
     !!
@@ -395,6 +398,7 @@ contains
           &                   orig_bcs    = bc,                           &
           &                   varsys      = varsys,                       &
           &                   var_degree  = var_degree,                   &
+          &                   lvl_degree  = lvl_degree,                   &
           &                   var_space   = var_space,                    &
           &                   ndims       = me%ndims,                     &
           &                   trackInst   = me%tracking%instance(iTrack), &

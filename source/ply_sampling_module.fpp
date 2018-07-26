@@ -225,9 +225,9 @@ contains
   !> Sampling polynomial data from a given array and mesh to a new mesh with
   !! a new data array, where just a single degree of freedom per element is
   !! used.
-  subroutine ply_sample_data( me, orig_mesh, orig_bcs, varsys, var_degree,    &
-    &                         var_space, ndims, trackInst, trackConfig, time, &
-    &                         new_mesh, resvars                               )
+  subroutine ply_sample_data( me, orig_mesh, orig_bcs, varsys, var_degree, &
+    &                         lvl_degree, var_space, ndims, trackInst,     &
+    &                         trackConfig, time, new_mesh, resvars         )
     ! -------------------------------------------------------------------- !
     !> A ply_sampling_type to describe the sampling method.
     type(ply_sampling_type), intent(in) :: me
@@ -247,6 +247,9 @@ contains
     !!       Possibly by defining a variable in the varsys, providing the
     !!       degree.
     integer, intent(in) :: var_degree(:)
+
+    !> Maximal polynomial degree for each level.
+    integer, intent(in) :: lvl_degree(:)
 
     !> Polynomial space for each variable.
     !!
@@ -593,6 +596,7 @@ contains
         &                       orig_bcs    = orig_bcs,    &
         &                       varsys      = varsys,      &
         &                       var_degree  = var_degree,  &
+        &                       lvl_degree  = lvl_degree,  &
         &                       trackInst   = trackInst,   &
         &                       trackConfig = trackConfig, &
         &                       time        = time,        &

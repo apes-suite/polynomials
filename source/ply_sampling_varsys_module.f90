@@ -2,10 +2,11 @@
 module ply_sampling_varsys_module
   use env_module, only: rk
 
-  use treelmesh_module, only: treelmesh_type
-  use tem_time_module, only: tem_time_type
+  use treelmesh_module,    only: treelmesh_type
+  use tem_time_module,     only: tem_time_type
   use tem_tracking_module, only: tem_tracking_instance_type
-  use tem_varsys_module, only: tem_varsys_type, tem_varSys_init
+  use tem_varsys_module,   only: tem_varsys_type, tem_varSys_init
+  use tem_topology_module, only: tem_levelof
 
   implicit none
 
@@ -33,8 +34,8 @@ contains
   ! ------------------------------------------------------------------------ !
   !> Create a variable system for the given tracking instance.
   subroutine ply_sampling_varsys_for_track( varsys, trackInst, mesh, nDims, &
-    &                                       var_degree, sample_varsys, var, &
-    &                                       time  )
+    &                                       var_degree, lvl_degree,         &
+    &                                       sample_varsys, var, time        )
     ! -------------------------------------------------------------------- !
     !> Variable system describing the access to the original data to sample.
     type(tem_varsys_type), intent(in) :: varsys
@@ -56,6 +57,9 @@ contains
     !!       Possibly by defining a variable in the varsys, providing the
     !!       degree.
     integer, intent(in) :: var_degree(:)
+
+    !> Maximal polynomial degree for each level.
+    integer, intent(in) :: lvl_degree(:)
 
     !> Variable system for the sampled data.
     type(tem_varsys_type), intent(out) :: sample_varsys
@@ -79,7 +83,9 @@ contains
     integer :: iComponent
     integer :: iScalar
     integer :: iTotComp
-    integer :: lastScalar
+    integer :: iLevel
+    integer :: total_dofs
+    integer :: lower_bound, upper_bound
     integer, allocatable :: elempos(:)
     real(kind=rk), allocatable :: elemdat(:)
     ! -------------------------------------------------------------------- !
@@ -107,71 +113,56 @@ contains
 
     allocate(var(nScalars))
 
+    ! Get the total number of dofs with respect to the actual
+    ! polynomial degree of every single element.
+    total_dofs = 0
+    do iElem = 1, nElems
+      iLevel = tem_LevelOf( mesh%treeID( iElem ))
+      nDofs = (lvl_degree(iLevel)+1)**nDims
+      total_dofs = total_dofs + nDofs
+    end do
+
     iScalar = 1
     variables: do iVar=1,nVars
-
       varpos = trackInst%varmap%varPos%val(iVar)
       nComponents = varsys%method%val(varpos)%nComponents
-      nDofs = (var_degree(iVar)+1)**nDims
-
       do iComponent=1,nComponents
         iTotComp = iScalar+iComponent-1
         call ply_sampling_var_allocate( var     = var(iTotComp), &
           &                             nElems  = nElems,        &
-          &                             datalen = nDofs*nElems   )
+          &                             datalen = total_dofs     )
+        var(iTotComp)%first(1) = 1
       end do
 
-      isScalar: if (nComponents == 1) then
+      ! Varying polynomial degree for elements is possible. 
+      ! Need to copy data element by element.
+      lower_bound = 1
+      do iElem=1,nElems
+        iLevel = tem_LevelOf( mesh%treeID( iElem ))
+        nDofs = (lvl_degree(iLevel)+1)**nDims
 
-        ! If there is only one component, we can directly copy the data
-        ! into vardat.
+        upper_bound = lower_bound-1 + nDofs
+
+        allocate(elemDat(nComponents*nDofs))
         call varSys%method%val(varpos)%get_element( &
           &    varSys  = varSys,                    &
-          &    elempos = elempos,                   &
+          &    elempos = elempos(iElem:iElem),      &
           &    time    = time,                      &
           &    tree    = mesh,                      &
-          &    nElems  = nElems,                    &
+          &    nElems  = 1,                         &
           &    nDofs   = nDofs,                     &
-          &    res     = var(iScalar)%dat           )
-
-      else isScalar
-
-        ! If the variable is not scalar, we need to take care of the
-        ! component data and separate them for `var%dat`.
-        ! To avoid overly large memory consumption, we do this element by
-        ! element.
-        allocate(elemDat(nComponents*ndofs))
-        do iElem=1,nElems
-          call varSys%method%val(varpos)%get_element( &
-            &    varSys  = varSys,                    &
-            &    elempos = elempos(iElem:iElem),      &
-            &    time    = time,                      &
-            &    tree    = mesh,                      &
-            &    nElems  = 1,                         &
-            &    nDofs   = ndofs,                     &
-            &    res     = elemdat                    )
-          do iComponent=1,nComponents
-            iTotComp = iScalar+iComponent-1
-            var(iTotComp)%dat(1+nDofs*(iElem-1):nDofs*iElem) &
-              & = elemdat(iComponent::nComponents)
-          end do
+          &    res     = elemdat                    )
+        do iComponent=1,nComponents
+          iTotComp = iScalar+iComponent-1
+          var(iTotComp)%dat(lower_bound:upper_bound) &
+            & = elemdat(iComponent::nComponents)
+          var(iTotComp)%first(iElem+1) = upper_bound+1
+          var(iTotComp)%degree(iElem) = lvl_degree(iLevel)
         end do
+
+        lower_bound = upper_bound + 1
+
         deallocate(elemDat)
-
-      end if isScalar
-
-      ! For each element we store the position of its first degree of freedom
-      ! (the last is given by the first of the next element), and the
-      ! polynomial degree in each element.
-      ! This is redundant, but convenient.
-      lastScalar = iScalar+nComponents-1
-      do iComponent=0,nComponents-1
-        var(iScalar+iComponent)%first(1) = 1
-        do iElem=1,nElems
-          var(iScalar+iComponent)%first(iElem+1)     &
-            & = var(iScalar+iComponent)%first(iElem) + nDofs
-          var(iScalar+iComponent)%degree(iElem) = var_degree(iVar)
-        end do
       end do
 
       iScalar = iScalar + nComponents
