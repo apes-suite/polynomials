@@ -216,9 +216,10 @@ contains
   !! object trackInst with adaptive refinements.
   !!
   !! Only works for Q-Polynomials.
-  subroutine ply_sample_adaptive( me, ndims, orig_mesh, orig_bcs, varsys,   &
-    &                             var_degree, lvl_degree, trackInst,        &
-    &                             trackConfig, time, new_mesh, resvars      )
+  subroutine ply_sample_adaptive( me, ndims, orig_mesh, orig_bcs, varsys, &
+    &                             var_degree, var_space, lvl_degree,      &
+    &                             trackInst, trackConfig, time, new_mesh, &
+    &                             resvars                                 )
     ! -------------------------------------------------------------------- !
     !> A ply_sampling_type to describe the sampling method.
     type(ply_sampling_adaptive_type), intent(in) :: me
@@ -233,12 +234,12 @@ contains
     type(tem_varsys_type), intent(in) :: varsys
 
     !> Maximal polynomial degree for each variable.
+    integer, intent(in) :: var_degree(:)
+
+    !> Polynomial space for each variable.
     !!
     !! Needs to be matching the variable definition in the variable system.
-    !! @todo Needs to be changed to be an information per element per variable!
-    !!       Possibly by defining a variable in the varsys, providing the
-    !!       degree.
-    integer, intent(in) :: var_degree(:)
+    integer, intent(in) :: var_space(:)
 
     !> Maximal polynomial degree for each level.
     integer, intent(in) :: lvl_degree(:)
@@ -355,7 +356,7 @@ contains
       &                                 trackInst     = trackInst,  &
       &                                 mesh          = orig_mesh,  &
       &                                 nDims         = nDims,      &
-      &                                 var_degree    = var_degree, &
+      &                                 var_space     = var_space,  &
       &                                 lvl_degree    = lvl_degree, &
       &                                 sample_varsys = resvars,    &
       &                                 var           = var,        &
