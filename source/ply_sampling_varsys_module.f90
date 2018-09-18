@@ -10,7 +10,8 @@ module ply_sampling_varsys_module
   use tem_aux_module,      only: tem_abort
   use tem_logging_module,  only: logunit
 
-  use ply_dof_module,      only: ply_degree_2dof
+  use ply_dof_module,      only: ply_degree_2dof, &
+    &                            P_space
 
   implicit none
 
