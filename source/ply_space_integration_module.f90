@@ -115,7 +115,6 @@ contains
     real(kind=rk), allocatable :: weights1D(:)
     integer :: numQuadPoints
     ! ---------------------------------------------------------------------- !
-    !$OMP PARALLEL DEFAULT(SHARED), PRIVATE(k, j, i, pointNumber)
 
     numQuadPoints = num_intp_per_direction**3
     allocate(points(numQuadPoints,3))
@@ -130,7 +129,6 @@ contains
       &                      nIntP = num_intp_per_direction )
 
     pointNumber = 1
-    !$OMP DO
     do k = 1, num_intp_per_direction
       do j = 1, num_intp_per_direction
         do i = 1, num_intp_per_direction
@@ -146,9 +144,6 @@ contains
         end do
       end do
     end do
-    !$OMP END DO
-
-    !$OMP END PARALLEL
 
   end subroutine ply_create_volume_gauss_points_cube
   ! *********************************************************************** !
@@ -172,7 +167,6 @@ contains
     real(kind=rk), allocatable :: weights1D(:)
     integer :: numQuadPoints
     ! ---------------------------------------------------------------------- !
-    !$OMP PARALLEL DEFAULT(SHARED), PRIVATE(j, i, pointNumber)
 
     numQuadPoints = num_intp_per_direction**2
     allocate(points(numQuadPoints,3))
@@ -187,7 +181,6 @@ contains
       &                      nIntP = num_intp_per_direction )
 
     pointNumber = 1
-    !$OMP DO
     do j = 1, num_intp_per_direction
       do i = 1, num_intp_per_direction
         !> here we build all possible combinations of the one-dimensional
@@ -200,9 +193,7 @@ contains
         pointNumber = pointNumber + 1
       end do
     end do
-    !$OMP END DO
 
-    !$OMP END PARALLEL
 
   end subroutine ply_create_volume_gauss_points_cube_2d
   ! *********************************************************************** !
@@ -225,7 +216,6 @@ contains
     real(kind=rk), allocatable :: gaussp1D(:)
     real(kind=rk), allocatable :: weights1D(:)
     ! ---------------------------------------------------------------------- !
-    !$OMP PARALLEL DEFAULT(SHARED), PRIVATE(i)
 
     allocate(points(num_intp_per_direction,3))
     allocate(weights(num_intp_per_direction))
@@ -239,7 +229,6 @@ contains
       &                      nIntP = num_intp_per_direction )
 
     pointNumber = 1
-    !$OMP DO
     do i = 1, num_intp_per_direction
       !> here we build all possible combinations of the one-dimensional
       !! quadrature points to get the three dimensional values.
@@ -250,9 +239,7 @@ contains
       weights(PointNumber) = weights1D(i)
       pointNumber = pointNumber + 1
     end do
-    !$OMP END DO
 
-    !$OMP END PARALLEL
 
   end subroutine ply_create_volume_gauss_points_cube_1d
   ! *********************************************************************** !
@@ -283,7 +270,6 @@ contains
     real(kind=rk), allocatable :: weights1D(:)
     integer :: nquadPoints
     ! ---------------------------------------------------------------------- !
-    !$OMP PARALLEL DEFAULT(SHARED), PRIVATE(j, i)
 
     nQuadPoints = num_intp_per_direction**2
 
@@ -302,7 +288,6 @@ contains
 
     select case(dir)
     case(1) ! face in x direction, x coord is fixed
-      !$OMP DO
       do j = 1, num_intp_per_direction
         do i = 1, num_intp_per_direction
           !> here we build all possible combinations of the one-dimensional
@@ -314,10 +299,8 @@ contains
           pointNumber = pointNumber + 1
         end do
       end do
-      !$OMP END DO
 
     case(2) ! face in y direction, y coord is fixed
-      !$OMP DO
       do j = 1, num_intp_per_direction
         do i = 1, num_intp_per_direction
           !> here we build all possible combinations of the one-dimensional
@@ -329,10 +312,8 @@ contains
           pointNumber = pointNumber + 1
         end do
       end do
-      !$OMP END DO
 
     case(3) ! face in z direction, z coord is fixed
-      !$OMP DO
       do j = 1, num_intp_per_direction
         do i = 1, num_intp_per_direction
           !> here we build all possible combinations of the one-dimensional
@@ -344,7 +325,6 @@ contains
           pointNumber = pointNumber + 1
         end do
       end do
-      !$OMP END DO
 
     case default
       call tem_abort( 'ERROR in create_surface_gauss_points_cube:' &
@@ -352,7 +332,6 @@ contains
 
     end select
 
-    !$OMP END PARALLEL
 
   end subroutine ply_create_surface_gauss_points_cube
   ! *********************************************************************** !
@@ -383,7 +362,6 @@ contains
     real(kind=rk), allocatable :: weights1D(:)
     integer :: nQuadPoints
     ! ---------------------------------------------------------------------- !
-    !$OMP PARALLEL DEFAULT(SHARED), PRIVATE(i)
 
     ! The number of quadrature points on the boundary of a 2d volume is the
     ! number of quad points in one direction
@@ -404,7 +382,6 @@ contains
 
     select case(dir)
     case(1) ! face in x direction, x coord is fixed
-      !$OMP DO
       do i = 1, num_intp_per_direction
         !> here we build all possible combinations of the one-dimensional
         !! quadrature points for 2d case to get the three dimensional values.
@@ -414,10 +391,8 @@ contains
         weights(PointNumber) = weights1D(i)
         pointNumber = pointNumber + 1
       end do
-      !$OMP END DO
 
     case(2) ! face in y direction, y coord is fixed
-      !$OMP DO
       do i = 1, num_intp_per_direction
         !> here we build all possible combinations of the one-dimensional
         !! quadrature points in 2d case to get the three dimensional values.
@@ -427,7 +402,6 @@ contains
         weights(PointNumber) = weights1D(i)
         pointNumber = pointNumber + 1
       end do
-      !$OMP END DO
 
     case default
       call tem_abort( 'ERROR in create_surface_gauss_points_cube_2d:' &
@@ -435,7 +409,6 @@ contains
 
     end select
 
-    !$OMP END PARALLEL
 
   end subroutine ply_create_surface_gauss_points_cube_2d
   ! *********************************************************************** !
@@ -503,7 +476,6 @@ contains
     real(kind=rk), allocatable :: gaussp1D(:)
     real(kind=rk), allocatable :: weights1D(:)
     ! ---------------------------------------------------------------------- !
-    !$OMP PARALLEL DEFAULT(SHARED), PRIVATE(j)
 
     numQuadPoints = num_intp_per_direction
 
@@ -519,7 +491,6 @@ contains
       &                      nIntP = num_intp_per_direction )
 
     pointNumber = 1
-    !$OMP DO
     do j = 1, num_intp_per_direction
       !> here we build all possible combinations of the one-dimensional
       !! quadrature points to get the three dimensional values.
@@ -527,9 +498,7 @@ contains
       weights(PointNumber) = weights1D(j)
       pointNumber = pointNumber + 1
     end do
-    !$OMP END DO
 
-    !$OMP END PARALLEL
 
   end subroutine ply_create_gauss_points_1d
   ! *********************************************************************** !
@@ -558,14 +527,12 @@ contains
     real(kind=rk) :: EPS
     integer :: m, i, j
     ! ---------------------------------------------------------------------- !
-    !$OMP PARALLEL DEFAULT(SHARED), PRIVATE(i, p1, p2, p3, pp, z1, z)
 
     EPS= 1.0 / (10.0**(PRECISION(1.0_rk)-2) )
     m = (nIntP+1)/2
     xm = 0.5*(x2+x1)
     xl = 0.5*(x2-x1)
 
-    !$OMP DO
     do i = 1, m
 
       z = cos(PI*((i-1)+0.75_rk)/(nIntP+0.5_rk))
@@ -590,9 +557,7 @@ contains
       w(nIntp-i+1) = w(i)
 
     end do
-    !$OMP END DO
 
-    !$OMP END PARALLEL
 
   end subroutine ply_gaussLegPoints
   ! *********************************************************************** !

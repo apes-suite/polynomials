@@ -11,6 +11,7 @@ module ply_legFpt_module
     &                               ply_fpt_single,        &
     &                               ply_legToCheb_param,   &
     &                               ply_chebToLeg_param,   &
+    &                               ply_bu_type,           &
     &                               assignment(=)
   use fftw_wrap
 
@@ -47,11 +48,18 @@ module ply_legFpt_module
     logical :: use_lobatto_points
   end type ply_legFpt_type
 
+  type ply_legFpt_bu_type
+    type(ply_bu_type) :: legToCheb_bu
+    type(ply_bu_type) :: chebToLeg_bu
+  end type ply_legFpt_bu_type
+
   interface assignment(=)
     module procedure Copy_fpt
+    module procedure Copy_fpt_bu
   end interface
 
   public :: ply_legFpt_type, ply_init_legFpt, ply_legToPnt, ply_pntToLeg
+  public :: ply_legFpt_bu_type
   public :: assignment(=)
 
 
@@ -78,17 +86,30 @@ contains
 
 
   ! ************************************************************************ !
+  subroutine Copy_fpt_bu(left, right)
+    ! -------------------------------------------------------------------- !
+    type(ply_legFpt_bu_type), intent(out) :: left
+    type(ply_legFpt_bu_type), intent(in) :: right
+    ! -------------------------------------------------------------------- !
+     left%legToCheb_bu = right%legToCheb_bu
+     left%chebToLeg_bu = right%chebToLeg_bu
+  end subroutine Copy_fpt_bu
+  ! ************************************************************************ !
+
+
+  ! ************************************************************************ !
   !> Subroutine to initialize the fast polynomial transformation
   !! for Legendre expansion.
   subroutine ply_init_legFpt( maxPolyDegree, nIndeps, fpt, blocksize, &
     &                         approx_terms, striplen, lobattoPoints,  &
-    &                         subblockingWidth, fft_flags             )
+    &                         subblockingWidth, fft_flags, bu         )
     ! -------------------------------------------------------------------- !
     integer, intent(in) :: maxPolyDegree
 
     !> Number of independent values that can be computed simultaneously.
     integer, intent(in) :: nIndeps
     type(ply_legFpt_type), intent(inout) :: fpt
+    type(ply_legFpt_bu_type), intent(inout) :: bu
 
     !> Smallest block that is approximated by approx_terms coefficients.
     !!
@@ -158,7 +179,8 @@ contains
       &                blocksize        = blocksize,           &
       &                approx_terms     = approx_terms,        &
       &                striplen         = maxstriplen,         &
-      &                subblockingWidth = subblockingWidth     )
+      &                subblockingWidth = subblockingWidth,    &
+      &                bu               = bu%legToCheb_bu      )
 
     ! Init the fast Chebyshev to Legendre transformation.
     call ply_fpt_init( n                = maxPolyDegree+1,     &
@@ -167,7 +189,8 @@ contains
       &                blocksize        = blocksize,           &
       &                approx_terms     = approx_terms,        &
       &                striplen         = maxstriplen,         &
-      &                subblockingWidth = subblockingWidth     )
+      &                subblockingWidth = subblockingWidth,    &
+      &                bu               = bu%chebToLeg_bu      )
 
     ! Create the buffers for the intermediate arrays
     n = fpt%legToChebParams%n
@@ -215,10 +238,11 @@ contains
   ! ************************************************************************ !
   !> Subroutine to transform Legendre expansion to point values
   !! at Chebyshev nodes.
-  subroutine ply_legToPnt( fpt, legCoeffs, pntVal, nIndeps )
+  subroutine ply_legToPnt( fpt, legCoeffs, pntVal, nIndeps, bu )
     ! -------------------------------------------------------------------- !
     real(kind=rk), intent(inout) :: legCoeffs(:)
     type(ply_legFpt_type), intent(inout) :: fpt
+     type(ply_legFpt_bu_type), intent(inout) :: bu
     real(kind=rk), intent(inout) :: pntVal(:)
     integer, intent(in) :: nIndeps
     ! -------------------------------------------------------------------- !
@@ -227,7 +251,7 @@ contains
     integer :: n
     ! -------------------------------------------------------------------- !
 
-    !$OMP PARALLEL DEFAULT(SHARED), PRIVATE(n, iDof, cheb)
+    !$OMP PARALLEL DEFAULT(SHARED), PRIVATE(n, iDof, cheb, bu)
     n = fpt%legToChebParams%n
 
     if (.not. fpt%use_lobatto_points) then
@@ -236,7 +260,8 @@ contains
       do iDof = 1, nIndeps*n, n
         call ply_fpt_single( alph   = legCoeffs(iDof:iDof+n-1), &
           &                  gam    = cheb,                     &
-          &                  params = fpt%legToChebParams       )
+          &                  params = fpt%legToChebParams,      &
+          &                  bu     = bu%legToCheb_bu           )
 
         ! Normalize the coefficients of the Chebyshev polynomials due
         ! to the unnormalized version of DCT in the FFTW.
@@ -255,7 +280,8 @@ contains
       do iDof = 1, nIndeps*n, n
         call ply_fpt_single( alph   = legCoeffs(iDof:iDof+n-1), &
           &                  gam    = cheb,                     &
-          &                  params = fpt%legToChebParams       )
+          &                  params = fpt%legToChebParams,      &
+          &                  bu     = bu%legToCheb_bu           )
 
         ! Normalize the coefficients of the Chebyshev polynomials due
         ! to the unnormalized version of DCT in the FFTW.
@@ -277,9 +303,10 @@ contains
   ! ************************************************************************ !
   !> Subroutine to transform Legendre expansion to point values
   !! at Chebyshev nodes.
-  subroutine ply_pntToLeg( fpt, pntVal, legCoeffs, nIndeps )
+  subroutine ply_pntToLeg( fpt, pntVal, legCoeffs, nIndeps, bu )
     ! -------------------------------------------------------------------- !
     type(ply_legFpt_type), intent(inout) :: fpt
+     type(ply_legFpt_bu_type), intent(inout) :: bu
     real(kind=rk), intent(inout) :: pntVal(:)
     real(kind=rk), intent(inout) :: legCoeffs(:)
     integer, intent(in) :: nIndeps
@@ -290,7 +317,7 @@ contains
     integer :: n
     ! -------------------------------------------------------------------- !
 
-    !$OMP PARALLEL DEFAULT(SHARED), PRIVATE(n, iDof, cheb, normFactor)
+    !$OMP PARALLEL DEFAULT(SHARED), PRIVATE(n, iDof, cheb, normFactor, bu)
     n = fpt%legToChebParams%n
 
     if (.not. fpt%use_lobatto_Points) then
@@ -309,7 +336,8 @@ contains
 
         call ply_fpt_single( gam    = legCoeffs(iDof:iDof+n-1), &
           &                  alph   = cheb,                     &
-          &                  params = fpt%ChebToLegParams       )
+          &                  params = fpt%ChebToLegParams,      &
+          &                  bu     = bu%chebToLeg_bu           )
       end do
       !$OMP END DO
 
@@ -329,7 +357,8 @@ contains
 
         call ply_fpt_single( gam    = legCoeffs(iDof:iDof+n-1), &
           &                  alph   = cheb,                     &
-          &                  params = fpt%ChebToLegParams       )
+          &                  params = fpt%ChebToLegParams,      &
+          &                  bu     = bu%chebToLeg_bu           )
       end do
       !$OMP END DO
 

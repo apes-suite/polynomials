@@ -17,6 +17,7 @@ module ply_poly_project_module
     &                                    ply_prj_init_type
 
   use ply_LegFpt_module,           only: ply_legFpt_type, &
+    &                                    ply_legFpt_bu_type, &
     &                                    ply_init_legFpt, &
     &                                    ply_legToPnt,    &
     &                                    ply_PntToLeg,    &
@@ -58,6 +59,7 @@ module ply_poly_project_module
     !! of nonlinear equations. It is used if fpt is choses as projection
     !! method in the lua file
     type(ply_legFpt_type)  :: fpt
+    type(ply_legFpt_bu_type) :: bu
     !> The Legendre Polynomial type for the Fast Orthogonal Function
     !! Transform via fxtpack. It is used if 'fxt' is chosen as projection
     !! method in the lua file
@@ -195,6 +197,7 @@ contains
     !------------------------------------------------------------------------!
 
     left%fpt = right%fpt
+    left%bu = right%bu
     left%l2p = right%l2p
     left%fxt = right%fxt
     left%nodes = right%nodes
@@ -376,7 +379,8 @@ contains
         & blocksize        = proj_init%header%fpt_header%blocksize,       &
         & approx_terms     = proj_init%header%fpt_header%approx_terms,    &
         & striplen         = proj_init%header%fpt_header%striplen,        &
-        & subblockingWidth = proj_init%header%fpt_header%subblockingWidth )
+        & subblockingWidth = proj_init%header%fpt_header%subblockingWidth,&
+        & bu               = me%body_1d%bu                                )
       !> Initialization/Create  of the volume quadrature  nodes and the
       !! quadrature points on the face
       call init_cheb_nodes_1d(                                          &
@@ -394,7 +398,8 @@ contains
           & blocksize        = proj_init%header%fpt_header%blocksize,       &
           & approx_terms     = proj_init%header%fpt_header%approx_terms,    &
           & striplen         = proj_init%header%fpt_header%striplen,        &
-          & subblockingWidth = proj_init%header%fpt_header%subblockingWidth )
+          & subblockingWidth = proj_init%header%fpt_header%subblockingWidth,&
+          & bu               = me%body_2d%bu                                )
         call init_cheb_nodes_2d(                                          &
           & me                = proj_init%header%fpt_header%nodes_header, &
           & nodes             = me%body_2d%nodes,                         &
@@ -411,7 +416,8 @@ contains
           & blocksize        = proj_init%header%fpt_header%blocksize,       &
           & approx_terms     = proj_init%header%fpt_header%approx_terms,    &
           & striplen         = proj_init%header%fpt_header%striplen,        &
-          & subblockingWidth = proj_init%header%fpt_header%subblockingWidth )
+          & subblockingWidth = proj_init%header%fpt_header%subblockingWidth,&
+          & bu               = me%body_3d%bu                                )
         call init_cheb_nodes(                                             &
           & me                = proj_init%header%fpt_header%nodes_header, &
           & nodes             = me%body_3d%nodes,                         &
@@ -500,8 +506,6 @@ contains
     !--------------------------------------------------------------------------!
     integer :: iVar
     !--------------------------------------------------------------------------!
-    !$OMP PARALLEL DEFAULT(SHARED), PRIVATE(iVar)
-
 
     select case(trim(me%kind))
     case ('l2p')
@@ -511,29 +515,26 @@ contains
       ! additional summation
       select case(dim)
       case (1)
-        !$OMP DO
         do iVar = 1, nVars
           call ply_l2p_trafo_1D( trafo = me%body_1D%l2p%leg2node, &
             &                    projected = nodal_data(:,iVar),  &
             &                    original  = modal_data(:,iVar)   )
         end do
-        !$OMP END DO
+
       case (2)
-        !$OMP DO
         do iVar = 1, nVars
           call ply_l2p_trafo_2D( trafo = me%body_2D%l2p%leg2node, &
             &                    projected = nodal_data(:,iVar),  &
             &                    original  = modal_data(:,iVar)   )
         end do
-        !$OMP END DO
+
       case (3)
-        !$OMP DO
         do iVar = 1, nVars
           call ply_l2p_trafo_3D( trafo = me%body_3D%l2p%leg2node, &
             &                    projected = nodal_data(:,iVar),  &
             &                    original  = modal_data(:,iVar)   )
         end do
-        !$OMP END DO
+
       end select
 
     case ('fpt')
@@ -543,56 +544,50 @@ contains
         call ply_LegToPnt_3D( fpt       = me%body_3d%fpt, &
           &                   pntVal    = nodal_data,     &
           &                   legCoeffs = modal_data,     &
-          &                   nVars     = nVars           )
+          &                   nVars     = nVars,          &
+          &                   bu        = me%body_3d%bu   )
       case (2)
         call ply_LegToPnt_2D( fpt       = me%body_2d%fpt, &
           &                   pntVal    = nodal_data,     &
           &                   legCoeffs = modal_data,     &
-          &                   nVars     = nVars           )
+          &                   nVars     = nVars,          &
+          &                   bu        = me%body_2d%bu   )
       case (1)
-        !$OMP DO
         do iVar = 1,nVars
           call ply_LegToPnt( fpt       = me%body_1d%fpt,     &
             &                pntVal    = nodal_data(:,iVar), &
             &                legCoeffs = modal_data(:,iVar), &
-            &                nIndeps   = 1                   )
+            &                nIndeps   = 1,                  &
+            &                bu        = me%body_1d%bu       )
         end do
-        !$OMP END DO
       end select
 
     case ('fxt')
       select case (dim)
       case (3)
-        !$OMP DO
         do iVar = 1,nVars
           call ply_fxt_m2n_3D( fxt = me%body_3d%fxt,             &
             &               modal_data = modal_data(:,iVar),     &
             &               nodal_data = nodal_data(:,iVar),     &
             &              oversamp_degree = me%oversamp_degree  )
         end do
-        !$OMP END DO
       case (2)
-        !$OMP DO
         do iVar = 1,nVars
           call ply_fxt_m2n_2D( fxt = me%body_2d%fxt,             &
             &               modal_data = modal_data(:,iVar),     &
             &               nodal_data = nodal_data(:,iVar),     &
             &              oversamp_degree = me%oversamp_degree  )
         end do
-        !$OMP END DO
 
       case (1)
-        !$OMP DO
         do iVar = 1,nVars
           call ply_fxt_m2n_1D( fxt = me%body_1d%fxt,         &
             &               modal_data = modal_data(:,iVar), &
             &               nodal_data = nodal_data(:,iVar)  )
         end do
-        !$OMP END DO
       end select
     end select
 
-    !$OMP END PARALLEL
 
   end subroutine ply_poly_project_m2n_multivar
   !****************************************************************************!
@@ -612,36 +607,28 @@ contains
     !--------------------------------------------------------------------------!
     integer :: iVar
     !--------------------------------------------------------------------------!
-    !$OMP PARALLEL DEFAULT(SHARED), PRIVATE(iVar)
-
 
     select case(trim(me%kind))
     case ('l2p')
       select case (dim)
       case (1)
-        !$OMP DO
         do iVar = 1, nVars
           call ply_l2p_trafo_1D( trafo = me%body_1D%l2p%node2leg, &
             &                    projected = modal_data(:,iVar),  &
             &                    original  = nodal_data(:,iVar)   )
         end do
-        !$OMP END DO
       case (2)
-        !$OMP DO
         do iVar = 1, nVars
           call ply_l2p_trafo_2D( trafo = me%body_2D%l2p%node2leg, &
             &                    projected = modal_data(:,iVar),  &
             &                    original  = nodal_data(:,iVar)   )
         end do
-        !$OMP END DO
       case (3)
-        !$OMP DO
         do iVar = 1, nVars
           call ply_l2p_trafo_3D( trafo = me%body_3D%l2p%node2leg, &
             &                    projected = modal_data(:,iVar),  &
             &                    original  = nodal_data(:,iVar)   )
         end do
-        !$OMP END DO
       end select
 
      case ('fpt')
@@ -651,27 +638,27 @@ contains
         call ply_pntToLeg_3D( fpt       = me%body_3d%fpt, &
           &                   nVars     = nVars,          &
           &                   pntVal    = nodal_data,     &
-          &                   legCoeffs = modal_data      )
+          &                   legCoeffs = modal_data,     &
+          &                   bu        = me%body_3d%bu   )
       case (2)
         call ply_pntToLeg_2D( fpt       = me%body_2d%fpt, &
           &                   nVars     = nVars,          &
           &                   pntVal    = nodal_data,     &
-          &                   legCoeffs = modal_data      )
+          &                   legCoeffs = modal_data,     &
+          &                   bu        = me%body_2d%bu   )
       case (1)
-        !$OMP DO
         do iVar = 1,nVars
           call ply_pntToLeg( fpt       = me%body_1d%fpt,     &
             &                nIndeps   = 1,                  &
             &                pntVal    = nodal_data(:,iVar), &
-            &                legCoeffs = modal_data(:,iVar)  )
+            &                legCoeffs = modal_data(:,iVar), &
+            &                bu        = me%body_1d%bu       )
         end do
-        !$OMP END DO
       end select
 
     case ('fxt')
       select case (dim)
       case (3)
-        !$OMP DO
         do iVar = 1, nVars
           call ply_fxt_n2m_3D(                                  &
             &         fxt              = me%body_3d%fxt,        &
@@ -679,10 +666,8 @@ contains
             &         modal_data       = modal_data(:,iVar),    &
             &         oversamp_degree  = me%oversamp_degree     )
         end do
-        !$OMP END DO
 
       case (2)
-        !$OMP DO
         do iVar = 1, nVars
           call ply_fxt_n2m_2D(                                  &
             &         fxt              = me%body_2d%fxt,        &
@@ -690,24 +675,20 @@ contains
             &         modal_data       = modal_data(:,iVar),    &
             &         oversamp_degree  = me%oversamp_degree     )
         end do
-        !$OMP END DO
 
       case (1)
-        !$OMP DO
         do iVar = 1, nVars
           call ply_fxt_n2m_1D(                               &
             &         fxt              = me%body_1d%fxt,     &
             &         nodal_data       = nodal_data(:,iVar), &
             &         modal_data       = modal_data(:,iVar)  )
         end do
-        !$OMP END DO
       end select
 
     case default
        write(logUnit(1),*) 'ERROR in projection nodal to modal'
     end select
 
-    !$OMP END PARALLEL
 
   end subroutine ply_poly_project_n2m_multivar
   !***************************************************************************!

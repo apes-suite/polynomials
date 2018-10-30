@@ -123,14 +123,12 @@ contains
 
       ispace_oq: if (inspace == Q_Space) then
 
-        !$OMP DO
         ! Both, output and input are Q Polynomials
         do out_Y=0,minord-1
           out_off = out_Y*(outdegree+1)
           in_off = out_Y*(indegree+1)
           outdat(out_off+1:out_off+minord) = indat(in_off+1:in_off+minord)
         end do
-        !$OMP END DO
 
       else ispace_oq
 

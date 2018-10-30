@@ -7,7 +7,7 @@ program ply_ifpt_test
   use tem_general_module,       only: tem_general_type, tem_start
   use ply_legFpt_module,        only: ply_init_legFpt, &
     &                                 ply_legFpt_type, &
-    &                                 ply_pntToLeg
+    &                                 ply_pntToLeg, ply_legFpt_bu_type
   use ply_modg_basis_module,    only: legendre_1D
 
   implicit none
@@ -31,7 +31,7 @@ program ply_ifpt_test
 
   if(res.lt.1e-08) then
     write(logUnit(1),*) 'PASSED'
-  end if 
+  end if
   call fin_env()
 
 contains
@@ -45,23 +45,24 @@ contains
     real(kind=rk), allocatable :: chebPnt(:)
     real(kind=rk), allocatable :: legValChebPnt(:,:)
     type(ply_legFpt_type) :: fpt
-  
+    type(ply_legFpt_bu_type) :: bu
+
     ! Define the maximal polynomial degree we want to calculate the
     ! bases exchange for.
     maxPolyDegree =  2**power-1  ! maxPolyDegree+1 has to be a power of 2
     write(logUnit(10),*) '------- Number of Legendre coefficients: ', maxPolyDegree+1
-  
+
     ! Create the Legendre expansion coefficients
-    allocate(legCoeffs(1:maxPolyDegree+1)) 
+    allocate(legCoeffs(1:maxPolyDegree+1))
     legCoeffs(:) = 1.0_rk
-  
+
     ! Create the Chebyshev nodes on the interval [-1,+1]
     allocate(chebPnt(maxPolyDegree+1))
     do iPoint = 1, maxPolyDegree+1
       chebPnt(iPoint) = (-1.0_rk) * cos(PI/(maxPolyDegree+1)*((iPoint-1.0_rk)+1.0_rk/2.0_rk))
       !write(*,*) 'Cehbyshev point', iPoint, ' is at: ', chebPnt(iPoint)
     end do
-  
+
     ! define the point values (Chebyshev nodes)
     allocate( legValChebPnt(maxPolyDegree+1,maxPolyDegree+1) )
     legValChebPnt(:,:) = legendre_1D(chebPnt, maxPolyDegree)
@@ -72,21 +73,23 @@ contains
       pntVal(:) = pntVal(:) + legValChebPnt(iPoly,:) * legCoeffs(iPoly)
     end do
     write(logUnit(10),*) 'Finished'
-  
-    ! Init the FPT 
+
+    ! Init the FPT
     call ply_init_legFpt( maxPolyDegree = maxPolyDegree, &
       &                   nIndeps       = 1,             &
-      &                   fpt           = fpt            )
-  
+      &                   fpt           = fpt,           &
+      &                   bu            = bu             )
+
     ! now transform to the Legendre coefficients
-    allocate(legVal(1:maxPolyDegree+1)) 
+    allocate(legVal(1:maxPolyDegree+1))
     write(logUnit(10),*) 'Calculating inverse FPT ...'
-    call ply_pntToLeg( fpt = fpt, pntVal = pntVal, legCoeffs = legVal, nIndeps=1 ) 
+    call ply_pntToLeg( fpt = fpt, pntVal = pntVal, legCoeffs = legVal, &
+        &              nIndeps=1, bu = bu )
     write(logUnit(10),*) 'Finished'
-  
+
     !!do iPoly = 1, maxPolyDegree+1
     !!  write(*,*) 'Poly degree: ', iPoly, &
-    !!           & ' iFPT: ', legVal(iPoly), & 
+    !!           & ' iFPT: ', legVal(iPoly), &
     !!           & ' Ref.: ', legCoeffs(iPoly), &
     !!           & ' error: ', legVal(iPoly)-legCoeffs(iPoly)
     !!end do

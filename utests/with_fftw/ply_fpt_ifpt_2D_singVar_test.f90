@@ -4,7 +4,8 @@ program ply_fpt_ifpt_2D_singVar_test
   use env_module,               only: rk, fin_env
   use tem_logging_module,       only: logUnit
   use tem_general_module,       only: tem_general_type, tem_start
-  use ply_legFpt_module,        only: ply_legFpt_type, ply_init_legFPT
+  use ply_legFpt_module,        only: ply_legFpt_type, ply_init_legFPT, &
+  &                                   ply_legFpt_bu_type
   use ply_legFpt_2D_module,     only: ply_legToPnt_2D, ply_pntToLeg_2D
 
   implicit none
@@ -28,7 +29,7 @@ program ply_fpt_ifpt_2D_singVar_test
 
   if(res.lt.1e-08) then
     write(logUnit(1),*) 'PASSED'
-  end if 
+  end if
 
   call fin_env()
 
@@ -41,7 +42,8 @@ contains
     real(kind=rk), allocatable :: legCoeffs(:), legCoeffsIn(:)
     real(kind=rk), allocatable :: pntVal(:), legVal(:)
     type(ply_legFpt_type) :: fpt
-  
+    type(ply_legFpt_bu_type) :: bu
+
     ! Define the maximal polynomial degree we want to calculate the
     ! bases exchange for.
     maxPolyDegree =  2**power-1  ! maxPolyDegree+1 has to be a power of 2
@@ -49,30 +51,31 @@ contains
       & ' Number of Legendre coefficients (per dim): ', maxPolyDegree+1
     write(logUnit(10),*) '------------------------------------' // &
       & ' Number of Legendre coefficients (total): ',(maxPolyDegree+1)**2
-  
+
     ! Create the Legendre expansion coefficients
-    allocate(legCoeffs((maxPolyDegree+1)**2)) 
-    allocate(legCoeffsIn((maxPolyDegree+1)**2)) 
+    allocate(legCoeffs((maxPolyDegree+1)**2))
+    allocate(legCoeffsIn((maxPolyDegree+1)**2))
     legCoeffs(:) = real(1,rk)
-  
-    ! Init the FPT 
+
+    ! Init the FPT
     call ply_init_legFpt( maxPolyDegree = maxPolyDegree,  &
       &                   fpt           = fpt,            &
-      &                   nIndeps       = maxPolyDegree+1 )
-  
+      &                   nIndeps       = maxPolyDegree+1,&
+      &                   bu            = bu              )
+
     ! now transform to the Chebyshev nodes
-    allocate(pntVal( (maxPolyDegree+1)**2)) 
+    allocate(pntVal( (maxPolyDegree+1)**2))
     legCoeffsIn = legCoeffs ! Duplicate input vector to make sure that it is not modified in the trafo
     write(logUnit(10),*) 'Calculating FPT ...'
-    call ply_legToPnt_2D( fpt = fpt, legCoeffs = legCoeffsIn, pntVal = pntVal ) 
+    call ply_legToPnt_2D( fpt = fpt, legCoeffs = legCoeffsIn, pntVal = pntVal, bu = bu )
     write(logUnit(10),*) 'Finished'
 
     ! now transform back to Legendre coefficients
-    allocate(legVal( (maxPolyDegree+1)**2 )) 
+    allocate(legVal( (maxPolyDegree+1)**2 ))
     write(logUnit(10),*) 'Calculating inverse FPT ...'
-    call ply_pntToLeg_2D( fpt = fpt, pntVal = pntVal, legCoeffs = legVal )
+    call ply_pntToLeg_2D( fpt = fpt, pntVal = pntVal, legCoeffs = legVal, bu = bu )
     write(logUnit(10),*) 'Finished'
-  
+
     !!do iDof = 1, (maxPolyDegree+1)**2
     !!  write(*,*) 'Leg coeff ', iDof, ' has error: ', legVal(iDof) - legCoeffs(iDof)
     !!end do
@@ -83,7 +86,7 @@ contains
              & ' has largest error of: ' ,maxval(abs(legVal(:) - legCoeffs(:)))
     maxErr = maxloc(abs(legVal(:) - legCoeffs(:)), 1)
     write(logUnit(10),*) 'Ref. sol ', legCoeffs(maxErr), ' alg delivers: ', legVal(maxErr)
-   
+
     res = maxval(abs(legVal(:) - legCoeffs(:)))
 
   end subroutine

@@ -5,7 +5,8 @@ program ply_fpt_3D_performance_test
   use env_module,               only: rk, fin_env
   use tem_logging_module,       only: logUnit, tem_logging_init_primary
   use tem_general_module,       only: tem_general_type, tem_start
-  use ply_legFpt_module,        only: ply_legFpt_type, ply_init_legFPT
+  use ply_legFpt_module,        only: ply_legFpt_type, ply_init_legFPT, &
+    &                                 ply_legFpt_bu_type
   use ply_legFpt_3D_module,     only: ply_legToPnt_3D, &
     &                                 ply_pntToLeg_3D
 
@@ -34,7 +35,7 @@ program ply_fpt_3D_performance_test
   write(*,*) 'Maximal deviation:', res
   if (res <  1.e-08) then
     write(logUnit(1),*) 'PASSED'
-  end if 
+  end if
 
   call fin_env()
 
@@ -47,6 +48,7 @@ contains
     real(kind=rk), allocatable :: legCoeffs(:,:), legCoeffsIn(:,:)
     real(kind=rk), allocatable :: pntVal(:,:), legVal(:,:)
     type(ply_legFpt_type) :: fpt
+    type(ply_legFpt_bu_type) :: bu
     real(kind=rk) :: starttime, stoptime
 
     ! Define the maximal polynomial degree we want to calculate the
@@ -57,40 +59,43 @@ contains
       & ' Number of Legendre coefficients (per dim): ', maxPolyDegree+1
     write(logUnit(10),*) '------------------------------------' // &
       & ' Number of Legendre coefficients (total): ',(maxPolyDegree+1)**3
-  
+
     ! Create the Legendre expansion coefficients
-    allocate(legCoeffs((maxPolyDegree+1)**3,nVars)) 
-    allocate(legCoeffsIn((maxPolyDegree+1)**3,nVars)) 
+    allocate(legCoeffs((maxPolyDegree+1)**3,nVars))
+    allocate(legCoeffsIn((maxPolyDegree+1)**3,nVars))
     do iVar = 1, nVars
       legCoeffs(:,iVar) = real(iVar, rk)
     end do
-  
-    ! Init the FPT 
+
+    ! Init the FPT
     call ply_init_legFpt( maxPolyDegree = maxPolyDegree,        &
       &                   nIndeps       = (maxpolydegree+1)**2, &
-      &                   fpt           = fpt                   )
-  
+      &                   fpt           = fpt,                  &
+      &                   bu            = bu                    )
+
     ! now transform to the Chebyshev nodes
-    allocate(pntVal( (maxPolyDegree+1)**3, nVars )) 
+    allocate(pntVal( (maxPolyDegree+1)**3, nVars ))
     legCoeffsIn = legCoeffs
     starttime = MPI_Wtime()
     call ply_legToPnt_3D( fpt       = fpt,         &
       &                   legCoeffs = legCoeffsIn, &
       &                   pntVal    = pntVal,      &
-      &                   nVars     = nVars        ) 
+      &                   nVars     = nVars,       &
+      &                   bu        = bu           )
     stoptime = MPI_Wtime()
     write(*,*) 'Time for degree ', maxpolydegree, ' trafo:   ', stoptime - starttime
 
     ! now transform back to Legendre coefficients
-    allocate(legVal( (maxPolyDegree+1)**3,nVars )) 
+    allocate(legVal( (maxPolyDegree+1)**3,nVars ))
     starttime = MPI_Wtime()
     call ply_pntToLeg_3D( fpt       = fpt,    &
       &                   pntVal    = pntVal, &
       &                   legCoeffs = legVal, &
-      &                   nVars     = nVars   )
+      &                   nVars     = nVars,  &
+      &                   bu        = bu      )
     stoptime = MPI_Wtime()
     write(*,*) 'Time for degree ', maxpolydegree, ' inverse: ', stoptime - starttime
-  
+
     res = maxval(abs(legVal(:,:) - legCoeffs(:,:)))
 
   end subroutine ply_check_legToPnt_3D

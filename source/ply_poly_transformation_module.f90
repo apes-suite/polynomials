@@ -101,13 +101,11 @@ contains
     integer :: nVars, nDofs, nComponents, nChildDofs
     integer :: iVar
     ! -------------------------------------------------------------------- !
-    !$OMP PARALLEL DEFAULT(SHARED), PRIVATE(iVar, nComponents, nDofs, workData, nChildDofs)
 
     nVars = size(varDofs)
     allocate(newVarDofs(nVars))
     allocate(newMeshData(nVars))
 
-    !$OMP DO
     varLoop: do iVar = 1, nVars
       nComponents = varComps(iVar)
       nDofs = vardofs(iVar)
@@ -147,9 +145,6 @@ contains
       deallocate(workData)
 
     end do varLoop
-    !$OMP END DO
-
-    !$OMP END PARALLEL
 
 
   end subroutine ply_Poly_Transformation
@@ -199,8 +194,6 @@ contains
     real(kind=rk), allocatable :: transform_matrix(:,:)
     real(kind=rk), allocatable :: childData(:)
     ! -------------------------------------------------------------------- !
-    !$OMP PARALLEL DEFAULT(SHARED), PRIVATE(iParentElem, iChild, iElem)
-
 
     nChilds = 2**nDims
 
@@ -227,7 +220,6 @@ contains
 
     if (subsamp%sampling_lvl > 1) then
 
-      !$OMP DO
       elementLoop: do iParentElem=1,nParentElems
         ! Check if the parent cell was already refined...
         if (refine_tree(iParentElem)) then
@@ -314,9 +306,7 @@ contains
           deallocate(childData)
         end if
       end do elementLoop
-      !$OMP END DO
     else
-      !$OMP DO
       elemLoop: do iElem=1,nElems
         if (new_refine_tree(iElem)) then
           ! Create lower and upper indices for all data of iElem in meshData.
@@ -367,12 +357,10 @@ contains
           deallocate(childData)
         end if
       end do elemLoop
-      !$OMP END DO
     end if
 
     deallocate(transform_matrix)
 
-    !$OMP END PARALLEL
 
   end subroutine ply_subsampleData
   ! ************************************************************************ !
@@ -763,8 +751,6 @@ contains
     integer :: m, orig
     real(kind=rk) :: shifting, scaling
     ! -------------------------------------------------------------------- !
-    !$OMP PARALLEL DEFAULT(SHARED), PRIVATE(orig, m)
-
 
     ! transformation matrix looks like this:
     ! [1.0  --  --     shift=0.5   ]
@@ -787,7 +773,6 @@ contains
       v(2,2) = scaling
 
       if (max_modes > 2) then
-        !$OMP DO
         do orig = 3,max_modes
           v(1,orig) = ply_beta(orig-1) * v(1,orig-2)                    &
             &       + ply_alpha(orig-1) * shifting * v(1,orig-1)        &
@@ -805,14 +790,12 @@ contains
             end if
           end do
         end do
-        !$OMP END DO
       end if
 
       ! Due to the symmetry of the problem (the left subinterval has just
       ! the shifting with a changed sign), we can fill the other half of
       ! the matrix by copying the already computed values accordingly with
       ! a change in sign, as needed (alternatingly).
-      !$OMP DO
       do m = 1 , max_modes
         do orig = 1, m-1
           if (mod((m+orig),2) /= 0) then
@@ -822,10 +805,8 @@ contains
           end if
         end do
       end do
-      !$OMP END DO
     end if
 
-    !$OMP END PARALLEL
 
   end subroutine ply_transform_matrix
   ! ************************************************************************ !

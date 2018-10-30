@@ -8,6 +8,7 @@ module ply_legFpt_3D_module
   use env_module,         only: rk
   use ply_legFpt_module,  only: ply_legFpt_type, &
     &                           ply_legToPnt, &
+    &                           ply_legFpt_bu_type, &
     &                           ply_PntToLeg
 
   implicit none
@@ -31,10 +32,11 @@ contains
 
 
   ! ************************************************************************ !
-  subroutine ply_legToPnt_3D_singvar( fpt, legCoeffs, pntVal )
+  subroutine ply_legToPnt_3D_singvar( fpt, legCoeffs, pntVal, bu )
    ! --------------------------------------------------------------------- !
    !> The FPT parameters.
    type(ply_legFpt_type), intent(inout) :: fpt
+   type(ply_legFpt_bu_type), intent(inout) :: bu
    !> The Legendre coefficients to convert to point values (Chebyshev nodes).
    !! \attention Although this array serves as input only, it is modified
    !! inside of this routine by the underlying FPT algorithm. So, when
@@ -115,7 +117,8 @@ contains
      call ply_legToPnt( fpt       = fpt,     &
        &                nIndeps   = nIndeps, &
        &                legCoeffs = alph,    &
-       &                pntVal    = gam      )
+       &                pntVal    = gam,     &
+       &                bu        = bu       )
 
      pntVal((iStrip-1)*n+1 : (iStrip+nIndeps-1)*n) = gam(1:nIndeps*n)
 
@@ -134,7 +137,8 @@ contains
      call ply_legToPnt( fpt       = fpt,     &
        &                nIndeps   = nIndeps, &
        &                legCoeffs = alph,    &
-       &                pntVal    = gam      )
+       &                pntVal    = gam,     &
+       &                bu        = bu       )
 
      legCoeffs((iStrip-1)*n+1 : (iStrip+nIndeps-1)*n) = gam(1:nIndeps*n)
 
@@ -152,7 +156,8 @@ contains
      call ply_legToPnt( fpt       = fpt,     &
        &                nIndeps   = nIndeps, &
        &                legCoeffs = alph,    &
-       &                pntVal    = gam      )
+       &                pntVal    = gam,     &
+       &                bu        = bu       )
 
      pntVal((iStrip-1)*n+1 : (iStrip+nIndeps-1)*n) = gam(1:nIndeps*n)
 
@@ -167,7 +172,7 @@ contains
   !> Subroutine to transform Legendre expansion to point values
   !! at Chebyshev nodes.
   !!VK: no multivar fashion of this routine is used anymore
-  subroutine ply_legToPnt_3D_multVar( fpt, legCoeffs, pntVal, nVars )
+  subroutine ply_legToPnt_3D_multVar( fpt, legCoeffs, pntVal, nVars, bu )
    ! --------------------------------------------------------------------- !
    !> The Legendre coefficients to convert to point values (Chebyshev nodes).
    !! \attention Although this array serves as input only, it is modified
@@ -176,6 +181,7 @@ contains
    !! be modified.
    real(kind=rk), intent(inout) :: legCoeffs(:,:)
    type(ply_legFpt_type), intent(inout) :: fpt
+   type(ply_legFpt_bu_type), intent(inout) :: bu
    real(kind=rk), intent(inout) :: pntVal(:,:)
    integer, intent(in) :: nVars
    ! --------------------------------------------------------------------- !
@@ -183,7 +189,7 @@ contains
    ! --------------------------------------------------------------------- !
 
    do iVar = 1, nVars
-    call ply_legToPnt_3D( fpt, legCoeffs(:,iVar), pntVal(:,iVar) )
+    call ply_legToPnt_3D( fpt, legCoeffs(:,iVar), pntVal(:,iVar), bu )
    end do
 
   end subroutine ply_legToPnt_3D_multVar
@@ -193,9 +199,10 @@ contains
   ! ************************************************************************ !
   !> Subroutine to transform Legendre expansion to point values
   !! at Chebyshev nodes.
-  subroutine ply_pntToLeg_3D_multVar( fpt, pntVal, legCoeffs, nVars )
+  subroutine ply_pntToLeg_3D_multVar( fpt, pntVal, legCoeffs, nVars, bu )
    ! --------------------------------------------------------------------- !
    type(ply_legFpt_type), intent(inout) :: fpt
+   type(ply_legFpt_bu_type), intent(inout) :: bu
    !> The point values to transform to 3D modal Legendre expansion.
    !! \attention Although this array serves as input only, it is modified
    !! inside of this routine by the underlying DCT algorithm. So, when
@@ -209,7 +216,7 @@ contains
    ! --------------------------------------------------------------------- !
 
    do iVar = 1, nVars
-     call ply_pntToLeg_3D( fpt, pntVal(:,iVar), legCoeffs(:,iVar) )
+     call ply_pntToLeg_3D( fpt, pntVal(:,iVar), legCoeffs(:,iVar), bu )
    end do
 
   end subroutine ply_pntToLeg_3D_multVar
@@ -219,9 +226,10 @@ contains
   ! ************************************************************************ !
   !> Subroutine to transform Legendre expansion to point values
   !! at Chebyshev nodes.
-  subroutine ply_pntToLeg_3D_singVar( fpt, pntVal, legCoeffs )
+  subroutine ply_pntToLeg_3D_singVar( fpt, pntVal, legCoeffs, bu )
    ! --------------------------------------------------------------------- !
     type(ply_legFpt_type), intent(inout) :: fpt
+    type(ply_legFpt_bu_type), intent(inout) :: bu
     !> The point values to transform to 3D modal Legendre expansion.
     !! \attention Although this array serves as input only, it is modified
     !! inside of this routine by the underlying DCT algorithm. So, when
@@ -268,7 +276,8 @@ contains
       call ply_pntToLeg( fpt       = fpt,     &
         &                nIndeps   = nIndeps, &
         &                legCoeffs = gam,     &
-        &                pntVal    = alph     )
+        &                pntVal    = alph,    &
+        &                bu        = bu       )
 
       legCoeffs((iStrip-1)*n+1 : (iStrip+nIndeps-1)*n)  = gam(1:nIndeps*n)
 
@@ -290,7 +299,8 @@ contains
       call ply_pntToLeg( fpt       = fpt,     &
         &                nIndeps   = nIndeps, &
         &                legCoeffs = gam,     &
-        &                pntVal    = alph     )
+        &                pntVal    = alph,    &
+        &                bu        = bu       )
 
         ! todo: fft on temp
         ! temp -> pntVal (stride-1 writing)
@@ -310,7 +320,8 @@ contains
       call ply_pntToLeg( fpt       = fpt,     &
         &                nIndeps   = nIndeps, &
         &                legCoeffs = gam,     &
-        &                pntVal    = alph     )
+        &                pntVal    = alph,    &
+        &                bu        = bu       )
 
       ! todo: fft on temp
       ! temp -> pntVal (stride-1 writing)

@@ -6,7 +6,7 @@ program ply_fpt_test
   use tem_logging_module,       only: logUnit
   use ply_legFpt_module,        only: ply_init_legFpt, &
     &                                 ply_legFpt_type, &
-    &                                 ply_legToPnt
+    &                                 ply_legToPnt, ply_legFpt_bu_type
   use ply_modg_basis_module,    only: legendre_1D
   use tem_general_module,       only: tem_general_type, tem_start
 
@@ -58,6 +58,7 @@ contains
     real(kind=rk), allocatable :: chebPnt(:)
     real(kind=rk), allocatable :: legValChebPnt(:,:)
     type(ply_legFpt_type) :: fpt
+    type(ply_legFpt_bu_type) :: bu
 
     ! Define the maximal polynomial degree we want to calculate the
     ! bases exchange for.
@@ -89,13 +90,14 @@ contains
     call ply_init_legFpt( maxPolyDegree = maxPolyDegree, &
       &                   nIndeps       = 1,             &
       &                   fpt           = fpt,           &
-      &                   blocksize     = blocksize      )
+      &                   blocksize     = blocksize,     &
+      &                   bu            = bu             )
 
     ! now transform to the Chebyshev nodes
     allocate(pntVal(1:maxPolyDegree+1))
     write(logUnit(10),*) 'Calculating FPT ...'
     call ply_legToPnt( fpt = fpt, legCoeffs = legCoeffs, &
-      &                pntVal = pntVal, nIndeps = 1      )
+      &                pntVal = pntVal, nIndeps = 1, bu = bu  )
     write(logUnit(10),*) 'Finished'
 
     !!do iPoint = 1, maxPolyDegree+1

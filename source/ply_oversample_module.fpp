@@ -155,7 +155,9 @@ contains
     nScalars = size(modalCoeffs,2)
     maxorders = 3*(poly_proj%min_degree + 1)-2
 
+    !$OMP WORKSHARE
     modalCoeffs = 0.0_rk
+    !$OMP END WORKSHARE
 
     if (poly_proj%basisType == Q_Space) then
       posQ: if (present(ensure_positivity)) then
@@ -163,6 +165,7 @@ contains
         varQ: do iVar=1,nScalars
           if (ensure_positivity(iVar)) then
             ordersum = 0.0_rk
+            !$OMP SINGLE
             do dof = 1, mpd1_cube
               iDegZ = (dof-1)/mpd1_square + 1
               iDegY = (dof-1-(iDegZ-1)*mpd1_square)/mpd1+1
@@ -178,9 +181,11 @@ contains
                  EXIT
               end if
             end do
+            !$OMP END SINGLE
           end if
         end do varQ
         do iVar=1,nScalars
+          !$OMP DO
           do dof = 1, mpd1_cube
             iDegZ = (dof-1)/mpd1_square + 1
             iDegY = (dof-1-(iDegZ-1)*mpd1_square)/mpd1+1
@@ -193,8 +198,10 @@ contains
               modalCoeffs(dofOverSamp,iVar) = state(dof,iVar)
             end if
           end do
+          !$OMP END DO
         end do
       else posQ
+        !$OMP DO
         do dof = 1, mpd1_cube
           iDegZ = (dof-1)/mpd1_square + 1
           iDegY = (dof-1-(iDegZ-1)*mpd1_square)/mpd1+1
@@ -206,6 +213,7 @@ contains
             modalCoeffs(dofOverSamp,iVar) = state(dof,iVar)
           end do
         end do
+        !$OMP END DO
       end if posQ
 
     else !P_Space
@@ -218,6 +226,7 @@ contains
             iDegY = 1
             iDegZ = 1
             ordersum = 0.0_rk
+            !$OMP SINGLE
             do idof = 1, poly_proj%body_3d%min_dofs
 ?? copy :: posOfModgCoeffPTens(iDegX, iDegY, iDegZ, dof)
               iOrd = iDegX+iDegY+iDegZ-2
@@ -232,12 +241,14 @@ contains
                  EXIT
               end if
             end do
+            !$OMP END SINGLE
           end if
         end do varP
         do iVar=1,nScalars
           iDegX = 1
           iDegY = 1
           iDegZ = 1
+          !$OMP SINGLE
           do idof = 1, poly_proj%body_3d%min_dofs
             iOrd = iDegX+iDegY+iDegZ-2
             if (iOrd > ord_lim) EXIT
@@ -248,11 +259,13 @@ contains
             modalCoeffs(dofOverSamp,iVar) = state(dof,iVar)
 ?? copy :: nextModgCoeffPTens(iDegX, iDegY, iDegZ)
           end do
+          !$OMP END SINGLE
         end do
       else posP
         iDegX = 1
         iDegY = 1
         iDegZ = 1
+        !$OMP SINGLE
         do idof = 1, poly_proj%body_3d%min_dofs
 ?? copy :: posOfModgCoeffPTens(iDegX, iDegY, iDegZ, dof)
           dofOverSamp = iDegX + ( iDegY-1  &
@@ -261,6 +274,7 @@ contains
           modalCoeffs(dofOverSamp,:) = state(dof,:)
 ?? copy :: nextModgCoeffPTens(iDegX, iDegY, iDegZ)
         end do
+        !$OMP END SINGLE
       end if posP
 
     end if
@@ -302,6 +316,7 @@ contains
     nScalars = size(modalCoeffs,2)
 
     if (poly_proj%basisType == Q_Space) then
+      !$OMP DO
       do iVar=1,nScalars
         do dof = 1, mpd1_cube
           iDegZ = (dof-1)/mpd1_square + 1
@@ -313,12 +328,14 @@ contains
           state(dof,iVar) = modalCoeffs(dofOverSamp,iVar)
         end do
       end do
+      !$OMP END DO
 
     else !P_Space
 
       iDegX = 1
       iDegY = 1
       iDegZ = 1
+      !$OMP SINGLE
       do idof = 1, poly_proj%body_3d%min_dofs
 ?? copy :: posOfModgCoeffPTens(iDegX, iDegY, iDegZ, dof)
         dofOverSamp = iDegX + ( iDegY-1  &
@@ -327,6 +344,7 @@ contains
         state(dof,:) = modalCoeffs(dofOverSamp,:)
 ?? copy :: nextModgCoeffPTens(iDegX, iDegY, iDegZ)
       end do
+      !$OMP END SINGLE
     end if
 
   end subroutine ply_convertFromoversample_3d
@@ -382,7 +400,9 @@ contains
     else
       nPVars = size(state,2)
     end if
+    !$OMP WORKSHARE
     maxorders = 2*(poly_proj%min_degree + 1)-1
+    !$OMP END WORKSHARE
 
     ! Information for the oversampling loop
     oversamp_degree = poly_proj%oversamp_degree
@@ -398,6 +418,7 @@ contains
         varQ: do iVar=1,nPVars
           if (ensure_positivity(iVar)) then
             ordersum = 0.0_rk
+            !$OMP SINGLE
             do dof = 1, mpd1_square
               iDegX = mod(dof-1,mpd1)+1
               iDegY = (dof-1)/mpd1+1
@@ -412,9 +433,11 @@ contains
                  EXIT
               end if
             end do
+            !$OMP END SINGLE
           end if
         end do varQ
         do iVar=1,nPVars
+          !$OMP DO
           do dof = 1, mpd1_square
             iDegX = mod(dof-1,mpd1)+1
             iDegY = (dof-1)/mpd1+1
@@ -424,14 +447,17 @@ contains
               modalCoeffs(dofOverSamp,iVar) = state(dof,iVar)
             end if
           end do
+          !$OMP END DO
         end do
       else posQ
+        !$OMP DO
         do dof = 1, mpd1_square
           iDegX = mod(dof-1,mpd1)+1
           iDegY = (dof-1)/mpd1+1
           dofOverSamp = 1 + (iDegX-1) + (iDegY-1)*(oversamp_degree+1)
           modalCoeffs(dofOverSamp,1:nPVars) = state(dof,1:nPVars)
         end do
+        !$OMP END DO
       end if posQ
 
     else !P_Space
@@ -440,6 +466,7 @@ contains
         ord_lim = maxorders
         varP: do iVar=1,nPVars
           if (ensure_positivity(iVar)) then
+            !$OMP SINGLE
             iDegX = 1
             iDegY = 1
             ordersum = 0.0_rk
@@ -457,9 +484,11 @@ contains
                  EXIT
               end if
             end do
+            !$OMP END SINGLE
           end if
         end do varP
         do iVar=1,nPVars
+          !$OMP SINGLE
           iDegX = 1
           iDegY = 1
           do idof = 1, poly_proj%body_2d%min_dofs
@@ -470,8 +499,10 @@ contains
             modalCoeffs(dofOverSamp,1:nPVars) = state(dof,1:nPVars)
 ?? copy :: nextModgCoeffPTens2D(iDegX, iDegY)
           end do
+          !$OMP END SINGLE
         end do
       else posP
+        !$OMP SINGLE
         iDegX = 1
         iDegY = 1
         do idof = 1, poly_proj%body_2d%min_dofs
@@ -480,6 +511,7 @@ contains
           modalCoeffs(dofOverSamp,1:nPVars) = state(dof,1:nPVars)
 ?? copy :: nextModgCoeffPTens2D(iDegX, iDegY)
         end do
+        !$OMP END SINGLE
       end if posP
 
     end if
@@ -530,15 +562,18 @@ contains
 
     if (poly_proj%basisType == Q_Space) then
 
+      !$OMP DO
       do dof = 1, mpd1_square
         iDegX = mod(dof-1,mpd1)+1
         iDegY = (dof-1)/mpd1+1
         dofOverSamp = 1 + (iDegX-1) + (iDegY-1)*(oversamp_degree+1)
         state(dof,1:nPVars) = modalCoeffs(dofOverSamp,1:nPVars)
       end do
+      !$OMP END DO
 
     else !P_Space
 
+      !$OMP SINGLE
       iDegX = 1
       iDegY = 1
       iDegZ = 0 ! not used in posOfModgCoeffPTens_2D, nextModgCoeffPTens
@@ -548,6 +583,7 @@ contains
         state(dof,1:nPVars) = modalCoeffs(dofOverSamp,1:nPVars)
 ?? copy :: nextModgCoeffPTens2D(iDegX, iDegY)
       end do
+      !$OMP END SINGLE
 
     end if
 
@@ -597,13 +633,16 @@ contains
     nPVars = (poly_proj%maxPolyDegree+1)*nVars
 
     ! Initialize oversampled space correct to 0
+    !$OMP WORKSHARE
     ModalCoeffs(:,:) = 0.0_rk
+    !$OMP END WORKSHARE
 
     if (present(ensure_positivity)) then
       ord_lim = poly_proj%min_degree+1
       do iVar = 1,nVars
         if (ensure_positivity(iVar)) then
           varSum = 0.0_rk
+          !$OMP SINGLE
           do iPoint=2,ord_lim
             varSum = varSum + abs(state(iPoint,iVar))
             if (varSum >= state(1,iVar)) then
@@ -611,19 +650,24 @@ contains
               EXIT
             end if
           end do
+          !$OMP END SINGLE
         end if
       end do
       do iVar=1,nVars
+        !$OMP DO
         do iPoint=1,ord_lim
           ModalCoeffs(iPoint,iVar) = state(iPoint,iVar)
         end do
+        !$OMP END DO
       end do
     else
+      !$OMP DO
       do iVP = 1,nPVars
         iVar = (iVP-1)/(poly_proj%min_degree+1) + 1
         iPoint = iVP - (iVar-1)*(poly_proj%min_degree+1)
         ModalCoeffs(iPoint,iVar) = state(iPoint,iVar)
       end do
+      !$OMP END DO
     end if
 
   end subroutine ply_convert2oversample_1d
@@ -659,11 +703,13 @@ contains
       nPVars = (poly_proj%maxPolyDegree+1)*size(state,2)
     end if
 
+    !$OMP DO
     do iVP = 1,nPVars
       iVar = (iVP-1)/(poly_proj%min_degree+1) + 1
       iPoint = iVP - (iVar-1)*(poly_proj%min_degree+1)
       state(iPoint,iVar) = modalCoeffs(iPoint,iVar)
     end do
+    !$OMP END DO
 
   end subroutine ply_convertFromoversample_1d
   ! ************************************************************************ !

@@ -81,9 +81,15 @@ module ply_polyBaseExc_module
     type(ply_matrixExpCoeffOddEven_type), allocatable :: col(:)
   end type ply_subvector_type
 
-  type ply_trafo_params_type
+  type ply_bu_type
     !> Lagrange polynomials evaluated at the Chebyshev points on [0,+1].
-    type(ply_sub_vec), allocatable :: u(:,:)
+     type(ply_sub_vec), allocatable :: u(:,:)
+
+    !> Conversion data structure used for fpt.
+    type(ply_subvector_type), allocatable :: b(:)
+  end type ply_bu_type
+
+  type ply_trafo_params_type
 
     !> The array to store the diagonals of the matrix in.
     !!
@@ -138,12 +144,11 @@ module ply_polyBaseExc_module
     !> The transformation type
     integer :: trafo
 
-    !> Conversion data structure used for fpt.
-    type(ply_subvector_type), allocatable :: b(:)
   end type ply_trafo_params_type
 
   interface assignment(=)
     module procedure Copy_trafo_params
+    module procedure Copy_bu
   end interface
 
   integer, parameter :: ply_legToCheb_param = 1
@@ -153,7 +158,7 @@ module ply_polyBaseExc_module
   public :: ply_fpt_exec_striped
   public :: ply_fpt_exec
   public :: ply_fpt_single
-  public :: ply_trafo_params_type
+  public :: ply_trafo_params_type, ply_bu_type
   public :: ply_legToCheb_param, ply_chebToLeg_param
   public :: ply_lambda
   public :: assignment(=)
@@ -198,22 +203,38 @@ contains
     left%diag = right%diag
     allocate( left%adapter(right%s, (right%s+mod(right%s,2)/2), right%nBlocks) )
     left%adapter = right%adapter
-    if(allocated(left%u))then
-      deallocate(left%u)
-    end if
-    allocate(left%u(1:right%h,0:right%k-1))
-    left%u = right%u
+!    if(allocated(left%u))then
+!      deallocate(left%u)
+!    end if
+!    allocate(left%u(1:right%h,0:right%k-1))
+!    left%u = right%u
 
   end subroutine Copy_trafo_params
   ! ************************************************************************ !
 
 
   ! ************************************************************************ !
+  subroutine Copy_bu( left, right )
+    ! -------------------------------------------------------------------- !
+    type(ply_bu_type), intent(out) :: left
+    type(ply_bu_type), intent(in)  :: right
+    ! --------------------------------------------------------------------- !
+   if(allocated(left%u))then
+     deallocate(left%u)
+    end if
+    left%u = right%u
+  end subroutine Copy_bu
+  ! ************************************************************************ !
+
+
+
+  ! ************************************************************************ !
   subroutine ply_fpt_init( n, params, trafo, blocksize, approx_terms, &
-    &                      striplen, subblockingWidth                 )
+    &                      striplen, subblockingWidth, bu              )
     ! -------------------------------------------------------------------- !
     integer, intent(in) :: n
     type(ply_trafo_params_type), intent(inout) :: params
+    type(ply_bu_type), intent(inout) :: bu
     integer, intent(in) :: trafo
 
     !> Smallest block that is approximated by approx_terms coefficients.
@@ -571,8 +592,8 @@ contains
 
     end if
 
-    allocate(params%u(0:h,0:k-1))
-    params%u(0:h,0:k-1) = u(0:h,0:k-1)
+    allocate(bu%u(0:h,0:k-1))
+    bu%u(0:h,0:k-1) = u(0:h,0:k-1)
     allocate(params%sub(0:h))
     params%sub(0:h) = sub(0:h)
     params%n = n
@@ -581,12 +602,12 @@ contains
     params%h = h
 
     ! Allocate the coefficients array for conversion
-    allocate(params%b(0:params%h))
+    allocate(bu%b(0:params%h))
     do l=0, h
       nRows = (params%nBlocks - 1) / (2**l) - 1
-      allocate(params%b(l)%col(2:nRows+1))
+      allocate(bu%b(l)%col(2:nRows+1))
       do j=2,nRows+1
-        allocate(params%b(l)%col(j)%coeff(0:k-1,0:1))
+        allocate(bu%b(l)%col(j)%coeff(0:k-1,0:1))
       end do
     end do
 
@@ -912,7 +933,7 @@ contains
   !> Convert strip of coefficients of a modal representation in terms of
   !! Legendre polynomials to modal coefficients in terms of Chebyshev
   !! polynomials.
-  subroutine ply_fpt_exec( alph, gam, params, nIndeps )
+  subroutine ply_fpt_exec( alph, gam, params, nIndeps, bu )
     ! -------------------------------------------------------------------- !
     !> Number of values that can be computed independently.
     integer, intent(in) :: nIndeps
@@ -930,6 +951,7 @@ contains
 
     !> The parameters of the fast polynomial transformation.
     type(ply_trafo_params_type), intent(inout) :: params
+    type(ply_bu_type), intent(inout) :: bu
     ! -------------------------------------------------------------------- !
     integer :: j, r, i, l, k, h, n, s, m
     integer :: iFun, indep
@@ -965,13 +987,13 @@ contains
         row_rem = mod(n-remainder, rowsize) + remainder + iFun
         blockColLoop: do j = 2, nRows+1, 1+mod(nRows,2)
           do r = 0, k-1
-            params%b(l)%col(j)%coeff(r,0) = 0.0_rk
-            params%b(l)%col(j)%coeff(r,1) = 0.0_rk
+            bu%b(l)%col(j)%coeff(r,0) = 0.0_rk
+            bu%b(l)%col(j)%coeff(r,1) = 0.0_rk
             do m = 0, rowsize-1
               odd = mod(row_rem + m + (j-1)*rowsize,2)
-              params%b(l)%col(j)%coeff(r,odd) &
-                &  = params%b(l)%col(j)%coeff(r,odd) &
-                &    + params%u(l,r)%dat(m) &
+              bu%b(l)%col(j)%coeff(r,odd) &
+                &  = bu%b(l)%col(j)%coeff(r,odd) &
+                &    + bu%u(l,r)%dat(m) &
                 &      * alph(row_rem + m + (j-1)*rowsize + 1)
             end do
           end do
@@ -988,7 +1010,7 @@ contains
                 gam(iVal) = gam(iVal)      &
                   &       + params%sub(l)%subRow(i)%subCol(j)%rowDat(m)&
                   &               %coeff(r) &
-                  &         * params%b(l)%col(j)%coeff(r,odd)
+                  &         * bu%b(l)%col(j)%coeff(r,odd)
               end do ! r
             end do ! m
           end do ! j
@@ -1048,10 +1070,11 @@ contains
   !> Convert strip of coefficients of a modal representation in terms of
   !! Legendre polynomials to modal coefficients in terms of Chebyshev
   !! polynomials.
-  subroutine ply_fpt_single( alph, gam, params)
+  subroutine ply_fpt_single( alph, gam, params, bu )
     ! -------------------------------------------------------------------- !
     !> The parameters of the fast polynomial transformation.
     type(ply_trafo_params_type), intent(inout) :: params
+    type(ply_bu_type), intent(inout) :: bu
 
     !> Modal coefficients of the Legendre expansion.
     !! Size has to be: params%n
@@ -1093,13 +1116,13 @@ contains
       row_rem = mod(n-remainder, rowsize) + remainder
       blockColLoop: do j = 2, nRows+1, 1+mod(nRows,2)
         do r = 0, k-1
-          params%b(l)%col(j)%coeff(r,0) = 0.0_rk
-          params%b(l)%col(j)%coeff(r,1) = 0.0_rk
+          bu%b(l)%col(j)%coeff(r,0) = 0.0_rk
+          bu%b(l)%col(j)%coeff(r,1) = 0.0_rk
           do m = 0, rowsize-1
             odd = mod(row_rem + m + (j-1)*rowsize,2)
-            params%b(l)%col(j)%coeff(r,odd) &
-              &  = params%b(l)%col(j)%coeff(r,odd) &
-              &    + params%u(l,r)%dat(m) &
+            bu%b(l)%col(j)%coeff(r,odd) &
+              &  = bu%b(l)%col(j)%coeff(r,odd) &
+              &    + bu%u(l,r)%dat(m) &
               &      * alph(row_rem + m + (j-1)*rowsize + 1)
           end do
         end do
@@ -1116,7 +1139,7 @@ contains
               gam(iVal) = gam(iVal)      &
                 &       + params%sub(l)%subRow(i)%subCol(j)%rowDat(m)&
                 &               %coeff(r) &
-                &         * params%b(l)%col(j)%coeff(r,odd)
+                &         * bu%b(l)%col(j)%coeff(r,odd)
             end do ! r
           end do ! m
         end do ! j
@@ -1173,13 +1196,14 @@ contains
   ! ************************************************************************ !
   !> Convert coefficients of a modal representation in terms of Legendre
   !! polynomials to modal coefficients in terms of Chebyshev polynomials.
-  subroutine ply_fpt_exec_striped( nIndeps, alph, gam, params )
+  subroutine ply_fpt_exec_striped( nIndeps, alph, gam, params, bu )
     ! -------------------------------------------------------------------- !
     !> Number of values that can be computed independently.
     integer, intent(in) :: nIndeps
 
     !> The parameters of the fast polynomial transformation.
     type(ply_trafo_params_type), intent(inout) :: params
+    type(ply_bu_type), intent(inout) :: bu
 
     !> Modal coefficients of the Legendre expansion.
     !! Size has to be: (1:params%n*indeps,nVars)
@@ -1236,13 +1260,13 @@ contains
 
           blockColLoop: do j = 2, nRows+1, 1+mod(nRows,2)
             do r = 0, k-1
-              params%b(l)%col(j)%coeff(r,0) = 0.0_rk
-              params%b(l)%col(j)%coeff(r,1) = 0.0_rk
+              bu%b(l)%col(j)%coeff(r,0) = 0.0_rk
+              bu%b(l)%col(j)%coeff(r,1) = 0.0_rk
               do m = 0, rowsize-1
                 odd = mod(row_rem + m + (j-1)*rowsize,2)
-                params%b(l)%col(j)%coeff(r,odd) &
-                  &  = params%b(l)%col(j)%coeff(r,odd) &
-                  &    + params%u(l,r)%dat(m) &
+                bu%b(l)%col(j)%coeff(r,odd) &
+                  &  = bu%b(l)%col(j)%coeff(r,odd) &
+                  &    + bu%u(l,r)%dat(m) &
                   &      * alph(row_rem + m + (j-1)*rowsize + 1)
               end do
             end do
@@ -1259,7 +1283,7 @@ contains
                   gam(iVal) = gam(iVal)      &
                     &       + params%sub(l)%subRow(i)%subCol(j)%rowDat(m)&
                     &               %coeff(r) &
-                    &         * params%b(l)%col(j)%coeff(r,odd)
+                    &         * bu%b(l)%col(j)%coeff(r,odd)
                 end do ! r
               end do ! m
             end do ! j

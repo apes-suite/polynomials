@@ -241,7 +241,7 @@ contains
     ! integer, parameter :: vlen = nIndeps
     ! -------------------------------------------------------------------- !
 
-    !$OMP PARALLEL DEFAULT(SHARED), PRIVATE(iStrip, iRow, iCell, iCol)
+    !$OMP PARALLEL DEFAULT(SHARED), PRIVATE(iStrip, iRow, iCell, iCol, strip_ub, mval)
     if (nDofs > 1) then
 
       !$OMP DO

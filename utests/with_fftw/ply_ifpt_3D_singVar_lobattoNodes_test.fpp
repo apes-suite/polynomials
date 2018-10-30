@@ -6,7 +6,8 @@ program ply_ifpt_3D_singVar_lobattoNodes_test
   use tem_param_module,         only: PI
   use tem_logging_module,       only: logUnit
   use tem_aux_module,           only: tem_abort
-  use ply_legFpt_module,        only: ply_legFpt_type, ply_init_legFPT
+  use ply_legFpt_module,        only: ply_legFpt_type, ply_init_legFPT, &
+    &                                 ply_legFpt_bu_type
   use ply_legFpt_3D_module,     only: ply_pntToLeg_3D
   use ply_modg_basis_module,    only: evalLegendreTensPoly
   use ply_dof_module,           only: Q_space
@@ -48,6 +49,7 @@ contains
     real(kind=rk), allocatable :: legValChebPnt(:,:)
     real(kind=rk) :: rfac
     type(ply_legFpt_type) :: fpt
+    type(ply_legFpt_bu_type) :: bu
     integer, allocatable :: rand_seed(:)
     integer :: nSeeds
 
@@ -119,11 +121,13 @@ contains
     call ply_init_legFpt( maxPolyDegree = maxPolyDegree,        &
       &                   nIndeps       = (maxPolyDegree+1)**2, &
       &                   fpt           = fpt,                  &
-      &                   lobattoPoints = .true.                )
+      &                   lobattoPoints = .true.,               &
+      &                   bu            = bu)
 
     ! now transform to the Chebyshev nodes
     write(logUnit(10),*) 'Calculating FPT ...'
-    call ply_pntToLeg_3D( fpt = fpt, pntVal = pntVal, legCoeffs = legCoeffs )
+    call ply_pntToLeg_3D( fpt = fpt, pntVal = pntVal, legCoeffs = legCoeffs, &
+        &                 bu  = bu                                           )
     write(logUnit(10),*) 'Finished'
 
     !!do iPoint = 1, (maxPolyDegree+1)**3

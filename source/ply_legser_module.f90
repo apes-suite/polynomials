@@ -41,23 +41,19 @@ contains
     real(kind=rk) :: ak, al, bb, c, d
     integer :: k, l, ll
     ! -------------------------------------------------------------------- !
-    !$OMP PARALLEL DEFAULT(SHARED), PRIVATE(k, d, c, l, ll, al, bb, ak)
 
     ak = 0.0_rk
 
     ! Calculation of the first Legendre coefficient
     b(1) = 0.5_rk * a(1)
-    !$OMP DO
     do k=3,n,2
       ak = ak + 2.0_rk
       b(1) = b(1) - a(k)/(ak*ak - 1.0_rk)
     end do
-    !$OMP END DO
     c = 2.0_rk / 3.0_rk
     al = 0.0_rk
 
     ! Start main loop (remaining Legendre coefficients)
-    !$OMP DO
     do l=2,n
       ! Calculation of the Lth coefficient
       ll = l+2
@@ -77,9 +73,7 @@ contains
         &   / ( (al+al+3.0_rk)*(al+al+2.0_rk) )
       b(l) = (al+0.5_rk)*bb
     end do
-    !$OMP END DO
 
-    !$OMP END PARALLEL
 
   end subroutine legser
   ! ************************************************************************ !
