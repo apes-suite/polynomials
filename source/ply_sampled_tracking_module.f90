@@ -308,6 +308,7 @@ contains
     type(tem_time_type) :: loctime
     type(tem_varsys_type) :: sampled_vars
     type(treelmesh_type) :: sampled_mesh
+    type(tem_comm_env_type) :: sampled_proc
     integer :: iTrack, iConfig
     integer :: iVar
     ! -------------------------------------------------------------------- !
@@ -407,6 +408,13 @@ contains
           &                   new_mesh    = sampled_mesh,                 &
           &                   resvars     = sampled_vars                  )
 
+        !> Get the communicator description for the subsampled mesh.
+        sampled_proc%comm_size = sampled_mesh%global%nParts
+        sampled_proc%rank = sampled_mesh%global%myPart
+        sampled_proc%comm = sampled_mesh%global%comm
+        sampled_proc%nThreads = proc%nThreads
+        sampled_proc%isRoot = (sampled_mesh%global%myPart == 0)
+
         ! initialize output
         basename = trim(me%tracking%config(iConfig)%prefix) &
           &        // trim(me%tracking%config(iConfig)%label)
@@ -417,7 +425,7 @@ contains
           & varSys      = sampled_vars,                              &
           & geometry    = me%tracking%config(iConfig)%geometry,      &
           & basename    = trim(basename),                            &
-          & globProc    = proc,                                      &
+          & globProc    = sampled_proc,                              &
           & solver      = solver                                     )
 
         call hvs_output_open(                                     &
