@@ -251,10 +251,6 @@ contains
       end do
     end if
 
-    do iScalar=1,nScalars
-      source(iScalar)%space = destination(iScalar)%space
-    end do
-
     destination => source
     nullify(source)
 
