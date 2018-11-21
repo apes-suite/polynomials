@@ -409,11 +409,12 @@ contains
           &                   resvars     = sampled_vars                  )
 
         !> Get the communicator description for the subsampled mesh.
+        sampled_proc%root   = 0
         sampled_proc%comm_size = sampled_mesh%global%nParts
         sampled_proc%rank = sampled_mesh%global%myPart
         sampled_proc%comm = sampled_mesh%global%comm
         sampled_proc%nThreads = proc%nThreads
-        sampled_proc%isRoot = (sampled_mesh%global%myPart == 0)
+        sampled_proc%isRoot = (sampled_mesh%global%myPart == sampled_proc%root)
 
         ! initialize output
         basename = trim(me%tracking%config(iConfig)%prefix) &
