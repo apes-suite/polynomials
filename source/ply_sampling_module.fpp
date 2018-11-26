@@ -272,30 +272,21 @@ contains
     type(treelmesh_type) :: tmp_mesh(0:1)
     type(tem_BC_prop_type) :: tmp_bcs(0:1)
     type(tem_subtree_type) :: tmp_subtree
-    type(tem_subtree_type) :: refined_sub
     type(capsule_array_type), pointer :: res
-    type(ply_array_type), allocatable :: meshData(:)
-    type(ply_array_type), allocatable :: newMeshData(:)
-    type(ply_array_type), allocatable :: work_dat(:)
-    type(ply_subsample_type) :: subsamp
     real(kind=rk), allocatable :: vardat(:)
     real(kind=rk), allocatable :: points(:)
     real(kind=rk), allocatable :: pointval(:,:)
     integer, allocatable :: vardofs(:)
-    integer, allocatable :: newVardofs(:)
-    integer, allocatable :: work_vardofs(:)
     integer, allocatable :: elempos(:)
-    integer, allocatable :: varcomps(:)
     integer :: pointCoord(4)
-    integer :: iElem, nOrigElems, nElemsToRefine
+    integer :: iElem, nOrigElems
     integer :: iVar, nVars, varPos
-    integer :: iDof, nDofs, maxDofs, maxdofs_left
+    integer :: iDof, nDofs, maxDofs
     integer :: iComp, nComponents
     integer :: iChild, nChilds, n1D_childs
     integer :: cur, prev
     integer :: ans(3)
     integer :: i, ii
-    integer :: iError
     integer :: iMesh
     integer :: iLevel
     integer :: iProp
@@ -305,8 +296,6 @@ contains
     integer :: bitlevel
     real(kind=rk) :: legval
     real(kind=rk) :: point_spacing, point_start
-    logical, allocatable :: refine_tree(:)
-    logical, allocatable :: new_refine_tree(:)
     procedure(tem_varSys_proc_element), pointer :: get_element
     procedure(tem_varSys_proc_point), pointer :: get_point
     procedure(tem_varSys_proc_setParams), pointer :: set_params

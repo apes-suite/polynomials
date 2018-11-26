@@ -272,12 +272,10 @@ contains
 
     type(sampled_method_data_type), pointer :: vardat => NULL()
 
-    real(kind=rk), allocatable :: elemdat(:)
     real(kind=rk), allocatable :: reduction_factor(:)
     real(kind=rk), allocatable :: maxmean(:)
     real(kind=rk), allocatable :: minmean(:)
     real(kind=rk) :: memprefac
-    real(kind=rk) :: variation
 
     real(kind=rk), pointer :: parent_data(:,:) => NULL()
     real(kind=rk), pointer :: child_data(:,:) => NULL()
@@ -298,7 +296,6 @@ contains
     integer :: refinedElems
 
     integer :: varpos
-    integer :: elempos
     integer :: bcpos
     integer :: firstdof, lastdof
     integer :: oldfirst, oldlast

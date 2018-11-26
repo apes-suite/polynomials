@@ -368,7 +368,7 @@ contains
     ! -------------------------------------------------------------------- !
     integer :: oversamp_degree
     integer :: mpd1, mpd1_square
-    integer :: iDegX, iDegY, iDegZ, idof, dof, dofOverSamp, nPVars
+    integer :: iDegX, iDegY, idof, dof, dofOverSamp, nPVars
     integer :: iVar
     real(kind=rk) :: ordersum(2*(poly_proj%min_degree + 1)-1)
     real(kind=rk) :: varsum
