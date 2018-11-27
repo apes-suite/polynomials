@@ -7,6 +7,10 @@ module ply_sampling_varsys_module
   use tem_tracking_module, only: tem_tracking_instance_type
   use tem_varsys_module,   only: tem_varsys_type, tem_varSys_init
   use tem_topology_module, only: tem_levelof
+  use tem_aux_module,      only: tem_abort
+  use tem_logging_module,  only: logunit
+
+  use ply_dof_module,      only: q_space, p_space
 
   implicit none
 
@@ -27,14 +31,13 @@ module ply_sampling_varsys_module
     logical, allocatable :: deviates(:)
   end type ply_sampling_var_type
 
-
 contains
 
 
   ! ------------------------------------------------------------------------ !
   !> Create a variable system for the given tracking instance.
   subroutine ply_sampling_varsys_for_track( varsys, trackInst, mesh, nDims, &
-    &                                       var_degree, lvl_degree,         &
+    &                                       var_space, lvl_degree,          &
     &                                       sample_varsys, var, time        )
     ! -------------------------------------------------------------------- !
     !> Variable system describing the access to the original data to sample.
@@ -50,13 +53,10 @@ contains
     !> Dimensionality of the data to sample.
     integer, intent(in) :: nDims
 
-    !> Maximal polynomial degree for each variable.
+    !> Polynomial space for each variable.
     !!
     !! Needs to be matching the variable definition in the variable system.
-    !! @todo Needs to be changed to be an information per element per variable!
-    !!       Possibly by defining a variable in the varsys, providing the
-    !!       degree.
-    integer, intent(in) :: var_degree(:)
+    integer, intent(in) :: var_space(:)
 
     !> Maximal polynomial degree for each level.
     integer, intent(in) :: lvl_degree(:)
@@ -113,17 +113,52 @@ contains
 
     allocate(var(nScalars))
 
-    ! Get the total number of dofs with respect to the actual
-    ! polynomial degree of every single element.
-    total_dofs = 0
-    do iElem = 1, nElems
-      iLevel = tem_LevelOf( mesh%treeID( iElem ))
-      nDofs = (lvl_degree(iLevel)+1)**nDims
-      total_dofs = total_dofs + nDofs
-    end do
-
     iScalar = 1
     variables: do iVar=1,nVars
+      ! Get the total number of dofs with respect to the polynomial space and
+      ! the actual polynomial degree of every single element.
+      total_dofs = 0
+      varpos = trackInst%varmap%varPos%val(iVar)
+      select case(var_space(varpos))
+      case(q_space)
+        do iElem = 1, nElems
+          iLevel = tem_LevelOf( mesh%treeID( iElem ))
+          nDofs = (lvl_degree(iLevel)+1)**nDims
+          total_dofs = total_dofs + nDofs
+        end do
+      case(p_space)
+        write(logunit(1),*) 'Adaptive subsampling for P-polynomials' &
+          &                 // ' is not implemented yet!'
+        write(logunit(1),*) 'Aborting...'
+        call tem_abort()
+
+        select case (nDims)
+        case(3)
+          do iElem = 1, nElems
+            iLevel = tem_LevelOf( mesh%treeID( iElem ))
+            nDofs = ((lvl_degree(iLevel) + 1)  &
+              &   *  (lvl_degree(iLevel) + 2)  &
+              &   *  (lvl_degree(iLevel) + 3)) &
+              &   / 6
+            total_dofs = total_dofs + nDofs
+          end do
+        case(2)
+          do iElem = 1, nElems
+            iLevel = tem_LevelOf( mesh%treeID( iElem ))
+            nDofs = ((lvl_degree(iLevel) + 1)  &
+              &   *  (lvl_degree(iLevel) + 2)) &
+              &   / 2
+            total_dofs = total_dofs + nDofs
+          end do
+        case(1)
+          do iElem = 1, nElems
+            iLevel = tem_LevelOf( mesh%treeID( iElem ))
+            nDofs = lvl_degree(iLevel) + 1
+            total_dofs = total_dofs + nDofs
+          end do
+        end select
+      end select
+
       varpos = trackInst%varmap%varPos%val(iVar)
       nComponents = varsys%method%val(varpos)%nComponents
       do iComponent=1,nComponents
