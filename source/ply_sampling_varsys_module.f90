@@ -10,7 +10,7 @@ module ply_sampling_varsys_module
   use tem_aux_module,      only: tem_abort
   use tem_logging_module,  only: logunit
 
-  use ply_dof_module,      only: q_space, p_space
+  use ply_dof_module,      only: ply_degree_2dof
 
   implicit none
 
@@ -25,6 +25,7 @@ module ply_sampling_varsys_module
   !> Small helping type to allow arrays of arrays for the variable data.
   type ply_sampling_var_type
     integer :: nDeviating
+    integer :: space
     integer, allocatable :: degree(:)
     integer, allocatable :: first(:)
     real(kind=rk), pointer :: dat(:)
@@ -119,45 +120,21 @@ contains
       ! the actual polynomial degree of every single element.
       total_dofs = 0
       varpos = trackInst%varmap%varPos%val(iVar)
-      select case(var_space(varpos))
-      case(q_space)
-        do iElem = 1, nElems
-          iLevel = tem_LevelOf( mesh%treeID( iElem ))
-          nDofs = (lvl_degree(iLevel)+1)**nDims
-          total_dofs = total_dofs + nDofs
-        end do
-      case(p_space)
+
+      if (var_space(varpos) == P_space) then
         write(logunit(1),*) 'Adaptive subsampling for P-polynomials' &
           &                 // ' is not implemented yet!'
         write(logunit(1),*) 'Aborting...'
         call tem_abort()
+      end if
 
-        select case (nDims)
-        case(3)
-          do iElem = 1, nElems
-            iLevel = tem_LevelOf( mesh%treeID( iElem ))
-            nDofs = ((lvl_degree(iLevel) + 1)  &
-              &   *  (lvl_degree(iLevel) + 2)  &
-              &   *  (lvl_degree(iLevel) + 3)) &
-              &   / 6
-            total_dofs = total_dofs + nDofs
-          end do
-        case(2)
-          do iElem = 1, nElems
-            iLevel = tem_LevelOf( mesh%treeID( iElem ))
-            nDofs = ((lvl_degree(iLevel) + 1)  &
-              &   *  (lvl_degree(iLevel) + 2)) &
-              &   / 2
-            total_dofs = total_dofs + nDofs
-          end do
-        case(1)
-          do iElem = 1, nElems
-            iLevel = tem_LevelOf( mesh%treeID( iElem ))
-            nDofs = lvl_degree(iLevel) + 1
-            total_dofs = total_dofs + nDofs
-          end do
-        end select
-      end select
+      do iElem = 1, nElems
+        iLevel = tem_LevelOf( mesh%treeID( iElem ))
+        nDofs = ply_degree_2dof( deg   = lvl_degree(iLevel), &
+          &                      space = var_space(varpos),  &
+          &                      nDims = nDims               )
+        total_dofs = total_dofs + nDofs
+      end do
 
       varpos = trackInst%varmap%varPos%val(iVar)
       nComponents = varsys%method%val(varpos)%nComponents
@@ -167,14 +144,19 @@ contains
           &                             nElems  = nElems,        &
           &                             datalen = total_dofs     )
         var(iTotComp)%first(1) = 1
+        var(iTotComp)%space = var_space(varpos)
       end do
+
 
       ! Varying polynomial degree for elements is possible. 
       ! Need to copy data element by element.
       lower_bound = 1
       do iElem=1,nElems
         iLevel = tem_LevelOf( mesh%treeID( iElem ))
-        nDofs = (lvl_degree(iLevel)+1)**nDims
+
+        nDofs = ply_degree_2dof( deg   = lvl_degree(iLevel), &
+          &                      space = var_space(varpos),  &
+          &                      nDims = nDims               )
 
         upper_bound = lower_bound-1 + nDofs
 
@@ -267,6 +249,11 @@ contains
           & deallocate(destination(iScalar)%deviates)
       end do
     end if
+
+    do iScalar=1,nScalars
+      source(iScalar)%space = destination(iScalar)%space
+    end do
+
     destination => source
     nullify(source)
 
