@@ -7,8 +7,7 @@ module ply_dof_module
 
   private
 
-  public :: ply_dof_nextCoeff, ply_dof_pos, ply_dof_count, ply_dof_2degree, &
-    &       ply_degree_2dof
+  public :: ply_dof_nextCoeff, ply_dof_pos, ply_dof_count, ply_dof_2degree
 
   abstract interface
     subroutine ply_dof_nextCoeff(ansFuncX, ansFuncY, ansFuncZ, maxDegree)
@@ -66,32 +65,5 @@ contains
     end select
 
   end function ply_dof_2degree
-
-  elemental function ply_degree_2dof(deg, space, nDims) result(nDofs)
-    integer, intent(in) :: deg
-    integer, intent(in) :: space
-    integer, intent(in) :: nDims
-    integer :: nDofs
-
-    select case(space)
-    case (Q_space)
-      nDofs = (deg+1)**nDims
-    case (P_space)
-        select case (nDims)
-        case(3)
-          nDofs = ((deg + 1)  &
-            &   *  (deg + 2)  &
-            &   *  (deg + 3)) &
-            &   / 6
-        case(2)
-          nDofs = ((deg + 1)  &
-            &   *  (deg + 2)) &
-            &   / 3
-        case(1)
-          nDofs = (deg + 1)
-        end select
-    end select
-
-  end function ply_degree_2dof
 
 end module ply_dof_module

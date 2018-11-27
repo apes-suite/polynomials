@@ -63,10 +63,6 @@ module ply_sampling_adaptive_module
     &                                 ply_split_element_1D,   &
     &                                 ply_split_element_2D,   &
     &                                 ply_split_element_3D
-  use ply_dof_module,      only: ply_degree_2dof, &
-    &                            ply_dof_2degree, &
-    &                            Q_space,         &
-    &                            P_space
 
   implicit none
 
@@ -550,19 +546,14 @@ contains
         ! of 0.
         do iScalar=1,nScalars
           ! The maximal amount of memory required will be:
-          ! `totaldofs = newelems + reducableElems*(newdofs - 1)`
-          ! Where 'newDofs' is 'newDofs(r, maxdeg)' and 'r' is the dof reduction
-          ! factor. Solving for this factor we get:
-
+          ! `totaldofs = newelems + reducableElems*((r*(maxdeg+1))**nDims - 1)`
+          ! Where `r` is the dof reduction factor. Solving for this factor we
+          ! get:
           if ( (newelems <= origsize(iScalar))     &
             &  .and. (reducableElems(iScalar) > 0) ) then
-            nDofs = ceiling( (( real( origsize(iScalar)                &
-              &                      - newelems, kind=rk) )             &
-              &                 / real(ReducableElems(iScalar))) + 1, kind=rk)
-
-            memprefac = real( ply_dof_2degree(nDofs, var(iScalar)%space, ndims), kind=rk) &
-              &         / real(maxdeg(iScalar), kind=rk)
-
+            memprefac = ( real(1 + origsize(iScalar) - newelems, kind=rk) &
+              &               / ReducableElems(iScalar) )**(1.0_rk/nDims) &
+              &         / real(maxdeg(iScalar)+1, kind=rk)
             ! Do not increase the number of dofs, even if memory would allow it.
             ! (limit factor to 1).
             memprefac = min(memprefac, 1.0_rk)
@@ -595,12 +586,8 @@ contains
           maxtarget = ceiling( reduction_factor(iScalar) &
             &                  * (maxdeg(iScalar)+1) )
           maxtarget = max(maxtarget, 1)
-
-          containersize = newelems                                             &
-            &           + reducableElems(iScalar)                              &
-            &           * ( ply_degree_2dof( deg   = maxtarget-1,         &
-                              &              space = prev(iScalar)%space, &
-                              &              nDims = nDims                ) -1 )
+          containersize = newelems &
+            &           + reducableElems(iScalar) * (maxtarget**nDims - 1)
         else
           ! No refinement to be done, just a single degree of freedom per
           ! element needed.
@@ -614,8 +601,6 @@ contains
 
         iNewElem = 1
         var(iScalar)%first(1) = 1
-
-        var(iScalar)%space = prev(iScalar)%space
 
         if (.not.need2refine) then
           ! No need to refine the mesh, just copy the first degree of freedom
@@ -657,13 +642,9 @@ contains
               oldlast = prev(iScalar)%first(iElem+1) - 1
               lastdof = var(iScalar)%first(iNewElem) &
                 &       - 1 + nChildren              &
-                &       * ply_degree_2dof( deg   = targetdeg,           &
-                            &              space = prev(iScalar)%space, &
-                            &              nDims = nDims                )
+                &             * (targetdeg+1)**nDims
 
-              ndofs = ply_degree_2dof( deg   = targetdeg,           &
-                        &              space = prev(iScalar)%space, &
-                        &              nDims = nDims                )
+              ndofs = (targetdeg+1)**ndims
               nOlddofs = oldlast - oldfirst + 1
 
               parent_data(1:nOlddofs,1:1)                 &
@@ -732,25 +713,19 @@ contains
 
           newelems = tracked_subtree%nElems
           do iScalar=1,nScalars
-            containersize = sum(ply_degree_2dof(                      &
-                                &  deg = prev(iScalar)%degree(  &
-                                     &   tracked_subtree%map2global), &
-                                &  space = prev(iScalar)%space,       &
-                                &  nDims = nDims                      ) )
-
+            containersize = sum( (prev(iScalar)                     &
+              &                   %degree(tracked_subtree           &
+              &                           %map2global) + 1 )**nDims )
             call ply_sampling_var_allocate( var     = var(iScalar), &
               &                             nElems  = newElems,     &
               &                             datalen = containersize )
-
             var(iScalar)%first(1) = 1
             do iNewElem=1,newelems
               iElem = tracked_subtree%map2global(iNewElem)
               var(iScalar)%degree(iNewElem) = prev(iScalar)%degree(iElem)
               var(iScalar)%first(iNewElem+1)             &
                 & = var(iScalar)%first(iNewElem)         &
-                & + ply_degree_2dof( deg   = prev(iScalar)%degree(iElem), &
-                      &              space = prev(iScalar)%space,         &
-                      &              nDims = nDims                        )
+                & + (prev(iScalar)%degree(iElem)+1)**nDims
 
               firstdof = var(iScalar)%first(iNewElem)
               lastdof = var(iScalar)%first(iNewElem+1) - 1
