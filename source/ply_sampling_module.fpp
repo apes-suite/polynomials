@@ -243,6 +243,9 @@ contains
     !> Maximal polynomial degree for each variable.
     !!
     !! Needs to be matching the variable definition in the variable system.
+    !! @todo Needs to be changed to be an information per element per variable!
+    !!       Possibly by defining a variable in the varsys, providing the
+    !!       degree.
     integer, intent(in) :: var_degree(:)
 
     !> Maximal polynomial degree for each level.
@@ -582,7 +585,6 @@ contains
         &                       orig_bcs    = orig_bcs,    &
         &                       varsys      = varsys,      &
         &                       var_degree  = var_degree,  &
-        &                       var_space   = var_space,   &
         &                       lvl_degree  = lvl_degree,  &
         &                       trackInst   = trackInst,   &
         &                       trackConfig = trackConfig, &
