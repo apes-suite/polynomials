@@ -599,7 +599,7 @@ contains
           containersize = newelems                                             &
             &           + reducableElems(iScalar)                              &
             &           * ( ply_degree_2dof( deg   = maxtarget-1,         &
-                              &              space = prev(iScalar)%space, &
+                              &              space = 1,&!prev(iScalar)%space, &
                               &              nDims = nDims                ) -1 )
         else
           ! No refinement to be done, just a single degree of freedom per
@@ -658,14 +658,13 @@ contains
               lastdof = var(iScalar)%first(iNewElem) &
                 &       - 1 + nChildren              &
                 &       * ply_degree_2dof( deg   = targetdeg,           &
-                            &              space = prev(iScalar)%space, &
+                            &              space = 1,&!prev(iScalar)%space, &
                             &              nDims = nDims                )
 
               ndofs = ply_degree_2dof( deg   = targetdeg,           &
-                        &              space = prev(iScalar)%space, &
+                        &              space = 1,&!prev(iScalar)%space, &
                         &              nDims = nDims                )
               nOlddofs = oldlast - oldfirst + 1
-
               parent_data(1:nOlddofs,1:1)                 &
                 & => prev(iScalar)%dat(oldfirst:oldlast)
               child_data(1:ndofs,1:nChildren) &
@@ -735,7 +734,7 @@ contains
             containersize = sum(ply_degree_2dof(                      &
                                 &  deg = prev(iScalar)%degree(  &
                                      &   tracked_subtree%map2global), &
-                                &  space = prev(iScalar)%space,       &
+                                &  space = 1,&!prev(iScalar)%space,       &
                                 &  nDims = nDims                      ) )
 
             call ply_sampling_var_allocate( var     = var(iScalar), &
@@ -749,7 +748,7 @@ contains
               var(iScalar)%first(iNewElem+1)             &
                 & = var(iScalar)%first(iNewElem)         &
                 & + ply_degree_2dof( deg   = prev(iScalar)%degree(iElem), &
-                      &              space = prev(iScalar)%space,         &
+                      &              space = 1,&!prev(iScalar)%space,         &
                       &              nDims = nDims                        )
 
               firstdof = var(iScalar)%first(iNewElem)
