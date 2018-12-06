@@ -150,11 +150,26 @@ contains
       ! the shifting with a changed sign), we can fill the other half of
       ! the matrix by copying the already computed values accordingly with
       ! a change in sign, as needed (alternatingly).
+      !
+      ! With O4, the Aurora compiler produces code that is not correct:
+      !   do orig=1,nModes
+      !     sign_factor = mod(orig,2)*2 - 1
+      !     do m=1, orig-1
+      !       split_matrix(orig, m) = sign_factor * split_matrix(m, orig)
+      !       sign_factor = -sign_factor
+      !     end do
+      !   end do
+      ! To mitigate this, we split the loop into to, each with a stride of 2.
+
       do orig=1,nModes
         sign_factor = mod(orig,2)*2 - 1
-        do m=1, orig-1
+        !$NEC ivdep
+        do m=1, orig-1, 2
           split_matrix(orig, m) = sign_factor * split_matrix(m, orig)
-          sign_factor = -sign_factor
+        end do
+        !$NEC ivdep
+        do m=2, orig-1, 2
+          split_matrix(orig, m) = -sign_factor * split_matrix(m, orig)
         end do
       end do
 
