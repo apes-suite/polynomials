@@ -5,6 +5,7 @@ program ply_polyBaseExc_test
 
   implicit none
 
+  real(kind=rk), parameter :: max_deviation = 5.0E-15_rk
   real(kind=rk) :: testnums(10) = [  5._rk, 10._rk, 15._rk, 17._rk, 20._rk, &
     &                               25._rk, 40._rk, 50._rk, 75._rk, 90._rk  ]
   real(kind=rk) :: lam_res(10)
@@ -26,8 +27,7 @@ program ply_polyBaseExc_test
     write(*,*) 'lambda(', testnums(inum), ') =', lam_res(inum)
   end do
   write(*,*) ''
-  if ( maxval(abs(lam_res - ref_lam))              &
-    &  <= maxval(abs(ref_lam))*epsilon(lam_res(1)) ) then
+  if ( maxval(abs(lam_res - ref_lam)) <= max_deviation ) then
     write(*,*) 'PASSED'
   else
     write(*,*) 'FAILED'
