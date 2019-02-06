@@ -48,20 +48,12 @@ contains
       deg = nint(ndofs**(1._rk/real(ndims,kind=rk))) - 1
     case (P_space)
       deg = 0
-      fact = 1
-      do idim=1,ndims
-        fact = fact*idim
-      end do
       do
-        estimate = 1
-        do idim=1,ndims
-          estimate = estimate * (deg + idim)
-        end do
-        estimate = estimate/fact
+        estimate = ply_degree_2dof(deg, space, nDims)
         if (estimate >= ndofs) then
-          deg = estimate
           EXIT
         end if
+        deg = deg + 1
       end do
     end select
 

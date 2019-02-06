@@ -62,7 +62,10 @@ module ply_sampling_adaptive_module
     &                                 ply_split_element,      &
     &                                 ply_split_element_1D,   &
     &                                 ply_split_element_2D,   &
-    &                                 ply_split_element_3D
+    &                                 ply_split_element_3D,   &
+    &                                 ply_split_P_element_1D, &
+    &                                 ply_split_P_element_2D, &
+    &                                 ply_split_P_element_3D
   use ply_dof_module,      only: ply_degree_2dof, &
     &                            ply_dof_2degree, &
     &                            Q_space,         &
@@ -342,13 +345,25 @@ contains
     nMaxModes = maxval(var_degree+1)
     nChildren = 2**nDims
 
-    select case(nDims)
-    case (1)
-      split_element => ply_split_element_1D
-    case (2)
-      split_element => ply_split_element_2D
-    case (3)
-      split_element => ply_split_element_3D
+    select case(var_space(1))
+    case(Q_space)
+      select case(nDims)
+      case (1)
+        split_element => ply_split_element_1D
+      case (2)
+        split_element => ply_split_element_2D
+      case (3)
+        split_element => ply_split_element_3D
+      end select
+    case(P_space)
+      select case(nDims)
+      case (1)
+        split_element => ply_split_P_element_1D
+      case (2)
+        split_element => ply_split_P_element_2D
+      case (3)
+        split_element => ply_split_P_element_3D
+      end select
     end select
 
     call ply_split_element_init(nMaxModes)
@@ -556,9 +571,9 @@ contains
 
           if ( (newelems <= origsize(iScalar))     &
             &  .and. (reducableElems(iScalar) > 0) ) then
-            nDofs = ceiling( (( real( origsize(iScalar)                &
-              &                      - newelems, kind=rk) )             &
-              &                 / real(ReducableElems(iScalar))) + 1, kind=rk)
+            nDofs = ceiling( (( real( origsize(iScalar)                      &
+              &                      - newelems, kind=rk) )                  &
+              &                 / real(ReducableElems(iScalar),kind=rk)) + 1 )
 
             memprefac = real( ply_dof_2degree(nDofs, var(iScalar)%space, ndims), kind=rk) &
               &         / real(maxdeg(iScalar), kind=rk)
@@ -599,7 +614,7 @@ contains
           containersize = newelems                                             &
             &           + reducableElems(iScalar)                              &
             &           * ( ply_degree_2dof( deg   = maxtarget-1,         &
-                              &              space = 1,&!prev(iScalar)%space, &
+                              &              space = prev(iScalar)%space, &
                               &              nDims = nDims                ) -1 )
         else
           ! No refinement to be done, just a single degree of freedom per
@@ -658,11 +673,11 @@ contains
               lastdof = var(iScalar)%first(iNewElem) &
                 &       - 1 + nChildren              &
                 &       * ply_degree_2dof( deg   = targetdeg,           &
-                            &              space = 1,&!prev(iScalar)%space, &
+                            &              space = prev(iScalar)%space, &
                             &              nDims = nDims                )
 
               ndofs = ply_degree_2dof( deg   = targetdeg,           &
-                        &              space = 1,&!prev(iScalar)%space, &
+                        &              space = prev(iScalar)%space, &
                         &              nDims = nDims                )
               nOlddofs = oldlast - oldfirst + 1
               parent_data(1:nOlddofs,1:1)                 &
@@ -734,7 +749,7 @@ contains
             containersize = sum(ply_degree_2dof(                      &
                                 &  deg = prev(iScalar)%degree(  &
                                      &   tracked_subtree%map2global), &
-                                &  space = 1,&!prev(iScalar)%space,       &
+                                &  space = prev(iScalar)%space,       &
                                 &  nDims = nDims                      ) )
 
             call ply_sampling_var_allocate( var     = var(iScalar), &
@@ -748,7 +763,7 @@ contains
               var(iScalar)%first(iNewElem+1)             &
                 & = var(iScalar)%first(iNewElem)         &
                 & + ply_degree_2dof( deg   = prev(iScalar)%degree(iElem), &
-                      &              space = 1,&!prev(iScalar)%space,         &
+                      &              space = prev(iScalar)%space,         &
                       &              nDims = nDims                        )
 
               firstdof = var(iScalar)%first(iNewElem)

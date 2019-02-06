@@ -1,4 +1,3 @@
-?? include "ply_dof_module.inc"
 !> Managing the variable system description for sampled data.
 module ply_sampling_varsys_module
   use env_module, only: rk
@@ -8,12 +7,8 @@ module ply_sampling_varsys_module
   use tem_tracking_module, only: tem_tracking_instance_type
   use tem_varsys_module,   only: tem_varsys_type, tem_varSys_init
   use tem_topology_module, only: tem_levelof
-  use tem_aux_module,      only: tem_abort
-  use tem_logging_module,  only: logunit
 
-  use ply_dof_module,      only: ply_degree_2dof, &
-    &                            P_space,         &
-    &                            Q_space
+  use ply_dof_module,      only: ply_degree_2dof
 
   implicit none
 
@@ -34,6 +29,7 @@ module ply_sampling_varsys_module
     real(kind=rk), pointer :: dat(:)
     logical, allocatable :: deviates(:)
   end type ply_sampling_var_type
+
 
 contains
 
@@ -90,10 +86,6 @@ contains
     integer :: iLevel
     integer :: total_dofs
     integer :: lower_bound, upper_bound
-    integer :: posX, posY, posZ
-    integer :: nIndepsX, nIndepsY, nIndepsZ
-    integer :: P_pos,Q_pos
-    integer :: deg
     integer, allocatable :: elempos(:)
     real(kind=rk), allocatable :: elemdat(:)
     ! -------------------------------------------------------------------- !
@@ -123,27 +115,22 @@ contains
 
     iScalar = 1
     variables: do iVar=1,nVars
-      ! Get the total number of dofs with respect to the polynomial space and
-      ! the actual polynomial degree of every single element.
-      total_dofs = 0
+
       varpos = trackInst%varmap%varPos%val(iVar)
 
-!!      if (var_space(varpos) == P_space) then
-!!        write(logunit(1),*) 'Adaptive subsampling for P-polynomials' &
-!!          &                 // ' is not implemented yet!'
-!!        write(logunit(1),*) 'Aborting...'
-!!        call tem_abort()
-!!      end if
-
+      ! Get the total number of dofs with respect to the actual
+      ! polynomial degree of every single element.
+      total_dofs = 0
       do iElem = 1, nElems
         iLevel = tem_LevelOf( mesh%treeID( iElem ))
+        ! Get the total number of dofs with respect to the actual
+        ! polynomial degree of every single element.
         nDofs = ply_degree_2dof( deg   = lvl_degree(iLevel), &
-          &                      space = 1,&!var_space(varpos),  &
+          &                      space = var_space(varpos),  &
           &                      nDims = nDims               )
         total_dofs = total_dofs + nDofs
       end do
 
-      varpos = trackInst%varmap%varPos%val(iVar)
       nComponents = varsys%method%val(varpos)%nComponents
       do iComponent=1,nComponents
         iTotComp = iScalar+iComponent-1
@@ -152,112 +139,46 @@ contains
           &                             datalen = total_dofs     )
         var(iTotComp)%first(1) = 1
         var(iTotComp)%space = var_space(varpos)
-        var(iTotComp)%dat = 0.0_rk
       end do
-
 
       ! Varying polynomial degree for elements is possible. 
       ! Need to copy data element by element.
       lower_bound = 1
+      do iElem=1,nElems
+        iLevel = tem_LevelOf( mesh%treeID( iElem ))
+        nDofs = ply_degree_2dof( deg   = lvl_degree(iLevel), &
+          &                      space = var_space(varpos),  &
+          &                      nDims = nDims               )
 
-      select case (var_space(varpos))
-      case (Q_space)
-        do iElem=1,nElems
-          iLevel = tem_LevelOf( mesh%treeID( iElem ))
+        upper_bound = lower_bound-1 + nDofs
 
-          nDofs = ply_degree_2dof( deg   = lvl_degree(iLevel), &
-            &                      space = var_space(varpos),  &
-            &                      nDims = nDims               )
-
-          upper_bound = lower_bound-1 + nDofs
-
-          allocate(elemDat(nComponents*nDofs))
-          call varSys%method%val(varpos)%get_element( &
-            &    varSys  = varSys,                    &
-            &    elempos = elempos(iElem:iElem),      &
-            &    time    = time,                      &
-            &    tree    = mesh,                      &
-            &    nElems  = 1,                         &
-            &    nDofs   = nDofs,                     &
-            &    res     = elemdat                    )
-          do iComponent=1,nComponents
-            iTotComp = iScalar+iComponent-1
-            var(iTotComp)%dat(lower_bound:upper_bound) &
-              & = elemdat(iComponent::nComponents)
-            var(iTotComp)%first(iElem+1) = upper_bound+1
-            var(iTotComp)%degree(iElem) = lvl_degree(iLevel)
-          end do
-
-          lower_bound = upper_bound + 1
-
-          deallocate(elemDat)
+        allocate(elemDat(nComponents*nDofs))
+        call varSys%method%val(varpos)%get_element( &
+          &    varSys  = varSys,                    &
+          &    elempos = elempos(iElem:iElem),      &
+          &    time    = time,                      &
+          &    tree    = mesh,                      &
+          &    nElems  = 1,                         &
+          &    nDofs   = nDofs,                     &
+          &    res     = elemdat                    )
+        do iComponent=1,nComponents
+          iTotComp = iScalar+iComponent-1
+          var(iTotComp)%dat(lower_bound:upper_bound) &
+            & = elemdat(iComponent::nComponents)
+          var(iTotComp)%first(iElem+1) = upper_bound+1
+          var(iTotComp)%degree(iElem) = lvl_degree(iLevel)
         end do
 
-        iScalar = iScalar + nComponents
-      case (P_space)
-        do iElem=1,nElems
-          iLevel = tem_LevelOf( mesh%treeID( iElem ))
-  
-          nDofs = ply_degree_2dof( deg   = lvl_degree(iLevel), &
-            &                      space = var_space(varpos),  &
-            &                      nDims = nDims               )
-  
-          allocate(elemDat(nComponents*nDofs))
-  
-          call varSys%method%val(varpos)%get_element( &
-            &    varSys  = varSys,                    &
-            &    elempos = elempos(iElem:iElem),      &
-            &    time    = time,                      &
-            &    tree    = mesh,                      &
-            &    nElems  = 1,                         &
-            &    nDofs   = nDofs,                     &
-            &    res     = elemdat                    )
+        lower_bound = upper_bound + 1
 
-          nDofs = ply_degree_2dof( deg   = lvl_degree(iLevel), &
-            &                      space = 1,&!var_space(varpos),  &
-            &                      nDims = nDims               )
+        deallocate(elemDat)
+      end do
 
-          upper_bound = lower_bound-1 + nDofs
-  
-          do iComponent=1,nComponents
-            iTotComp = iScalar+iComponent-1
-  
-            ! Resorting of dofs from P-polynomial format
-            ! to Q-polynomial format
-            deg = lvl_degree(iLevel)+1
-
-            P_pos = 0
-            nIndepsX = deg
-            nIndepsY = deg
-            nIndepsZ = deg
-            do posZ=1,nIndepsZ
-              nIndepsY = deg-posZ+1
-              nIndepsX = deg-posZ+1
-              do posY=1,nIndepsY
-                do posX=1,nIndepsX
-?? copy :: posOfModgCoeffPTens(posX, posY, posZ,  P_pos)
-?? copy :: posOfModgCoeffQTens(posX, posY, posZ, lvl_degree(iLevel), Q_pos)
-                  var(iTotComp)%dat(lower_bound-1+Q_pos) &
-                    & = elemdat( P_pos )
-                end do
-                nIndepsX = nIndepsX - 1
-              end do
-              nIndepsY = nIndepsY - 1
-            end do
-            var(iTotComp)%first(iElem+1) = upper_bound+1
-            var(iTotComp)%degree(iElem) = lvl_degree(iLevel)
-          end do
-  
-          lower_bound = upper_bound + 1
-  
-          deallocate(elemDat)
-        end do
-  
-        iScalar = iScalar + nComponents
-
-      end select
+      iScalar = iScalar + nComponents
 
     end do variables
+
+    deallocate(elempos)
 
   end subroutine ply_sampling_varsys_for_track
   ! ------------------------------------------------------------------------ !
@@ -322,7 +243,6 @@ contains
           & deallocate(destination(iScalar)%deviates)
       end do
     end if
-
     destination => source
     nullify(source)
 

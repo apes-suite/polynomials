@@ -1,3 +1,4 @@
+?? include "ply_dof_module.inc"
 !> This module provides the methods to project the polynomial representation in
 !! elements onto the representations in their halves in each dimension.
 !!
@@ -17,9 +18,13 @@
 !! Where \(x\) refers to the coordinate in the original (coarse) element, and
 !! \(\xi\) to the coordinates in the two (left and right) halves of the element.
 module ply_split_element_module
-  use env_module, only: rk
+  use env_module,                only: rk
+
   use ply_split_legendre_module, only: ply_split_legendre_matrix
-  use ply_modg_basis_module, only: legendre_1d
+  use ply_modg_basis_module,     only: legendre_1d
+  use ply_dof_module,            only: ply_degree_2dof, &
+    &                                  Q_space,         &
+    &                                  P_space
 
   implicit none
 
@@ -30,6 +35,9 @@ module ply_split_element_module
   public :: ply_split_element_1D
   public :: ply_split_element_2D
   public :: ply_split_element_3D
+  public :: ply_split_P_element_1D
+  public :: ply_split_P_element_2D
+  public :: ply_split_P_element_3D
   public :: ply_split_element_init
 
   public :: ply_split_element_test
@@ -248,7 +256,6 @@ contains
         Rchild = iParent*2
         Lchild = Rchild - 1
         newmodes: do childMode=1,maxrow
-
           do indep=1,nIndeps
             parentpos = indep + nIndeps*(parentMode-1)
             childpos = childmode + (indep-1)*outLen(1)
@@ -261,7 +268,6 @@ contains
               &                                            parentmode ) &
               &                            * parent_data(parentpos, iParent)
           end do
-
         end do newmodes
       end do elemloop
 
@@ -421,10 +427,355 @@ contains
       &                             parent_data = ysplit,                  &
       &                             child_data  = child_data               )
 
+
     deallocate(ysplit)
     deallocate(zsplit)
 
   end subroutine ply_split_element_3D
+  ! ======================================================================== !
+
+
+  ! ------------------------------------------------------------------------ !
+  subroutine ply_split_P_element_singleD( nDims, inLen, outLen, parent_data, &
+    &                                     child_data                         )
+    ! -------------------------------------------------------------------- !
+    !> Number of dimensions of the polynomial data.
+    integer, intent(in) :: nDims
+
+    !> Number degrees of freedom for each direction in parent_Data.
+    !!
+    !! The first index of parent_data needs to have a length equal to the
+    !! product of all inLen components.
+    !! The splitting operation will be done in the last dimension.
+    integer, intent(in) :: inLen(nDims)
+
+    !> Number degrees of freedom for each direction in child_Data.
+    !!
+    !! The first index of child_data needs to have a length equal to the
+    !! product of all outLen components.
+    !! The data will be cyclicly exchanged. Thus, the last dimension in
+    !! parent_data corresponds to the first in one in child_data and all
+    !! other components are shifted once to the right.
+    integer, intent(in) :: outLen(nDims)
+
+    !> Polynomial representation in the parent elements.
+    !!
+    !! The first index are the degrees of freedom in elements, the second index
+    !! are the elements.
+    !! In the first index the shape of data has to be in the form
+    !! (inLen(1), inLen(2), ... , inLen(nDims)).
+    !! The splitting operation is performed on the last dimension in that
+    !! data.
+    real(kind=rk), intent(in) :: parent_data(:,:)
+
+    !> Computed projection of the polynomial representation in the child
+    !! elements.
+    !!
+    !! Again, the first index refers to the degrees of freedom, while the
+    !! second index are the elements. There need to be twice as many elements
+    !! as in the parent_data.
+    !! Left childs are stored in iChild = (iParent*2 - 1), and the right
+    !! childs in iParent*2.
+    !!
+    !! In the first index the shape of the data has to be in the form
+    !! (outLen(1), outLen(2), ... , outLen(nDims)), the data is rotated
+    !! in comparison to parent_data and the splitted direction has to be
+    !! the first one in child_data (while it was the last in parent_data),
+    !! and all other dimensions are shifted by one to the right.
+    real(kind=rk), intent(out) :: child_data(:,:)
+    ! -------------------------------------------------------------------- !
+    integer :: iParent, Lchild, Rchild
+    integer :: parentMode, childMode
+    integer :: maxrow
+    integer :: nParents
+    integer :: parentpos, childpos
+    integer :: nIndepsX, nIndepsY, nIndepsZ
+    integer :: parentModeX, parentModeY, parentModeZ
+    integer :: childModeX, childModeY, childModeZ
+    integer :: space
+    ! -------------------------------------------------------------------- !
+
+    nParents = size(parent_data,2)
+
+    ! Use split_legendre to compute the two child_data elements for each
+    ! parent_data element.
+    ! We store the left childs in iChild = (iParent*2 - 1), and the right
+    ! childs in iParent*2.
+
+    child_data = 0.0_rk
+
+    select case(nDims)
+    case(3)
+      nIndepsZ = inLen(3)
+      do parentModeZ=1,nIndepsZ
+        ! Maximal number modes to compute, as this is a triangular matrix
+        ! it is limited by the diagonal (parentMode). However, it may be
+        ! that the target polynomial space in the output is smaller, in this
+        ! case we cap the computations and no more than outLen(1) entries
+        ! are to be computed.
+        maxrow = min(parentModeZ, outLen(1))
+  
+        do iParent=1,nParents
+          Rchild = iParent*2
+          Lchild = Rchild - 1
+  
+          do childModeX=1,maxrow
+            nIndepsX = max(inLen(1) - (parentModeZ-1),1)
+            nIndepsY = max(inLen(2) - (parentModeZ-1),1)
+  
+            do parentModeY=1,nIndepsY
+              childModeZ = min(parentModeY,outLen(3))
+              do parentModeX=1,nIndepsX
+                childModeY = min(parentModeX,outLen(2))
+??   copy :: posOfModgCoeffPTens(parentModeX, parentModeY, parentModeZ,  parentpos)
+??   copy :: posOfModgCoeffPTens(childModex, childModeY, childModeZ, childpos)
+  
+                child_data(childpos, Lchild) = child_data(childpos, Lchild) &
+                  &                          + split_legendre( parentmodeZ,  &
+                  &                                            childmodeX )  &
+                  &                            * parent_data(parentpos, iParent)
+                child_data(childpos, Rchild) = child_data(childpos, Rchild) &
+                  &                          + split_legendre( childmodeX,   &
+                  &                                            parentmodeZ ) &
+                  &                            * parent_data(parentpos, iParent)
+              end do
+              nIndepsX = nIndepsX - 1
+            end do
+            nIndepsY = nIndepsY - 1
+          end do
+        end do
+  
+      end do
+    case(2)
+      nIndepsY = inLen(2)
+      do parentModeY=1,nIndepsY
+        ! Maximal number modes to compute, as this is a triangular matrix
+        ! it is limited by the diagonal (parentMode). However, it may be
+        ! that the target polynomial space in the output is smaller, in this
+        ! case we cap the computations and no more than outLen(1) entries
+        ! are to be computed.
+        maxrow = min(parentModeY, outLen(1))
+  
+        do iParent=1,nParents
+          Rchild = iParent*2
+          Lchild = Rchild - 1
+  
+          do childModeX=1,maxrow
+            nIndepsX = max(inLen(1) - (parentModeZ-1),1)
+  
+            do parentModeX=1,nIndepsX
+              childModeY = min(parentModeX,outLen(3))
+??   copy :: posOfModgCoeffPTens2D(parentModeX, parentModeY, parentpos)
+??   copy :: posOfModgCoeffPTens2D(childModex, childModeY, childpos)
+  
+                child_data(childpos, Lchild) = child_data(childpos, Lchild) &
+                  &                          + split_legendre( parentmodeZ,  &
+                  &                                            childmodeX )  &
+                  &                            * parent_data(parentpos, iParent)
+                child_data(childpos, Rchild) = child_data(childpos, Rchild) &
+                  &                          + split_legendre( childmodeX,   &
+                  &                                            parentmodeY ) &
+                  &                            * parent_data(parentpos, iParent)
+            end do
+            nIndepsX = nIndepsX - 1
+          end do
+        end do
+  
+      end do
+    case(1)
+      nIndepsX = inLen(1)
+      do parentModeX=1,nIndepsX
+        ! Maximal number modes to compute, as this is a triangular matrix
+        ! it is limited by the diagonal (parentMode). However, it may be
+        ! that the target polynomial space in the output is smaller, in this
+        ! case we cap the computations and no more than outLen(1) entries
+        ! are to be computed.
+        maxrow = min(parentModeX, outLen(1))
+  
+        do iParent=1,nParents
+          Rchild = iParent*2
+          Lchild = Rchild - 1
+  
+          do childModeX=1,maxrow
+??   copy :: posOfModgCoeffPTens1D(parentModeX, parentpos)
+??   copy :: posOfModgCoeffPTens1D(childModeX, childpos)
+  
+                child_data(childpos, Lchild) = child_data(childpos, Lchild) &
+                  &                          + split_legendre( parentmodeZ,  &
+                  &                                            childmodeX )  &
+                  &                            * parent_data(parentpos, iParent)
+                child_data(childpos, Rchild) = child_data(childpos, Rchild) &
+                  &                          + split_legendre( childmodeX,   &
+                  &                                            parentmodeY ) &
+                  &                            * parent_data(parentpos, iParent)
+          end do
+        end do
+  
+      end do
+    end select
+
+  end subroutine ply_split_P_element_singleD
+  ! ======================================================================== !
+
+
+  ! ------------------------------------------------------------------------ !
+  !> Split one-dimensional elements of degree parent_degree into two elements
+  !! with polynomials of degree child_degree.
+  subroutine ply_split_P_element_1D( parent_degree, child_degree, parent_data, &
+    &                              child_data )
+    ! -------------------------------------------------------------------- !
+    !> Polynomial degree in the parent element.
+    integer, intent(in) :: parent_degree
+
+    !> Polynomial degree in the child elements.
+    integer, intent(in) :: child_degree
+
+    !> Polynomial data in the parent element. The first index describes the
+    !! degrees of freedom. The second index refers to the elements to split.
+    real(kind=rk), intent(in) :: parent_data(:,:)
+
+    !> Polynomial data in the child elements. The first index describes the
+    !! degrees of freedom. The second index refers to the elements, there
+    !! needs to be four times as many elements than in the parent_data.
+    !!
+    !! Elements follow the ordering of the Z space filling curve.
+    real(kind=rk), intent(out) :: child_data(:,:)
+    ! -------------------------------------------------------------------- !
+    integer :: pardofs
+    integer :: childdofs
+    ! -------------------------------------------------------------------- !
+
+    pardofs = parent_degree + 1
+    childdofs = child_degree + 1
+
+    call ply_split_P_element_singleD( nDims       = 1,            &
+      &                             inLen       = [pardofs],    &
+      &                             outLen      = [childdofs],  &
+      &                             parent_data = parent_data,  &
+      &                             child_data  = child_data    )
+
+  end subroutine ply_split_P_element_1D
+  ! ======================================================================== !
+
+
+  ! ------------------------------------------------------------------------ !
+  !> Split two-dimensional elements of degree parent_degree into four elements
+  !! with polynomials of degree child_degree.
+  subroutine ply_split_P_element_2D( parent_degree, child_degree, parent_data, &
+    &                              child_data )
+    ! -------------------------------------------------------------------- !
+    !> Polynomial degree in the parent element.
+    integer, intent(in) :: parent_degree
+
+    !> Polynomial degree in the child elements.
+    integer, intent(in) :: child_degree
+
+    !> Polynomial data in the parent element. The first index describes the
+    !! degrees of freedom. The second index refers to the elements to split.
+    real(kind=rk), intent(in) :: parent_data(:,:)
+
+    !> Polynomial data in the child elements. The first index describes the
+    !! degrees of freedom. The second index refers to the elements, there
+    !! needs to be four times as many elements than in the parent_data.
+    !!
+    !! Elements follow the ordering of the Z space filling curve.
+    real(kind=rk), intent(out) :: child_data(:,:)
+    ! -------------------------------------------------------------------- !
+    real(kind=rk), allocatable :: ysplit(:,:)
+    integer :: pardofs
+    integer :: childdofs
+    ! -------------------------------------------------------------------- !
+
+    pardofs = parent_degree + 1
+    childdofs = child_degree + 1
+
+    allocate(ysplit(childdofs*pardofs, 2))
+
+    call ply_split_P_element_singleD( nDims       = 2,                     &
+      &                             inLen       = [pardofs, pardofs],    &
+      &                             outLen      = [childdofs, pardofs],  &
+      &                             parent_data = parent_data,           &
+      &                             child_data  = ysplit                 )
+
+    call ply_split_P_element_singleD( nDims       = 2,                       &
+      &                             inLen       = [childdofs, pardofs],    &
+      &                             outLen      = [childdofs, childdofs],  &
+      &                             parent_data = ysplit,                  &
+      &                             child_data  = child_data               )
+
+    deallocate(ysplit)
+
+  end subroutine ply_split_P_element_2D
+  ! ======================================================================== !
+
+
+  ! ------------------------------------------------------------------------ !
+  !> Split three-dimensional elements of degree parent_degree into eight
+  !! elements with polynomials of degree child_degree.
+  subroutine ply_split_P_element_3D( parent_degree, child_degree, parent_data, &
+    &                              child_data )
+    ! -------------------------------------------------------------------- !
+    !> Polynomial degree in the parent element.
+    integer, intent(in) :: parent_degree
+
+    !> Polynomial degree in the child elements.
+    integer, intent(in) :: child_degree
+
+    !> Polynomial data in the parent element. The first index describes the
+    !! degrees of freedom. The second index refers to the elements to split.
+    real(kind=rk), intent(in) :: parent_data(:,:)
+
+    !> Polynomial data in the child elements. The first index describes the
+    !! degrees of freedom. The second index refers to the elements, there
+    !! needs to be four times as many elements than in the parent_data.
+    !!
+    !! Elements follow the ordering of the Z space filling curve.
+    real(kind=rk), intent(out) :: child_data(:,:)
+    ! -------------------------------------------------------------------- !
+    real(kind=rk), allocatable :: ysplit(:,:)
+    real(kind=rk), allocatable :: zsplit(:,:)
+    integer :: pardofs
+    integer :: childdofs
+    integer :: nDofs
+    ! -------------------------------------------------------------------- !
+
+    pardofs = parent_degree + 1
+    childdofs = child_degree + 1
+
+    nDofs = ply_degree_2dof(parent_degree, P_space, nDims=3)
+
+    allocate(zsplit(nDofs, 2))
+    allocate(ysplit(nDofs, 4))
+
+    call ply_split_P_element_singleD( nDims       = 3,                     &
+      &                               inLen       = [ pardofs, pardofs,    &
+      &                                               pardofs           ], &
+      &                               outLen      = [ childdofs, pardofs,  &
+      &                                               pardofs           ], &
+      &                               parent_data = parent_data,           &
+      &                               child_data  = zsplit                 )
+
+    call ply_split_P_element_singleD( nDims       = 3,                      &
+      &                               inLen       = [ childdofs, pardofs,   &
+      &                                               pardofs           ],  &
+      &                               outLen      = [ childdofs, childdofs, &
+      &                                               pardofs           ],  &
+      &                               parent_data = zsplit,                 &
+      &                               child_data  = ysplit                  )
+
+    call ply_split_P_element_singleD( nDims       = 3,                       &
+      &                               inLen       = [ childdofs, childdofs,  &
+      &                                               pardofs             ], &
+      &                               outLen      = [ childdofs, childdofs,  &
+      &                                               childdofs           ], &
+      &                               parent_data = ysplit,                  &
+      &                               child_data  = child_data               )
+
+
+    deallocate(ysplit)
+    deallocate(zsplit)
+
+  end subroutine ply_split_P_element_3D
   ! ======================================================================== !
 
 
