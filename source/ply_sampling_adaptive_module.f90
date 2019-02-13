@@ -63,7 +63,6 @@ module ply_sampling_adaptive_module
     &                                 ply_split_element_1D,   &
     &                                 ply_split_element_2D,   &
     &                                 ply_split_element_3D,   &
-    &                                 ply_split_P_element_1D, &
     &                                 ply_split_P_element_2D, &
     &                                 ply_split_P_element_3D
   use ply_dof_module,      only: ply_degree_2dof, &
@@ -358,7 +357,7 @@ contains
     case(P_space)
       select case(nDims)
       case (1)
-        split_element => ply_split_P_element_1D
+        split_element => ply_split_element_1D
       case (2)
         split_element => ply_split_P_element_2D
       case (3)
