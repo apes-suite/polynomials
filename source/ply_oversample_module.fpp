@@ -155,11 +155,10 @@ contains
     nScalars = size(modalCoeffs,2)
     maxorders = 3*(poly_proj%min_degree + 1)-2
 
-    modalCoeffs = 0.0_rk
-
     if (poly_proj%basisType == Q_Space) then
       posQ: if (present(ensure_positivity)) then
         ord_lim = maxorders
+        modalCoeffs = 0.0_rk
         varQ: do iVar=1,nScalars
           if (ensure_positivity(iVar)) then
             ordersum = 0.0_rk
@@ -195,17 +194,22 @@ contains
           end do
         end do
       else posQ
-        do dof = 1, mpd1_cube
-          iDegZ = (dof-1)/mpd1_square + 1
-          iDegY = (dof-1-(iDegZ-1)*mpd1_square)/mpd1+1
-          iDegX = mod(dof-1,mpd1)+1
-          dofOverSamp = iDegX + ( iDegY-1  &
-            &                     + (iDegZ-1)*(oversamp_degree+1) &
-            &                   ) * (oversamp_degree+1)
-          do iVar=1,nScalars
-            modalCoeffs(dofOverSamp,iVar) = state(dof,iVar)
+        if (oversamp_degree == poly_proj%min_degree) then
+          modalCoeffs = state
+        else
+          modalCoeffs = 0.0_rk
+          do dof = 1, mpd1_cube
+            iDegZ = (dof-1)/mpd1_square + 1
+            iDegY = (dof-1-(iDegZ-1)*mpd1_square)/mpd1+1
+            iDegX = mod(dof-1,mpd1)+1
+            dofOverSamp = iDegX + ( iDegY-1  &
+              &                     + (iDegZ-1)*(oversamp_degree+1) &
+              &                   ) * (oversamp_degree+1)
+            do iVar=1,nScalars
+              modalCoeffs(dofOverSamp,iVar) = state(dof,iVar)
+            end do
           end do
-        end do
+        end if
       end if posQ
 
     else !P_Space
@@ -302,17 +306,21 @@ contains
     nScalars = size(modalCoeffs,2)
 
     if (poly_proj%basisType == Q_Space) then
-      do iVar=1,nScalars
-        do dof = 1, mpd1_cube
-          iDegZ = (dof-1)/mpd1_square + 1
-          iDegY = (dof-1-(iDegZ-1)*mpd1_square)/mpd1+1
-          iDegX = mod(dof-1,mpd1)+1
-          dofOverSamp = iDegX + ( iDegY-1  &
-            &                     + (iDegZ-1)*(oversamp_degree+1) &
-            &                   ) * (oversamp_degree+1)
-          state(dof,iVar) = modalCoeffs(dofOverSamp,iVar)
+      if (oversamp_degree == poly_proj%min_degree) then
+        state = modalCoeffs
+      else
+        do iVar=1,nScalars
+          do dof = 1, mpd1_cube
+            iDegZ = (dof-1)/mpd1_square + 1
+            iDegY = (dof-1-(iDegZ-1)*mpd1_square)/mpd1+1
+            iDegX = mod(dof-1,mpd1)+1
+            dofOverSamp = iDegX + ( iDegY-1  &
+              &                     + (iDegZ-1)*(oversamp_degree+1) &
+              &                   ) * (oversamp_degree+1)
+            state(dof,iVar) = modalCoeffs(dofOverSamp,iVar)
+          end do
         end do
-      end do
+      end if
 
     else !P_Space
 
