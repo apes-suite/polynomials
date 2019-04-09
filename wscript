@@ -25,13 +25,13 @@ def configure(conf):
          conf.env.INCLUDES_FFTW3 = conf.options.fftw_incpath
        elif conf.options.fftw_path:
          conf.env.INCLUDES_FFTW3 = conf.options.fftw_path+'/include'
-    else:
-       # Try to use pkg-config to find the FFTW library.
-       conf.check_cfg(package='fftw3', uselib_store='FFTW3',
-                      args=['--cflags', '--libs'], mandatory=False)
-       if not conf.env.LIB_FFTW3:
-          # Try to link the fftw without any further options.
-          conf.check(lib='fftw3', uselib_store='FFTW3', mandatory=False)
+#    else:
+#       # Try to use pkg-config to find the FFTW library.
+#       conf.check_cfg(package='fftw3', uselib_store='FFTW3',
+#                      args=['--cflags', '--libs'], mandatory=False)
+#       if not conf.env.LIB_FFTW3:
+#          # Try to link the fftw without any further options.
+#          conf.check(lib='fftw3', uselib_store='FFTW3', mandatory=False)
 
     if conf.env.LIB_FFTW3:
        conf.all_envs[''].FCFLAGS_FFTW3 = conf.env.CFLAGS_FFTW3
