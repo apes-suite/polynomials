@@ -8,13 +8,9 @@ module ply_fxt_header_module
 
   use tem_aux_module,          only: tem_abort
   use tem_logging_module,      only: logUnit
-  use tem_float_module,        only: operator(.feq.), operator(.fne.)
+  use tem_float_module
 
-  use ply_nodes_header_module, only: ply_nodes_header_type,      &
-    &                                assignment(=),              &
-    &                                operator(==), operator(>=), &
-    &                                operator(/=), operator(<),  &
-    &                                operator(<=), operator(>)
+  use ply_nodes_header_module
 
   implicit none
 

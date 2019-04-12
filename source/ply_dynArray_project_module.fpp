@@ -8,12 +8,7 @@ module ply_dynarray_project_module
   use aotus_module,           only: flu_State
   use tem_logging_module,     only: logUnit
 
-  use ply_prj_header_module,  only: ply_prj_header_load,        &
-    &                               ply_prj_header_type,        &
-    &                               assignment(=),              &
-    &                               operator(==), operator(>=), &
-    &                               operator(/=), operator(<),  &
-    &                               operator(<=), operator(>)
+  use ply_prj_header_module
 
 
   implicit none

@@ -11,13 +11,8 @@ module ply_fpt_header_module
   use tem_aux_module,          only: tem_abort
   use tem_logging_module,      only: logUnit
   use tem_compileconf_module,  only: vlen
-  use tem_float_module,        only: operator(.feq.), operator(.fne.)
-
-  use ply_nodes_header_module, only: ply_nodes_header_type,     &
-    &                                assignment(=),             &
-    &                                operator(/=), operator(<), &
-    &                                operator(<=), operator(>), &
-    &                                operator(>=), operator(==)
+  use tem_float_module
+  use ply_nodes_header_module
 
   implicit none
 

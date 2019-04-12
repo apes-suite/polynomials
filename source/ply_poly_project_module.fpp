@@ -7,11 +7,7 @@ module ply_poly_project_module
   use tem_tools_module,          only: tem_horizontalSpacer
   use ply_dof_module,            only: Q_space, &
    &                                   P_space
-  use ply_prj_header_module,     only: ply_prj_header_type,        &
-    &                                  assignment(=),              &
-    &                                  operator(==), operator(>=), &
-    &                                  operator(/=), operator(<),  &
-    &                                  operator(<=), operator(>)
+  use ply_prj_header_module
   use ply_dynArray_project_module, only: dyn_ProjectionArray_type, &
     &                                    ply_fill_dynProjectArray, &
     &                                    ply_prj_init_type

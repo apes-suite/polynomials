@@ -29,7 +29,7 @@
 module ply_polyBaseExc_module
   use, intrinsic :: iso_c_binding
   use env_module,            only: rk
-  use tem_float_module,      only: operator(.fne.)
+  use tem_float_module
   use tem_param_module,      only: pi
   use tem_gamma_module
   use tem_logging_module,    only: logUnit

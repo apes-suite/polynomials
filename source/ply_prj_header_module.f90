@@ -10,31 +10,10 @@ module ply_prj_header_module
   use tem_tools_module,         only: upper_to_lower
   use tem_logging_module,       only: logUnit
 
-  use ply_fpt_header_module,    only: ply_fpt_header_type,        &
-    &                                 ply_fpt_header_load,        &
-    &                                 ply_fpt_header_display,     &
-    &                                 ply_fpt_header_out,         &
-    &                                 assignment(=),              &
-    &                                 operator(==), operator(/=), &
-    &                                 operator(<), operator(<=),  &
-    &                                 operator(>),operator(>=)
-  use ply_l2p_header_module,    only: ply_l2p_header_type,        &
-    &                                 ply_l2p_header_load,        &
-    &                                 ply_l2p_header_display,     &
-    &                                 ply_l2p_header_out,         &
-    &                                 assignment(=),              &
-    &                                 operator(==), operator(/=), &
-    &                                 operator(<), operator(<=),  &
-    &                                 operator(>),operator(>=)
-  use ply_fxt_header_module,    only: ply_fxt_header_type,        &
-    &                                 ply_fxt_header_load,        &
-    &                                 ply_fxt_header_display,     &
-    &                                 ply_fxt_header_out,         &
-    &                                 assignment(=),              &
-    &                                 operator(==), operator(/=), &
-    &                                 operator(<), operator(<=),  &
-    &                                 operator(>),operator(>=)
-
+  use ply_fpt_header_module
+  use ply_l2p_header_module
+  use ply_fxt_header_module
+  
   implicit none
 
   private
