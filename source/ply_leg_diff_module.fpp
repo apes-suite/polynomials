@@ -301,7 +301,7 @@ contains
     endif
   end subroutine calcDiff_leg
   ! ************************************************************************ !
-
+  
 
   ! ************************************************************************ !
   subroutine calcDiff_leg_2d( legCoeffs, legCoeffsDiff, maxPolyDegree, nVars, &
