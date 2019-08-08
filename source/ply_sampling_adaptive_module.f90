@@ -455,6 +455,9 @@ contains
       allocate(is_varying(curmesh%nElems))
       refinedElems = 0
 
+      write(logunit(5),*) 'Adaptive sampling refinement ', iRefLevel
+      write(logunit(5),*) '        Parent local mesh has ', curmesh%nelems, &
+        &                 ' elements.'
       ! The decision whether an element needs to be refined or not depends
       ! on all variable components. Thus, this needs to be checked once
       ! beforehand.
@@ -494,6 +497,10 @@ contains
 
       end do
 
+      write(logunit(5),*) '        The new mesh will have ', newelems, &
+        &                 ' elements.'
+      flush(logunit(5))
+
       need2refine = (newElems > curmesh%nElems)
 
       call MPI_Allreduce( MPI_IN_PLACE,        & !sendbuf
@@ -505,6 +512,7 @@ contains
         &                 iError               ) !ierror
 
       if (need2refine) then
+        write(logunit(5),*) '        Need to do a refinement!'
         ! Mesh needs to be refined, and we need to create a new one.
         if (allocated(map2global)) deallocate(map2global)
         allocate(map2global(refinedElems))
