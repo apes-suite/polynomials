@@ -1,3 +1,19 @@
+! Copyright (c) 2017 Harald Klimach <harald.klimach@uni-siegen.de>
+!
+! Parts of this file were written by Harald Klimach for University of Siegen.
+!
+! Permission to use, copy, modify, and distribute this software for any
+! purpose with or without fee is hereby granted, provided that the above
+! copyright notice and this permission notice appear in all copies.
+!
+! THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHORS DISCLAIM ALL WARRANTIES
+! WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+! MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR
+! ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+! WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+! ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+! OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+! **************************************************************************** !
 !> This module provides the methods to project the polynomial representation in
 !! elements onto the representations in their halves in each dimension.
 !!
@@ -126,7 +142,7 @@ contains
   !! indices would most likely be better.
   !! Maybe, using explicit shaped arrays and therby allowing more dimensions
   !! in the input, while keeping the interface to two dimensions for all
-  !! cases (the normal direction and all independent degrees of freedom). 
+  !! cases (the normal direction and all independent degrees of freedom).
   !! For vectorization on x86 it also is necessary to have a stride-1 access
   !! only in reading and writing.
   !! The rotation of data might not be the best option because of this.

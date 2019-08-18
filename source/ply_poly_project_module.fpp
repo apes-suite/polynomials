@@ -1,3 +1,32 @@
+! Copyright (c) 2013-2014 Jens Zudrop <j.zudrop@grs-sim.de>
+! Copyright (c) 2013-2014, 2016-2017 Peter Vitt <peter.vitt2@uni-siegen.de>
+! Copyright (c) 2013-2015 Nikhil Anand <nikhil.anand@uni-siegen.de>
+! Copyright (c) 2013-2018 Harald Klimach <harald.klimach@uni-siegen.de.de>
+! Copyright (c) 2013-2014 Verena Krupp <v.krupp@grs-sim.de>
+! Copyright (c) 2015 Kay Langhammer <kay.langhammer@student.uni-siegen.de>
+! Copyright (c) 2016-2017, 2019 Neda Ebrahimi Pour <neda.epour@uni-siegen.de>
+! Copyright (c) 2016 Tobias Girresser <tobias.girresser@student.uni-siegen.de>
+! Copyright (c) 2016 Kannan Masilamani <kannan.masilamani@uni-siegen.de>
+!
+! Parts of this file were written by Jens Zudrop for German Research School
+! for Simulation Sciences GmbH.
+!
+! Parts of this file were written by Harald Klimach, Verena Krupp, Peter Vitt,
+! Tobias Girresser, Nikhil Anand, Kay Langhammer, Kannan Masilamani and Neda
+! Ebrahimi Pour for University of Siegen.
+!
+! Permission to use, copy, modify, and distribute this software for any
+! purpose with or without fee is hereby granted, provided that the above
+! copyright notice and this permission notice appear in all copies.
+!
+! THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHORS DISCLAIM ALL WARRANTIES
+! WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+! MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR
+! ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+! WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+! ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+! OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+! **************************************************************************** !
 ?? include "ply_dof_module.inc"
 module ply_poly_project_module
   use env_module,                only: rk, labelLen
@@ -119,7 +148,7 @@ module ply_poly_project_module
 
     !> projection header consits of general information like which kind
     !! of projection is used
-    
+
     !> In the body datatype, there is for each dimension the main data
     !! for the projection method stored
     type(ply_prj_body_type)   :: body_1d
@@ -355,7 +384,7 @@ contains
     me%body_3d%oversamp_dofs = (oversampling_order)**3
     me%body_2d%oversamp_dofs = (oversampling_order)**2
     me%body_1d%oversamp_dofs = oversampling_order
-    
+
     select case (trim(proj_init%header%kind))
     case('fpt')
       ! Fill fpt datatype
@@ -639,7 +668,7 @@ contains
     case ('fxt')
       select case (dim)
       case (3)
-        do iVar = 1, nVars 
+        do iVar = 1, nVars
           call ply_fxt_n2m_3D(                                  &
             &         fxt              = me%body_3d%fxt,        &
             &         nodal_data       = nodal_data(:,iVar),    &
@@ -648,7 +677,7 @@ contains
         end do
 
       case (2)
-        do iVar = 1, nVars 
+        do iVar = 1, nVars
           call ply_fxt_n2m_2D(                                  &
             &         fxt              = me%body_2d%fxt,        &
             &         nodal_data       = nodal_data(:,iVar),    &
@@ -657,7 +686,7 @@ contains
         end do
 
       case (1)
-        do iVar = 1, nVars 
+        do iVar = 1, nVars
           call ply_fxt_n2m_1D(                               &
             &         fxt              = me%body_1d%fxt,     &
             &         nodal_data       = nodal_data(:,iVar), &

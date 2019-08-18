@@ -1,3 +1,22 @@
+! Copyright (c) 2014,2016-2017 Peter Vitt <peter.vitt2@uni-siegen.de>
+! Copyright (c) 2014 Harald Klimach <harald.klimach@uni-siegen.de>
+!
+! Parts of this file were written by Peter Vitt and Harald Klimach for
+! University of Siegen.
+!
+! Permission to use, copy, modify, and distribute this software for any
+! purpose with or without fee is hereby granted, provided that the above
+! copyright notice and this permission notice appear in all copies.
+!
+! THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHORS DISCLAIM ALL WARRANTIES
+! WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+! MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR
+! ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+! WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+! ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+! OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+! **************************************************************************** !
+!
 ! Return the position of a given ansatz function combination in the
 ! linearized list of modal coefficients for Q-Tensor product polynomials.
 ! You must provide
@@ -5,7 +24,7 @@
 ! * Ansatzfunction index in y direction. Index starts with 1.
 ! * Ansatzfunction index in z direction. Index starts with 1.
 ! * The maximal polynomial degree per spatial direction.
-! * The variable to store the position of the modal coefficient in the list of 
+! * The variable to store the position of the modal coefficient in the list of
 !   modal coefficients in.
 ?? text :: posOfModgCoeffQTens(ansFuncX, ansFuncY, ansFuncZ, maxdegree, result)
   ?result? = ?ansFuncX?                                      &
@@ -20,7 +39,7 @@
 ! * Ansatzfunction index in x direction. Index starts with 1.
 ! * Ansatzfunction index in y direction. Index starts with 1.
 ! * The maximal polynomial degree per spatial direction.
-! * The variable to store the position of the modal coefficient in the list of 
+! * The variable to store the position of the modal coefficient in the list of
 !   modal coefficients in.
 ?? text :: posOfModgCoeffQTens2D(ansFuncX, ansFuncY, maxdegree, result)
   ?result? = ?ansFuncX? + (?ansFuncY?-1)*(?maxdegree?+1)
@@ -31,7 +50,7 @@
 ! linearized list of modal coefficients for Q-Tensor product polynomials.
 ! You must provide
 ! * Ansatzfunction index in x direction. Index starts with 1.
-! * The variable to store the position of the modal coefficient in the list of 
+! * The variable to store the position of the modal coefficient in the list of
 !   modal coefficients in.
 ?? text :: posOfModgCoeffQTens1D(ansFuncX, result)
   ?result? = ?ansFuncX?
@@ -45,7 +64,7 @@
 ! * Ansatzfunction index in y direction. Index starts with 1.
 ! * Ansatzfunction index in z direction. Index starts with 1.
 ! * The maximal polynomial degree per spatial direction.
-! * The variable to store the position of the modal coefficient in the list of 
+! * The variable to store the position of the modal coefficient in the list of
 !   modal coefficients in.
 ?? text :: posOfModgCoeffPTens(ansFuncX, ansFuncY, ansFuncZ, result)
   ! integer divisions are no mistake here.
@@ -56,7 +75,7 @@
     & + ((?ansFuncZ?-1) * (?ansFuncX? + ?ansFuncY? + ?ansFuncZ? -2) &
     &   - ((?ansFuncZ?-2) * (?ansFuncZ?-1)) / 2) &
     & + (?ansFuncY?-1)
-?? end text posOfModgCoeffPTens 
+?? end text posOfModgCoeffPTens
 
 
 ! Return the position of a given ansatz function combination in the
@@ -65,7 +84,7 @@
 ! * Ansatzfunction index in x direction. Index starts with 1.
 ! * Ansatzfunction index in y direction. Index starts with 1.
 ! * The maximal polynomial degree per spatial direction.
-! * The variable to store the position of the modal coefficient in the list of 
+! * The variable to store the position of the modal coefficient in the list of
 !   modal coefficients in.
 ?? text :: posOfModgCoeffPTens2D(ansFuncX, ansFuncY, result)
   ! integer divisions are no mistake here.
@@ -79,7 +98,7 @@
 ! linearized list of modal coefficients for P-Tensor product polynomials.
 ! You must provide
 ! * Ansatzfunction index in x direction. Index starts with 1.
-! * The variable to store the position of the modal coefficient in the list of 
+! * The variable to store the position of the modal coefficient in the list of
 !   modal coefficients in.
 ?? text :: posOfModgCoeffPTens1D(ansFuncX, result)
   ! integer divisions are no mistake here.
