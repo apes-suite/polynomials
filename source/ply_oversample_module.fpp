@@ -235,7 +235,7 @@ contains
       end if posQ
 
     else !P_Space
-
+      modalCoeffs = 0.0_rk
       posP: if (present(ensure_positivity)) then
         ord_lim = maxorders
         varP: do iVar=1,nScalars
