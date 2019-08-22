@@ -7,45 +7,68 @@ other projects, which also include TreElM.
 The library provides some functionality to deal with Legendre polynomials,
 especially transforming between modal and nodal representations.
 
-We are now including FXTPACK, and are working on integrating it to allow a
-fast polynomial transformation directly from Legendre modes to Legendre nodes.
-
 License
 =======
 
-This library is licensed under the terms of the 2-clause BSD license reproduced below.
-This means that polynomials is free software and can be used, reproduced, modified,
-distributed and redistributed also for commercial purposes under the conditions
-of the BSD license.
+This library is licensed under the terms of the ISC license reproduced below.
+This means that polynomials is free software and can be used, reproduced,
+modified, distributed and redistributed also for commercial purposes.
 The only requirement is that some credit to the authors is given by putting this
 copyright notice somewhere in your project.
 
+Note that the FXTPACK distributed with this library in
+external/fxtp/fxtpack140715 is not covered by this license, see its README for
+details.
+For your convenience its conditions are reproduced below.
+
+Please see the individual source files for the respective authors.
+
 
 ---
-Copyright (C) 2015 University of Siegen.
 All rights reserved.
- 
-Redistribution and use in source and binary forms, with or without modification,
-are permitted provided that the following conditions are met:
- 
-1. Redistributions of source code must retain the above copyright notice, this
-list of conditions and the following disclaimer.
- 
-2. Redistributions in binary form must reproduce the above copyright notice,
-this list of conditions and the following disclaimer in the documentation and/or
-other materials provided with the distribution.
- 
-THIS SOFTWARE IS PROVIDED BY UNIVERSITY OF SIEGN “AS IS” AND ANY EXPRESS OR
-IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT
-SHALL UNIVERSITY OF SIEGEN OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
-INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
-ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- 
+
+Permission to use, copy, modify, and distribute this software for any
+purpose with or without fee is hereby granted, provided that the above
+copyright notice and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHORS DISCLAIM ALL WARRANTIES
+WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR
+ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
 The views and conclusions contained in the software and documentation are those
 of the authors and should not be interpreted as representing official policies,
 either expressed or implied, of University of Siegen.
+(end of Polynomials license)
+---
+
+h2. Usage Conditions of FXTPACK from its README
+
+Anyone can use FXTPACK in any software, and anyone can modify the
+source files.
+
+When you publish your software that uses FXTPACK or its modification,
+please mention that FXTPACK developed by Reiji Suda is used, in the
+documentation.
+
+When you publish your paper of your research that uses FXTPACK,
+please refer the paper [R. Suda, M. Takami, "A Fast Spherical Harmonics
+ Transform Algorithm", Math. Comp., 71-238, Apr. 2002, pp.703--715]
+(and [R. SUda, "Fast Spherical Harmonic Transform Algorithm based on·
+Generalized Fast Multiple Method", RIMS Kokyuroku vol 1606,
+pp. 18-29, Jun. 2008, RIMS, Kyoto University]).
+
+h3. FXTPACK Author:
+
+Reiji SUDA
+Department of Computer Science,
+Graduate School of Information Science and Technology,
+The University of Tokyo
+reiji@is.s.u-tokyo.ac.jp
+
+This work is supported by "An Evolutionary Approach to Construction
+of a Software Development Environment for Massively-Parallel
+Computing Systems", CREST, JST.

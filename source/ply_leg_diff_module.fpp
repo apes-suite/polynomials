@@ -1,3 +1,24 @@
+! Copyright (c) 2014-2015 Nikhil Anand <nikhil.anand@uni-siegen.de>
+! Copyright (c) 2014 Timo Stentenbach
+! Copyright (c) 2014, 2018 Harald Klimach <harald.klimach@uni-siegen.de>
+! Copyright (c) 2016-2017 Peter Vitt <peter.vitt2@uni-siegen.de>
+!
+! Parts of this file were written by Nikhil Anand, Timo Stentenbach,
+! Harald Klimach and Peter Vitt for University of Siegen.
+!
+! Permission to use, copy, modify, and distribute this software for any
+! purpose with or without fee is hereby granted, provided that the above
+! copyright notice and this permission notice appear in all copies.
+!
+! THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHORS DISCLAIM ALL WARRANTIES
+! WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+! MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR
+! ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+! WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+! ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+! OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+! **************************************************************************** !
+
 ?? include "ply_dof_module.inc"
 !> ply_leg_diff_module
 !!

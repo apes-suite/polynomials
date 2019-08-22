@@ -1,3 +1,22 @@
+! Copyright (c) 2017-2018 Harald Klimach <harald.klimach@uni-siegen.de>
+! Copyright (c) 2018 Peter Vitt <peter.vitt2@uni-siegen.de>
+! Copyright (c) 2017-2018 Daniel Fleischer <daniel.fleischer@student.uni-siegen.de>
+!
+! Parts of this file were written by Harald Klimach, Peter Vitt and Daniel
+! Fleischer for University of Siegen.
+!
+! Permission to use, copy, modify, and distribute this software for any
+! purpose with or without fee is hereby granted, provided that the above
+! copyright notice and this permission notice appear in all copies.
+!
+! THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHORS DISCLAIM ALL WARRANTIES
+! WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+! MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR
+! ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+! WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+! ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+! OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+! **************************************************************************** !
 !> Adaptive sampling of polynomial data.
 !!
 !! This module implements the sampling of polynomials with data dependent
@@ -121,7 +140,7 @@ module ply_sampling_adaptive_module
   type sampled_method_data_type
     type(realarray_type), allocatable :: component(:)
   end type sampled_method_data_type
-    
+
 
 contains
 
@@ -469,7 +488,7 @@ contains
         elemlevel = tem_levelOf(curmesh%treeID(iElem))
         reached_limit(iElem) = lastrefine                                     &
           &                    .or. ( (me%AbsUpperBoundLevel > 0)             &
-          &                    .and. (elemlevel >= me%AbsUpperBoundLevel - 1) ) 
+          &                    .and. (elemlevel >= me%AbsUpperBoundLevel - 1) )
 
         ! Now get the spectral variation (sum of absolute values of all
         ! higher modes).

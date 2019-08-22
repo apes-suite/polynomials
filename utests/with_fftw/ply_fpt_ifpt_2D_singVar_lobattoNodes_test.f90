@@ -1,3 +1,28 @@
+! Copyright (c) 2013-2014 Jens Zudrop <j.zudrop@grs-sim.de>
+! Copyright (c) 2013-2014 Peter Vitt <peter.vitt2@uni-siegen.de>
+! Copyright (c) 2013-2016, 2018 Harald Klimach <harald.klimach@uni-siegen.de>
+! Copyright (c) 2013-2014 Verena Krupp
+! Copyright (c) 2014 Nikhil Anand <nikhil.anand@uni-siegen.de>
+!
+! Parts of this file were written by Jens Zudrop for German Research School
+! for Simulation Sciences GmbH.
+!
+! Parts of this file were written by Harald Klimach, Peter Vitt, Verena Krupp,
+! and Nikhil Anand for University of Siegen.
+!
+! Permission to use, copy, modify, and distribute this software for any
+! purpose with or without fee is hereby granted, provided that the above
+! copyright notice and this permission notice appear in all copies.
+!
+! THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHORS DISCLAIM ALL WARRANTIES
+! WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+! MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR
+! ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+! WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+! ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+! OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+! **************************************************************************** !
+
 !> Unit test to check functionallity of fast polynomial transformations.
 !! \author{Jens Zudrop}
 program ply_fpt_ifpt_2D_singVar_lobattoNodes_test
@@ -29,7 +54,7 @@ program ply_fpt_ifpt_2D_singVar_lobattoNodes_test
 
   if (res < 1e-08) then
     write(logUnit(1),*) 'PASSED'
-  end if 
+  end if
 
   call fin_env()
 

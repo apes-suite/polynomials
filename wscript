@@ -1,3 +1,27 @@
+# Copyright (c) 2014-2016, 2018-2019 Harald Klimach <harald@klimachs.de>
+# Copyright (c) 2014 Tobias Schneider <tobias1.schneider@student.uni-siegen.de>
+# Copyright (c) 2015-2016 Nikhil Anand <nikhil.anand@uni-siegen.de>
+# Copyright (c) 2015 Kay Langhammer <kay.langhammer@student.uni-siegen.de>
+# Copyright (c) 2016 Verena Krupp
+# Copyright (c) 2016 Peter Vitt <peter.vitt2@uni-siegen.de>
+#
+# Parts of this file were written by Harald Klimach, Tobias Schneider, Kay
+# Langhammer, Verena Krupp, Peter Vitt and Nikhil Anand for Universit of
+# Siegen.
+#
+# Permission to use, copy, modify, and distribute this software for any
+# purpose with or without fee is hereby granted, provided that the above
+# copyright notice and this permission notice appear in all copies.
+#
+# THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHORS DISCLAIM ALL WARRANTIES
+# WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+# MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR
+# ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+# WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+# ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+# OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+# **************************************************************************** !
+
 #! /usr/bin/env python
 APPNAME = 'polynomials'
 VERSION = '1'
@@ -77,63 +101,63 @@ def build(bld):
                          'external/fxtp/fxt_fwrap.f90']
 
     fxtp_sources = ['fxt_faltld.c',
-		'fxt_faltld_comp.c',
-		'fxt_faltld_preproc.c',
-		'fxt_file.c',
-		'fxt_error.c',
-                'fxt_flptld.c',
-		'fxt_flptld_comp.c', 
-		'fxt_flptld_preproc.c',
-		'fxt_fmmld.c',
-		'fxt_fmmld_estimate.c',
-		'fxt_fmmld_evaluate.c',
-		'fxt_fmmld_evl.c',
-		'fxt_fmmld_exp.c',
-		'fxt_fmmld_lagld.c',
-		'fxt_fmmld_locexpmat.c',
-		'fxt_fmmld_matrix.c',
-		'fxt_fmmld_mulexpmat.c',
-		'fxt_fmmld_network.c',
-		'fxt_fmmld_preproc.c',
-		'fxt_fmmld_regions.c',
-		'fxt_fmmld_scalefmm.c',
-		'fxt_fmmld_scalevec.c',
-		'fxt_fxtld.c',
-		'fxt_fxtld_amat.c',
-		'fxt_fxtld_comp.c',
-		'fxt_fxtld_div.c',
-		'fxt_fxtld_fmm.c',
-		'fxt_fxtld_info.c',
-		'fxt_fxtld_lagld.c',
-		'fxt_fxtld_make.c',
-		'fxt_fxtld_scale.c',
-		'fxt_lagld.c',
-		'fxt_lagld_comp.c',
-		'fxt_lagld_drop.c',
-		'fxt_lagld_normal.c',
-		'fxt_lagld_oper.c',
-		'fxt_math_gaussll.c',
-		'fxt_math_legendrell.c',
-		'fxt_math_lsqrt.c',
-		'fxt_matld.c',
-		'fxt_matld_drop.c',
-		'fxt_matld_glq.c',
-		'fxt_matld_ipstab.c',
-		'fxt_matld_lagld.c',
-		'fxt_matld_lowrank.c',
-		'fxt_matld_vecld.c',
-		'fxt_matll.c',
-		'fxt_matll_drop.c',
-		'fxt_matll_ipstab.c',
-		'fxt_sarld.c',
-		'fxt_sarld_comp.c',
-		'fxt_sarld_error.c',
-		'fxt_sarld_lagld.c',
-		'fxt_sarld_scale.c',
-		'fxt_vecl.c',
-		'fxt_vecld.c',
-		'fxt_vecll.c']
-    
+                    'fxt_faltld_comp.c',
+                    'fxt_faltld_preproc.c',
+                    'fxt_file.c',
+                    'fxt_error.c',
+                    'fxt_flptld.c',
+                    'fxt_flptld_comp.c',
+                    'fxt_flptld_preproc.c',
+                    'fxt_fmmld.c',
+                    'fxt_fmmld_estimate.c',
+                    'fxt_fmmld_evaluate.c',
+                    'fxt_fmmld_evl.c',
+                    'fxt_fmmld_exp.c',
+                    'fxt_fmmld_lagld.c',
+                    'fxt_fmmld_locexpmat.c',
+                    'fxt_fmmld_matrix.c',
+                    'fxt_fmmld_mulexpmat.c',
+                    'fxt_fmmld_network.c',
+                    'fxt_fmmld_preproc.c',
+                    'fxt_fmmld_regions.c',
+                    'fxt_fmmld_scalefmm.c',
+                    'fxt_fmmld_scalevec.c',
+                    'fxt_fxtld.c',
+                    'fxt_fxtld_amat.c',
+                    'fxt_fxtld_comp.c',
+                    'fxt_fxtld_div.c',
+                    'fxt_fxtld_fmm.c',
+                    'fxt_fxtld_info.c',
+                    'fxt_fxtld_lagld.c',
+                    'fxt_fxtld_make.c',
+                    'fxt_fxtld_scale.c',
+                    'fxt_lagld.c',
+                    'fxt_lagld_comp.c',
+                    'fxt_lagld_drop.c',
+                    'fxt_lagld_normal.c',
+                    'fxt_lagld_oper.c',
+                    'fxt_math_gaussll.c',
+                    'fxt_math_legendrell.c',
+                    'fxt_math_lsqrt.c',
+                    'fxt_matld.c',
+                    'fxt_matld_drop.c',
+                    'fxt_matld_glq.c',
+                    'fxt_matld_ipstab.c',
+                    'fxt_matld_lagld.c',
+                    'fxt_matld_lowrank.c',
+                    'fxt_matld_vecld.c',
+                    'fxt_matll.c',
+                    'fxt_matll_drop.c',
+                    'fxt_matll_ipstab.c',
+                    'fxt_sarld.c',
+                    'fxt_sarld_comp.c',
+                    'fxt_sarld_error.c',
+                    'fxt_sarld_lagld.c',
+                    'fxt_sarld_scale.c',
+                    'fxt_vecl.c',
+                    'fxt_vecld.c',
+                    'fxt_vecll.c']
+
     for i_source in range(0, len(fxtp_sources)):
        fxtp_sources[i_source] = 'external/fxtp/fxtpack140715/' + fxtp_sources[i_source]
 
@@ -150,7 +174,7 @@ def build(bld):
           bld( features = 'fc',
                source = 'external/dummy/fftw_wrap.f90',
                target = 'fftw_mod_obj')
-  
+
        bld( features = 'c',
             source = fxtp_sources,
             use = ['MATH'],
