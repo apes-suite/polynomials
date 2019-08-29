@@ -118,8 +118,8 @@ module ply_modg_basis_module
 
 
   public :: init_modg_multilevelCoeffs, evalLegendreTensPoly, scalProdLeg, &
-    &       scalProdDualLeg, scalProdDualLegDiff, ply_modg_refine_type,    &
-    &       ply_modg_covolume_type,                                        &
+    &       scalProdDualLeg, scalProdDualLegDiff,scalProdDualLeg_vec,      &
+    &       ply_modg_refine_type, ply_modg_covolume_type,                                        &
     &       faceValLeftBndAns, faceValLeftBndTest,                         &
     &       faceValRightBndTest, ply_modg_basis_type, legendre_1D,         &
     &       faceValLeftBndTestGrad, faceValRightBndTestGrad,               &
@@ -750,5 +750,38 @@ contains
 
   end function scalProdDualLegDiff
   ! ************************************************************************ !
+  
+  ! ************************************************************************ !
+  !> Vectorized Function to calculate the scalar product between a Legendre polynomial
+  !! (ansatz function) and a dual Legendre polynomial (test function) on the
+  !! reference element [-1;+1] and
+  !! to calculate the scalar product between a Legendre polynomial
+  !! (ansatz function) and a differentiated dual Legendre polynomial (test
+  !! function) on the reference element [-1;+1].
+  pure function scalProdDualLeg_vec( ansFunc, testFunc, mPd) result(scalProd)
+  ! -------------------------------------------------------------------------!
+    !> maxPolyDegree
+    integer, intent(in) :: mPd
+    !> The ansatz function index, there first ansatz function has index 1.
+    integer, intent(in) :: ansFunc
+    !> The test function index, there first test function has index 1.
+    integer, intent(in) :: testFunc
+    !> The scalar product of the two functions.
+    real(kind=rk) :: scalProd(mPd+1)
+    integer :: iTest
 
+    do iTest = 1, mPd+1
+     if( ansFunc == testFunc ) then
+       scalProd(iTest) = 2.0_rk / ( 2.0_rk * iTest - 1.0_rk )
+     elseif( ansFunc == testFunc - 2 ) then
+       scalProd(iTest) = ( -2.0_rk ) / ( 2.0_rk * (iTest-2) - 1.0_rk )
+     elseif(ansFunc == testFunc-1) then
+       scalProd(iTest) = 2.0_rk
+     else
+       scalProd(iTest) = 0.0_rk
+     end if
+   end do
+   
+  end function scalProdDualLeg_vec
+  
 end module ply_modg_basis_module

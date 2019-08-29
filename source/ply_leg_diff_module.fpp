@@ -15,6 +15,7 @@ module ply_leg_diff_module
   public :: calcDiff_leg_1d
   public :: calcDiff_leg_normal
   public :: calcDiff_leg_2d_normal
+  public :: calcDiff_leg_normal_vec
 
 contains
 
@@ -150,6 +151,155 @@ contains
   end subroutine calcDiff_leg_normal
   ! ************************************************************************ !
 
+! ************************************************************************ !
+  subroutine calcDiff_leg_normal_vec( legCoeffs, legCoeffsDiff, mPd, nVars, &
+    &                             elemLength, iDir, dirVec              )
+    ! -------------------------------------------------------------------- !
+    real(kind=rk), intent(in) :: legCoeffs(:,:)
+    !> Modal expansion of the derivative of legCoeffs in terms of Legendre
+    !! modal coefficients. \n
+    !! First index is the number of modal coefficients. \n
+    !! Second index is the number of velocity components \n
+    !! Third index is the number of partial derivatives, i.e. 3 in 3D.
+    !real(kind=rk), intent(inout) :: legCoeffsDiff(:,:,:)
+    real(kind=rk), intent(inout) :: legCoeffsDiff(:,:)
+    integer, intent(in) :: mPd
+    !> The number of varibales to differentiate
+    integer, intent(in) :: nVars
+    !> The physical length of the element to build the derivatives for.
+    real(kind=rk), intent(in):: elemLength
+    !> The direction to differentiate
+    integer, intent(in) :: iDir
+    !> The direction vector for the rotation
+    integer, optional :: dirVec(3)
+    ! -------------------------------------------------------------------- !
+    integer :: iVar
+    integer :: dofPos, dofPosPrev, dofPos2Prev
+    integer :: leg(3), iDeg,iDeg1, iDeg2, iDeg3, DV(3)
+    integer :: legprev(3)
+    ! -------------------------------------------------------------------- !
+
+    if (present(dirVec)) then
+      DV = dirvec
+    else
+      if (iDir == 1) then
+        DV = [3,1,2]
+      elseif (iDir ==2) then
+        DV = [1,3,2]
+      elseif (iDir ==3) then
+        DV = [1,2,3]
+      endif
+    endif
+
+    
+    do iVar = 1, nVars
+      !iDeg3 = mPd+1
+      leg(3) = mPd+1
+      !legprev(3) = mPd
+
+      
+      do iDeg = 1, (mpd+1)**2
+        iDeg1 = (iDeg-1)/(mpd+1) + 1      !! do IDeg1 = 1, mPd+1
+        iDeg2 = iDeg - (iDeg1-1)*(mpd+1)  !! do IDeg2 = 1, mPd=1   !! iDeg2 = mod(iDeg-1,mpd+1)+1
+        leg(1) = iDeg1
+        leg(2) = iDeg2
+        leg(3) = mPd+1
+        !leg = (/iDeg1, iDeg2, iDeg3/)
+?? copy :: posOfModgCoeffQTens(leg(DV(1)), leg(DV(2)), leg(DV(3)), mPd, dofposprev )
+       ! dofpos = posOfModgCoeffQTens(leg(dirVec(1)), &
+       !                              leg(dirVec(2)), &
+       !                              leg(dirVec(3)), &
+       !                              maxPolyDegree   )
+
+       !legCoeffsDiff(dofPos,:,iDir) = 0.0_rk
+        legCoeffsDiff(dofPosPrev,iVar) = 0.0_rk
+
+        !leg = (/iDeg1, iDeg2, iDeg3-1/)
+        leg(3) = mpd
+?? copy :: posOfModgCoeffQTens(leg(DV(1)), leg(DV(2)), leg(DV(3)), mPd, dofpos )
+       ! dofpos = posOfModgCoeffQTens(leg(dirVec(1)), &
+       !                              leg(dirVec(2)), &
+       !                              leg(dirVec(3)), &
+       !                              maxPolyDegree   )
+
+       !legCoeffsDiff(dofPos,:,iDir) = legCoeffs(dofPosPrev,:)
+       legCoeffsDiff(dofPos,iVar) = legCoeffs(dofPosPrev,iVar)
+      end do
+
+        
+      do iDeg3 = mPd-1, 1, -1
+      
+       !NEC$ ivdep
+       do iDeg = 1, (mpd+1)**2
+        iDeg1 = (iDeg-1)/(mpd+1) + 1      !! do IDeg1 = 1, mPd+1
+        iDeg2 = iDeg - (iDeg1-1)*(mpd+1)  !! do IDeg2 = 1, mPd=1   !! iDeg2 = mod(iDeg-1,mpd+1)+1
+
+         leg = (/iDeg1, iDeg2, iDeg3/)
+?? copy :: posOfModgCoeffQTens(leg(DV(1)), leg(DV(2)), leg(DV(3)), mPd, dofpos )
+         ! dofpos = posOfModgCoeffQTens(leg(dirVec(1)), &
+         !                              leg(dirVec(2)), &
+         !                              leg(dirVec(3)), &
+         !                              mPd   )
+
+         leg = (/iDeg1, iDeg2, iDeg3+1/)
+?? copy :: posOfModgCoeffQTens(leg(DV(1)), leg(DV(2)), leg(DV(3)), mPd, dofposPrev )
+         ! dofposPrev = posOfModgCoeffQTens(leg(dirVec(1)), &
+         !                                  leg(dirVec(2)), &
+         !                                  leg(dirVec(3)), &
+         !                                  mPd   )
+
+         leg = (/iDeg1, iDeg2, iDeg3+2/)
+?? copy :: posOfModgCoeffQTens(leg(DV(1)), leg(DV(2)), leg(DV(3)), mPd, dofpos2Prev )
+         ! dofpos2Prev = posOfModgCoeffQTens(leg(dirVec(1)), &
+         !                                   leg(dirVec(2)), &
+         !                                   leg(dirVec(3)), &
+         !                                   mPd   )
+
+        !legCoeffsDiff(dofPos, iVar, iDir) = legCoeffsDiff(dofPos2Prev,iVar,iDir) &
+         legCoeffsDiff(dofPos, iVar) = legCoeffsDiff(dofPos2Prev,iVar) &
+          &                               + legCoeffs(dofPosPrev, iVar)
+        end do
+      end do
+     ! Scale the results due to the Jacobians of the mappings
+      do dofpos=1,(mpd+1)**3
+        ideg3 = (dofpos-1)/(mpd+1)**2 + 1
+        iDeg = dofpos - (ideg3-1)*(mpd+1)**2
+        iDeg2 = (iDeg-1)/(mpd+1) + 1
+        iDeg1 = mod(dofpos-1, mpd+1)  + 1
+        leg = (/iDeg1, iDeg2, iDeg3/)
+        legCoeffsDiff(dofPos,iVar) = legCoeffsDiff(dofPos,iVar)         &
+          &                         * (2.0_rk/elemLength)         &
+          &                         * (2.0_rk*leg(iDir) - 1.0_rk)
+      end do
+    
+    end do
+    
+
+
+
+
+
+
+   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+   ! Uncollapsed version of the scaling !
+   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+!!   do iDeg1 = 1, mPd+1
+!!     do iDeg2 = 1, mPd+1
+!!       do iDeg3 = 1, mPd+1
+!!         leg = (/iDeg1, iDeg2, iDeg3/)
+!!         dofPos = 1 + (iDeg1-1)                                   &
+!!         &      + (iDeg2-1)*(mPd+1)                               &
+!!         &      + (iDeg3-1)*(mPd+1)*(mPd+1)
+!!         legCoeffsDiff(dofPos,:,iDir) = legCoeffsDiff(dofPos,:,iDir)       &
+!!         &                       * (2.0_rk/elemLength)                     &
+!!         &                       * (2.0_rk*leg(iDir) - 1.0_rk)
+!!       end do
+!!     end do
+!!   end do
+
+  end subroutine calcDiff_leg_normal_vec
+  ! ************************************************************************ !
 
   ! ************************************************************************ !
   subroutine calcDiff_leg_2d_normal( legCoeffs, legCoeffsDiff, mPd, nVars, &
@@ -290,7 +440,7 @@ contains
       ! Loop over Directions
       do iDir = 1,3
         ! Calculate the differentiation for the particular direction
-        call calcDiff_leg_normal( legCoeffs     = legCoeffs,               &
+        call calcDiff_leg_normal_vec( legCoeffs     = legCoeffs,               &
           &                       legCoeffsDiff = legCoeffsDiff(:,:,iDir), &
           &                       mPD           = maxPolyDegree,           &
           &                       nVars         = nVars,                   &
