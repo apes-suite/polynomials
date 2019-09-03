@@ -1,6 +1,6 @@
 ! Copyright (c) 2012-2013 Jens Zudrop <j.zudrop@grs-sim.de>
 ! Copyright (c) 2012 Jan Hueckelheim <j.hueckelheim@grs-sim.de>
-! Copyright (c) 2013-2014,2018 Harald Klimach <harald.klimach@uni-siegen.de>
+! Copyright (c) 2013-2014,2018-2019 Harald Klimach <harald.klimach@uni-siegen.de>
 ! Copyright (c) 2013 Verena Krupp <verena.krupp@uni-siegen.de>
 ! Copyright (c) 2013 Melven Zoellner <yameta@freenet.de>
 ! Copyright (c) 2014,2016-2017 Peter Vitt <peter.vitt2@uni-siegen.de>
@@ -37,33 +37,16 @@ module ply_dof_module
 
   private
 
-  public :: ply_dof_nextCoeff, ply_dof_pos, ply_dof_count, ply_dof_2degree, &
-    &       ply_degree_2dof, ply_change_poly_space
-
-  abstract interface
-    subroutine ply_dof_nextCoeff(ansFuncX, ansFuncY, ansFuncZ, maxDegree)
-      integer, intent(inout) :: ansFuncX, ansFuncY, ansFuncZ
-      integer, intent(in) :: maxdegree
-    end subroutine ply_dof_nextCoeff
-
-    function ply_dof_pos(ansFuncX, ansFuncY, ansFuncZ, maxDegree) result(pos)
-      integer, intent(in) :: ansFuncX, ansFuncY, ansFuncZ
-      integer, intent(in) :: maxdegree
-      integer :: pos
-    end function ply_dof_pos
-
-    function ply_dof_count(maxPolyDegree) result(DoFs)
-      integer, intent(in) :: maxPolyDegree
-      integer :: DoFs
-    end function ply_dof_count
-  end interface
+  public :: ply_dof_2degree, ply_degree_2dof, ply_change_poly_space
 
   !> Parameter to identify Q polynomials
   integer, public, parameter :: Q_space = 1
   !> Parameter to identify P polynomials
   integer, public, parameter :: P_space = 2
 
+
 contains
+
 
   elemental function ply_dof_2degree(ndofs, space, ndims) result(deg)
     integer, intent(in) :: ndofs
