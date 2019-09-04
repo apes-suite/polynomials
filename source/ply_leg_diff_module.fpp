@@ -194,7 +194,7 @@ contains
     
     do iVar = 1, nVars
       !iDeg3 = mPd+1
-      leg(3) = mPd+1
+      !leg(3) = mPd+1
       !legprev(3) = mPd
 
       
