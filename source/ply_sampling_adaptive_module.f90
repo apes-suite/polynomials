@@ -673,8 +673,13 @@ contains
 
         ! Allocate an array of sufficient size for the refined data.
         if (need2refine) then
-          maxtarget = ceiling( reduction_factor(iScalar) &
-            &                  * (maxdeg(iScalar)+1) )
+          select case(me%reduction_mode)
+          case(redux_factor)
+            maxtarget = ceiling( reduction_factor(iScalar) &
+              &                  * (maxdeg(iScalar)+1) )
+          case(redux_decrement)
+            maxtarget = maxdeg(iScalar) - me%dof_decrement
+          end select
           maxtarget = max(maxtarget, 1)
           containersize = newelems &
             &           + reducableElems(iScalar) * (maxtarget**nDims - 1)
