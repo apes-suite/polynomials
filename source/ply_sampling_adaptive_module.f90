@@ -1,4 +1,4 @@
-! Copyright (c) 2017-2018 Harald Klimach <harald.klimach@uni-siegen.de>
+! Copyright (c) 2017-2019 Harald Klimach <harald.klimach@uni-siegen.de>
 ! Copyright (c) 2018 Peter Vitt <peter.vitt2@uni-siegen.de>
 ! Copyright (c) 2017-2018 Daniel Fleischer <daniel.fleischer@student.uni-siegen.de>
 !
@@ -39,7 +39,7 @@ module ply_sampling_adaptive_module
   use mpi
 
   use iso_c_binding, only: c_f_pointer, c_loc
-  use env_module, only: rk
+  use env_module, only: rk, labelLen
 
   use aotus_module, only: flu_state,   &
     &                     aot_get_val
@@ -60,6 +60,7 @@ module ply_sampling_adaptive_module
   use tem_topology_module, only: tem_levelOf
   use tem_tracking_module, only: tem_tracking_instance_type, &
     &                            tem_tracking_config_type
+  use tem_tools_module, only: upper_to_lower
   use tem_varsys_module, only: tem_varSys_proc_element,       &
     &                          tem_varSys_proc_point,         &
     &                          tem_varSys_proc_getParams,     &
@@ -92,6 +93,12 @@ module ply_sampling_adaptive_module
   public :: ply_sampling_adaptive_load
 
 
+  !> Constant to indicate the factor reduction mode.
+  integer, parameter :: redux_factor = 1
+
+  !> Constant to indicate the decrement reduction mode.
+  integer, parameter :: redux_decrement = 2
+
   !> Configuration of the adaptive sampling.
   !!
   !! The main setting is max_nlevels, which states the maximum number of
@@ -110,6 +117,27 @@ module ply_sampling_adaptive_module
     !> Maximum allowed oscillation of the solution.
     !! For adaptive subsampling only.
     real(kind=rk) :: eps_osci
+
+    !> Method to use for the reduction.
+    !!
+    !! This may either be:
+    !!
+    !! - redux_factor: multiply the maximal polynomial degree by the
+    !!               given factor in each refinement level. This allows to
+    !!               maintain the same total number of degrees of freedom by
+    !!               halfing the modes during each refinement.
+    !!               This is the default reduction mode
+    !! - redux_decrement: Cut off the given dof_decrement last modes in each
+    !!                    refinement. This can be used to filter off the most
+    !!                    oscillatory modes while affecting the solution
+    !!                    minimally otherwise.
+    integer :: reduction_mode
+
+    !> Number of modes to cut off in each refinement.
+    !!
+    !! If the decrement mode for reduction is used, this setting will
+    !! be used to cut off as many modes from the refined elements.
+    integer :: dof_decrement = 1
 
     !> Factor to Reduce dofs for every sampling level.
     !! Can be used to avoid too drastic increase of memory consumption.
@@ -153,6 +181,7 @@ contains
     integer, intent(in), optional :: parent
     ! -------------------------------------------------------------------- !
     integer :: iError
+    character(len=labelLen) :: reduction_mode
     ! -------------------------------------------------------------------- !
 
     call aot_get_val( L       = conf,           &
@@ -186,44 +215,77 @@ contains
 
     call aot_get_val( L       = conf,              &
       &               thandle = parent,            &
-      &               key     = 'dof_reduction',   &
-      &               val     = me%dofReducFactor, &
+      &               key     = 'reduction_mode',  &
+      &               val     = reduction_mode,    &
       &               ErrCode = iError,            &
-      &               default = 0.5_rk             )
+      &               default = 'factor'           )
 
-    if (me%dofReducFactor > 1.0_rk .or. me%dofReducFactor <= 0.0_rk) then
-      write(logunit(1),*) 'ERROR: dof_reduction has invalid setting:', &
-        &                 me%dofReducFactor
-      call tem_abort( 'dof_reduction needs to be in ' &
-        & // '0.0 < dof_reduction <= 1.0'             )
-    end if
+    reduction_mode = upper_to_lower(reduction_mode)
+    select case(trim(reduction_mode))
+    case ('factor')
+      me%reduction_mode = redux_factor
+      call aot_get_val( L       = conf,              &
+        &               thandle = parent,            &
+        &               key     = 'dof_reduction',   &
+        &               val     = me%dofReducFactor, &
+        &               ErrCode = iError,            &
+        &               default = 0.5_rk             )
 
-    call aot_get_val( L       = conf,                    &
-      &               thandle = parent,                  &
-      &               key     = 'adaptiveDofReduction',  &
-      &               val     = me%adaptiveDofReduction, &
-      &               ErrCode = iError,                  &
-      &               default = .FALSE.                  )
+      if (me%dofReducFactor > 1.0_rk .or. me%dofReducFactor <= 0.0_rk) then
+        write(logunit(1),*) 'ERROR: dof_reduction has invalid setting:', &
+          &                 me%dofReducFactor
+        call tem_abort( 'dof_reduction needs to be in ' &
+          & // '0.0 < dof_reduction <= 1.0'             )
+      end if
 
-    if (me%adaptiveDofReduction) then
+      call aot_get_val( L       = conf,                    &
+        &               thandle = parent,                  &
+        &               key     = 'adaptiveDofReduction',  &
+        &               val     = me%adaptiveDofReduction, &
+        &               ErrCode = iError,                  &
+        &               default = .FALSE.                  )
 
-      write(logunit(1),*) '  Reducing the degrees of freedom adaptively.'
-      write(logunit(1),*) '  This option tries to keep as many degrees of' &
-        &                 // ' freedom'
-      write(logunit(1),*) '  as possible while not increasing the required'
-      write(logunit(1),*) '  memory.'
-      write(logunit(1),*) '  However, the factor for the reduction will be'
-      write(logunit(1),*) '  at least ', me%dofReducFactor
-      write(logunit(1),*) '  Even if this results in an increased memory'
-      write(logunit(1),*) '  consumption after the refinement.'
+      if (me%adaptiveDofReduction) then
 
-    else
+        write(logunit(1),*) '  Reducing the degrees of freedom adaptively.'
+        write(logunit(1),*) '  This option tries to keep as many degrees of' &
+          &                 // ' freedom'
+        write(logunit(1),*) '  as possible while not increasing the required'
+        write(logunit(1),*) '  memory.'
+        write(logunit(1),*) '  However, the factor for the reduction will be'
+        write(logunit(1),*) '  at least ', me%dofReducFactor
+        write(logunit(1),*) '  Even if this results in an increased memory'
+        write(logunit(1),*) '  consumption after the refinement.'
 
-      write(logunit(1),*) 'Reducing the degrees of freedom on each ' &
-        &                 // 'refinement by a factor of', &
-        &                 me%dofReducFactor
+      else
 
-    end if
+        write(logunit(1),*) 'Reducing the degrees of freedom on each ' &
+          &                 // 'refinement by a factor of', &
+          &                 me%dofReducFactor
+
+      end if
+
+    case ('decrement')
+      me%reduction_mode = redux_decrement
+
+      call aot_get_val( L       = conf,             &
+        &               thandle = parent,           &
+        &               key     = 'dof_decrement',  &
+        &               val     = me%dof_decrement, &
+        &               ErrCode = iError,           &
+        &               default = 1                 )
+
+      write(logunit(1),*) '  Degrees of freedom will be decremented', &
+        &                 ' on each level by ', me%dof_decrement
+
+    case default
+      write(logunit(1),*) 'ERROR: Unknown reduction mode: ', &
+        &                 trim(reduction_mode)
+      write(logunit(1),*) 'Available reduction modes are:'
+      write(logunit(1),*) '* factor'
+      write(logunit(1),*) '* decrement'
+      call tem_abort( 'Unknown reduction mode!' )
+    end select
 
   end subroutine ply_sampling_adaptive_load
   ! ------------------------------------------------------------------------- !
@@ -562,7 +624,9 @@ contains
         ReducableElems(iScalar) = var(iScalar)%nDeviating*nChildren
       end do
 
-      if (me%adaptiveDofReduction .and. need2refine) then
+      if (me%reduction_mode == redux_factor &
+        & .and. me%adaptiveDofReduction     &
+        & .and. need2refine                 ) then
         ! If adaptive reduction is active, we may increase the factor and
         ! keep more dofs after the refinement for improved accuracy without
         ! increased memory. This is computed individually for each variable
@@ -621,9 +685,9 @@ contains
           containersize = newelems
         end if
 
-        call ply_sampling_var_allocate( var     = var(iScalar),  &
-          &                             nElems  = newElems,      &
-          &                             datalen = containersize  )
+        call ply_sampling_var_allocate( var     = var(iScalar), &
+          &                             nElems  = newElems,     &
+          &                             datalen = containersize )
 
         iNewElem = 1
         var(iScalar)%first(1) = 1
@@ -661,8 +725,14 @@ contains
                 ! degree of freedom.
                 targetdeg = 0
               else
-                targetdeg = ceiling( reduction_factor(iScalar)             &
-                  &                  * (prev(iScalar)%degree(iElem)+1) ) - 1
+                select case(me%reduction_mode)
+                case(redux_factor)
+                  targetdeg = ceiling( reduction_factor(iScalar)             &
+                    &                  * (prev(iScalar)%degree(iElem)+1) ) - 1
+                case(redux_decrement)
+                  targetdeg = max( prev(iScalar)%degree(iElem) &
+                    &              - me%dof_decrement, 0       )
+                end select
               end if
 
               oldlast = prev(iScalar)%first(iElem+1) - 1
