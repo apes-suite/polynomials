@@ -1,4 +1,4 @@
-! Copyright (c) 2017 Harald Klimach <harald.klimach@uni-siegen.de>
+! Copyright (c) 2017,2019 Harald Klimach <harald.klimach@uni-siegen.de>
 !
 ! Parts of this file were written by Harald Klimach for University of Siegen.
 !
@@ -54,7 +54,7 @@ module ply_split_element_module
     !> Split elements of degree parent_degree into elements with polynomials of
     !! degree child_degree.
     subroutine ply_split_element( parent_degree, child_degree, parent_data, &
-      &                           child_data )
+      &                           child_data, ignore_highmodes )
       ! -------------------------------------------------------------------- !
       import :: rk
       !> Polynomial degree in the parent element.
@@ -73,6 +73,15 @@ module ply_split_element_module
       !!
       !! Elements follow the ordering of the Z space filling curve.
       real(kind=rk), intent(out) :: child_data(:,:)
+
+      !> Whether to ignore high modes from the parent element.
+      !!
+      !! This can be used as a simple lowpass filter by ignoring all higher
+      !! modes from the parent element, that exceed the target polynomial
+      !! degree. Thus, the polynomials are filtered before projection,
+      !! instead of cutting them only of after refinement.
+      !! Defaults to false (no filtering).
+      logical, optional, intent(in) :: ignore_highmodes
       ! -------------------------------------------------------------------- !
     end subroutine ply_split_element
   end interface
@@ -179,7 +188,7 @@ contains
   !! We need: nDofs in the direction where the transformation is to be done
   !!          and the nDofs for all normal directions.
   subroutine ply_split_element_singleD( nDims, inLen, outLen, parent_data, &
-    &                                   child_data                         )
+    &                                   child_data, ignore                 )
     ! -------------------------------------------------------------------- !
     !> Number of dimensions of the polynomial data.
     integer, intent(in) :: nDims
@@ -210,6 +219,13 @@ contains
     !! data.
     real(kind=rk), intent(in) :: parent_data(:,:)
 
+    !> Whether to ignore high modes that exceed the target maximal polynomial
+    !! degree.
+    !!
+    !! This can be used as a simple lowpass filter that cuts off the highest
+    !! modes in the parent elements prior to mapping to child elements.
+    logical, intent(in) :: ignore
+
     !> Computed projection of the polynomial representation in the child
     !! elements.
     !!
@@ -230,6 +246,7 @@ contains
     integer :: iParent, Lchild, Rchild
     integer :: parentMode, childMode
     integer :: maxrow
+    integer :: maxcol
     integer :: indep
     integer :: nIndeps
     integer :: nParents
@@ -252,7 +269,12 @@ contains
       nIndeps = nIndeps*inLen(iDir)
     end do
 
-    oldmodes: do parentMode=1,inLen(nDims)
+    if (ignore) then
+      maxcol = min(outLen(1), inLen(nDims))
+    else
+      maxcol = inLen(nDims)
+    end if
+    oldmodes: do parentMode=1,maxcol
       ! Maximal number modes to compute, as this is a triangular matrix
       ! it is limited by the diagonal (parentMode). However, it may be
       ! that the target polynomial space in the output is smaller, in this
@@ -291,7 +313,7 @@ contains
   !> Split one-dimensional elements of degree parent_degree into two elements
   !! with polynomials of degree child_degree.
   subroutine ply_split_element_1D( parent_degree, child_degree, parent_data, &
-    &                              child_data )
+    &                              child_data, ignore_highmodes              )
     ! -------------------------------------------------------------------- !
     !> Polynomial degree in the parent element.
     integer, intent(in) :: parent_degree
@@ -309,10 +331,25 @@ contains
     !!
     !! Elements follow the ordering of the Z space filling curve.
     real(kind=rk), intent(out) :: child_data(:,:)
+
+    !> Whether to ignore high modes from the parent element.
+    !!
+    !! This can be used as a simple lowpass filter by ignoring all higher
+    !! modes from the parent element, that exceed the target polynomial
+    !! degree. Thus, the polynomials are filtered before projection,
+    !! instead of cutting them only of after refinement.
+    !! Defaults to false (no filtering).
+    logical, optional, intent(in) :: ignore_highmodes
     ! -------------------------------------------------------------------- !
+    logical :: ignore
     integer :: pardofs
     integer :: childdofs
     ! -------------------------------------------------------------------- !
+
+    ignore = .false.
+    if (present(ignore_highmodes)) then
+      ignore = ignore_highmodes
+    end if
 
     pardofs = parent_degree + 1
     childdofs = child_degree + 1
@@ -320,6 +357,7 @@ contains
     call ply_split_element_singleD( nDims       = 1,            &
       &                             inLen       = [pardofs],    &
       &                             outLen      = [childdofs],  &
+      &                             ignore      = ignore,       &
       &                             parent_data = parent_data,  &
       &                             child_data  = child_data    )
 
@@ -331,7 +369,7 @@ contains
   !> Split two-dimensional elements of degree parent_degree into four elements
   !! with polynomials of degree child_degree.
   subroutine ply_split_element_2D( parent_degree, child_degree, parent_data, &
-    &                              child_data )
+    &                              child_data, ignore_highmodes              )
     ! -------------------------------------------------------------------- !
     !> Polynomial degree in the parent element.
     integer, intent(in) :: parent_degree
@@ -349,11 +387,26 @@ contains
     !!
     !! Elements follow the ordering of the Z space filling curve.
     real(kind=rk), intent(out) :: child_data(:,:)
+
+    !> Whether to ignore high modes from the parent element.
+    !!
+    !! This can be used as a simple lowpass filter by ignoring all higher
+    !! modes from the parent element, that exceed the target polynomial
+    !! degree. Thus, the polynomials are filtered before projection,
+    !! instead of cutting them only of after refinement.
+    !! Defaults to false (no filtering).
+    logical, optional, intent(in) :: ignore_highmodes
     ! -------------------------------------------------------------------- !
     real(kind=rk), allocatable :: ysplit(:,:)
+    logical :: ignore
     integer :: pardofs
     integer :: childdofs
     ! -------------------------------------------------------------------- !
+
+    ignore = .false.
+    if (present(ignore_highmodes)) then
+      ignore = ignore_highmodes
+    end if
 
     pardofs = parent_degree + 1
     childdofs = child_degree + 1
@@ -363,12 +416,14 @@ contains
     call ply_split_element_singleD( nDims       = 2,                     &
       &                             inLen       = [pardofs, pardofs],    &
       &                             outLen      = [childdofs, pardofs],  &
+      &                             ignore      = ignore,                &
       &                             parent_data = parent_data,           &
       &                             child_data  = ysplit                 )
 
     call ply_split_element_singleD( nDims       = 2,                       &
       &                             inLen       = [childdofs, pardofs],    &
       &                             outLen      = [childdofs, childdofs],  &
+      &                             ignore      = ignore,                &
       &                             parent_data = ysplit,                  &
       &                             child_data  = child_data               )
 
@@ -382,7 +437,7 @@ contains
   !> Split three-dimensional elements of degree parent_degree into eight
   !! elements with polynomials of degree child_degree.
   subroutine ply_split_element_3D( parent_degree, child_degree, parent_data, &
-    &                              child_data )
+    &                              child_data, ignore_highmodes              )
     ! -------------------------------------------------------------------- !
     !> Polynomial degree in the parent element.
     integer, intent(in) :: parent_degree
@@ -400,15 +455,31 @@ contains
     !!
     !! Elements follow the ordering of the Z space filling curve.
     real(kind=rk), intent(out) :: child_data(:,:)
+
+    !> Whether to ignore high modes from the parent element.
+    !!
+    !! This can be used as a simple lowpass filter by ignoring all higher
+    !! modes from the parent element, that exceed the target polynomial
+    !! degree. Thus, the polynomials are filtered before projection,
+    !! instead of cutting them only of after refinement.
+    !! Defaults to false (no filtering).
+    logical, optional, intent(in) :: ignore_highmodes
     ! -------------------------------------------------------------------- !
     real(kind=rk), allocatable :: ysplit(:,:)
     real(kind=rk), allocatable :: zsplit(:,:)
+    logical :: ignore
     integer :: pardofs
     integer :: childdofs
     ! -------------------------------------------------------------------- !
 
     pardofs = parent_degree + 1
     childdofs = child_degree + 1
+
+    ignore = .false.
+    if (present(ignore_highmodes)) then
+      ignore = ignore_highmodes
+    end if
+
 
     allocate(zsplit(childdofs * pardofs**2, 2))
     allocate(ysplit(childdofs**2 * pardofs, 4))
@@ -418,6 +489,7 @@ contains
       &                                             pardofs           ], &
       &                             outLen      = [ childdofs, pardofs,  &
       &                                             pardofs           ], &
+      &                             ignore      = ignore,                &
       &                             parent_data = parent_data,           &
       &                             child_data  = zsplit                 )
 
@@ -426,6 +498,7 @@ contains
       &                                             pardofs           ],  &
       &                             outLen      = [ childdofs, childdofs, &
       &                                             pardofs           ],  &
+      &                             ignore      = ignore,                 &
       &                             parent_data = zsplit,                 &
       &                             child_data  = ysplit                  )
 
@@ -434,6 +507,7 @@ contains
       &                                             pardofs             ], &
       &                             outLen      = [ childdofs, childdofs,  &
       &                                             childdofs           ], &
+      &                             ignore      = ignore,                  &
       &                             parent_data = ysplit,                  &
       &                             child_data  = child_data               )
 
@@ -549,6 +623,7 @@ contains
         call ply_split_element_singleD( nDims       = 1,             &
           &                             inLen       = [parentModes], &
           &                             outLen      = [childModes],  &
+          &                             ignore      = .false.,       &
           &                             parent_data = rootelem,      &
           &                             child_data  = childelem      )
         success = success                                          &
@@ -561,6 +636,7 @@ contains
         call ply_split_element_singleD( nDims       = 1,             &
           &                             inLen       = [parentModes], &
           &                             outLen      = [childModes],  &
+          &                             ignore      = .false.,       &
           &                             parent_data = rootelem,      &
           &                             child_data  = childelem      )
         do iElem=1,2

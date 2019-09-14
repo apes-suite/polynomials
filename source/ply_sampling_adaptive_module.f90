@@ -133,6 +133,14 @@ module ply_sampling_adaptive_module
     !!                    minimally otherwise.
     integer :: reduction_mode
 
+    !> Indication whether to filter modes during refinement by ignoring
+    !! all modes in the parent, that exceed the target polynomial degree
+    !! of the child elements.
+    !!
+    !! This provides a simple lowpass filtering method if activated.
+    !! Defaults to false.
+    logical :: ignore_highmodes = .false.
+
     !> Number of modes to cut off in each refinement.
     !!
     !! If the decrement mode for reduction is used, this setting will
@@ -211,6 +219,18 @@ contains
         &                 ' will be used as absolute upper bound for the'
       write(logunit(1),*) '  refinement. No element will be refined beyond this'
       write(logunit(1),*) '  level.'
+    end if
+
+    call aot_get_val( L       = conf,                &
+      &               thandle = parent,              &
+      &               key     = 'ignore_highmodes',  &
+      &               val     = me%ignore_highmodes, &
+      &               ErrCode = iError,              &
+      &               default = .false.              )
+
+    if (me%ignore_highmodes) then
+      write(logunit(1),*) 'The highest modes that exceed the target degree'
+      write(logunit(1),*) 'will be ignored during each refinement!'
     end if
 
     call aot_get_val( L       = conf,              &
@@ -678,9 +698,8 @@ contains
             maxtarget = ceiling( reduction_factor(iScalar) &
               &                  * (maxdeg(iScalar)+1) )
           case(redux_decrement)
-            maxtarget = maxdeg(iScalar) - me%dof_decrement + 1
+            maxtarget = max(maxdeg(iScalar) - me%dof_decrement + 1, 1)
           end select
-          maxtarget = max(maxtarget, 1)
           containersize = newelems &
             &           + reducableElems(iScalar) * (maxtarget**nDims - 1)
         else
@@ -735,9 +754,9 @@ contains
                   targetdeg = ceiling( reduction_factor(iScalar)             &
                     &                  * (prev(iScalar)%degree(iElem)+1) ) - 1
                 case(redux_decrement)
-                  targetdeg = max( prev(iScalar)%degree(iElem) &
-                    &              - me%dof_decrement, 0       )
+                  targetdeg = prev(iScalar)%degree(iElem) - me%dof_decrement
                 end select
+                targetdeg = max(targetdeg, 0)
               end if
 
               oldlast = prev(iScalar)%first(iElem+1) - 1
@@ -753,10 +772,12 @@ contains
               child_data(1:ndofs,1:nChildren) &
                 & => var(iScalar)%dat(firstdof:lastdof)
 
-              call split_element( parent_degree = prev(iScalar)%degree(iElem), &
-                &                 child_degree  = targetdeg,                   &
-                &                 parent_data   = parent_data,                 &
-                &                 child_data    = child_data                   )
+              call split_element( parent_degree    = prev(iScalar)        &
+                &                                    %degree(iElem),      &
+                &                 child_degree     = targetdeg,           &
+                &                 ignore_highmodes = me%ignore_highmodes, &
+                &                 parent_data      = parent_data,         &
+                &                 child_data       = child_data           )
 
             else
               ! This scalar does not vary more than the threshold, just keep
