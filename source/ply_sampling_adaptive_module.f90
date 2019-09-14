@@ -678,7 +678,7 @@ contains
             maxtarget = ceiling( reduction_factor(iScalar) &
               &                  * (maxdeg(iScalar)+1) )
           case(redux_decrement)
-            maxtarget = maxdeg(iScalar) - me%dof_decrement
+            maxtarget = maxdeg(iScalar) - me%dof_decrement + 1
           end select
           maxtarget = max(maxtarget, 1)
           containersize = newelems &
