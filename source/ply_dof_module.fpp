@@ -103,66 +103,103 @@ contains
   !! atl_statedata_type from Q-space to P-space and vice versa.
   !  The space of the instate (inspace) defines the space of the
   !  outstate.
-  subroutine ply_change_poly_space( inspace, instate, outstate,     &
-    &                               maxPolyDeg, nElems, nVars )
+  subroutine ply_change_poly_space( inspace, instate, outstate,      &
+    &                               maxPolyDeg, nElems, nVars, nDims )
     ! -------------------------------------------------------------------- !
     !> Polynomial space of the input state (P_sapce or Q_space)
     integer, intent(in) :: inspace
 
     !> States of the variables of the input in polynomial space as
     !! prescribed in inspace.
-    real(kind=rk), allocatable, intent(in) :: instate(:,:,:)
+    real(kind=rk), intent(in) :: instate(:,:,:)
 
     !> States of the variables of the output.
-    real(kind=rk), allocatable, intent(inout) :: outstate(:,:,:)
+    real(kind=rk), intent(inout) :: outstate(:,:,:)
 
     integer, intent(in) :: maxPolyDeg
 
     integer, intent(in) :: nElems
 
     integer, intent(in) :: nVars
+
+    integer, intent(in) :: nDims
     ! -------------------------------------------------------------------- !
     integer :: iElem, iVar, iAnsX, iAnsY, iAnsZ
     integer :: P_pos, Q_pos
     ! -------------------------------------------------------------------- !
-    select case(inspace)
-    ! Instate space is P_space so outstate space is Q_space
-    ! Copy the dofs in the right order and fill up the higher modes with zeros
-    case(P_space)
-      outstate = 0.0_rk
-      do iElem = 1, nElems
-        do iVar = 1, nVars
-          do iAnsZ = 1, maxPolyDeg+1
-            do iAnsY = 1, maxPolyDeg+1 - (iAnsZ-1)
-              do iAnsX = 1, maxPolyDeg+1 - (iAnsZ-1) - (iAnsY-1)
+
+    select case(nDims)
+    case(3)
+      select case(inspace)
+      ! Instate space is P_space so outstate space is Q_space
+      ! Copy the dofs in the right order and fill up the higher modes with zeros
+      case(P_space)
+        outstate = 0.0_rk
+        do iElem = 1, nElems
+          do iVar = 1, nVars
+            do iAnsZ = 1, maxPolyDeg+1
+              do iAnsY = 1, maxPolyDeg+1 - (iAnsZ-1)
+                do iAnsX = 1, maxPolyDeg+1 - (iAnsZ-1) - (iAnsY-1)
 ?? copy :: posOfModgCoeffPTens(iAnsX, iAnsY, iAnsZ, P_pos)
 ?? copy :: posOfModgCoeffQTens(iAnsX, iAnsY, iAnsZ, maxPolyDeg, Q_pos)
+                  outstate( iElem, Q_pos, iVar ) = instate(iElem, P_pos, iVar)
+                end do
+              end do
+            end do
+          end do
+        end do
+
+      ! Instate space is Q_space so outstate space is P_space
+      ! Copy the dofs in the right order and cut off the higher modes
+      case(Q_space)
+        do iElem = 1, nElems
+          do iVar = 1, nVars
+            do iAnsZ = 1, maxPolyDeg+1
+              do iAnsY = 1, maxPolyDeg+1 - (iAnsZ-1)
+                do iAnsX = 1, maxPolyDeg+1 - (iAnsZ-1) - (iAnsY-1)
+?? copy :: posOfModgCoeffPTens(iAnsX, iAnsY, iAnsZ, P_pos)
+?? copy :: posOfModgCoeffQTens(iAnsX, iAnsY, iAnsZ, maxPolyDeg, Q_pos)
+                  outstate( iElem, P_pos, iVar ) = instate(iElem, Q_pos, iVar)
+                end do
+              end do
+            end do
+          end do
+        end do
+      end select
+
+    case(2)
+      select case(inspace)
+      ! Instate space is P_space so outstate space is Q_space
+      ! Copy the dofs in the right order and fill up the higher modes with zeros
+      case(P_space)
+        outstate = 0.0_rk
+        do iElem = 1, nElems
+          do iVar = 1, nVars
+            do iAnsY = 1, maxPolyDeg+1
+              do iAnsX = 1, maxPolyDeg+1 - (iAnsY-1)
+?? copy :: posOfModgCoeffPTens2D(iAnsX, iAnsY, P_pos)
+?? copy :: posOfModgCoeffQTens2D(iAnsX, iAnsY, maxPolyDeg, Q_pos)
                 outstate( iElem, Q_pos, iVar ) = instate(iElem, P_pos, iVar)
               end do
             end do
           end do
         end do
-      end do
 
-    ! Instate space is Q_space so outstate space is P_space
-    ! Copy the dofs in the right order and cut off the higher modes
-    case(Q_space)
-
-      do iElem = 1, nElems
-        do iVar = 1, nVars
-          do iAnsZ = 1, maxPolyDeg+1
-            do iAnsY = 1, maxPolyDeg+1 - (iAnsZ-1)
-              do iAnsX = 1, maxPolyDeg+1 - (iAnsZ-1) - (iAnsY-1)
-?? copy :: posOfModgCoeffPTens(iAnsX, iAnsY, iAnsZ, P_pos)
-?? copy :: posOfModgCoeffQTens(iAnsX, iAnsY, iAnsZ, maxPolyDeg, Q_pos)
+      ! Instate space is Q_space so outstate space is P_space
+      ! Copy the dofs in the right order and cut off the higher modes
+      case(Q_space)
+        do iElem = 1, nElems
+          do iVar = 1, nVars
+            do iAnsY = 1, maxPolyDeg+1
+              do iAnsX = 1, maxPolyDeg+1 - (iAnsY-1)
+?? copy :: posOfModgCoeffPTens2D(iAnsX, iAnsY, P_pos)
+?? copy :: posOfModgCoeffQTens2D(iAnsX, iAnsY, maxPolyDeg, Q_pos)
                 outstate( iElem, P_pos, iVar ) = instate(iElem, Q_pos, iVar)
               end do
             end do
           end do
         end do
-      end do
-
-
+      end select
     end select
 
   end subroutine ply_change_poly_space
