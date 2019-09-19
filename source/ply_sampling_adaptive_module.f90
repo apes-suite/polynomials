@@ -83,6 +83,9 @@ module ply_sampling_adaptive_module
     &                                 ply_split_element_1D,   &
     &                                 ply_split_element_2D,   &
     &                                 ply_split_element_3D
+  use ply_filter_element_module, only: ply_filter_element,      &
+    &                                  ply_filter_element_type, &
+    &                                  ply_filter_element_load
 
   implicit none
 
@@ -157,6 +160,13 @@ module ply_sampling_adaptive_module
 
     !> Absolute upper bound level to refine to.
     integer :: AbsUpperBoundLevel
+
+    !> Filtering the poylnomial modes during adaptive refinement.
+    !!
+    !! This filtering provides the possibility to change the applied
+    !! filtering based on the polynomials and thereby attempting to
+    !! capture discontinuities more sharply.
+    type(ply_filter_element_type) :: filter_element
   end type ply_sampling_adaptive_type
 
 
@@ -307,6 +317,11 @@ contains
       call tem_abort( 'Unknown reduction mode!' )
     end select
 
+    call ply_filter_element_load(      &
+      &    me     = me%filter_element, &
+      &    conf   = conf,              &
+      &    parent = parent             )
+
   end subroutine ply_sampling_adaptive_load
   ! ------------------------------------------------------------------------- !
   ! ------------------------------------------------------------------------- !
@@ -427,6 +442,7 @@ contains
     type(tem_subTree_type) :: tracked_subtree
 
     procedure(ply_split_element), pointer :: split_element
+    procedure(ply_filter_element), pointer :: filtering
     procedure(tem_varSys_proc_element), pointer :: get_element
     procedure(tem_varSys_proc_point), pointer :: get_point
     procedure(tem_varSys_proc_setParams), pointer :: set_params
@@ -441,10 +457,13 @@ contains
     select case(nDims)
     case (1)
       split_element => ply_split_element_1D
+      filtering     => me%filter_element%filter1D
     case (2)
       split_element => ply_split_element_2D
+      filtering     => me%filter_element%filter2D
     case (3)
       split_element => ply_split_element_3D
+      filtering     => me%filter_element%filter3D
     end select
 
     call ply_split_element_init(nMaxModes)
@@ -771,6 +790,13 @@ contains
                 & => prev(iScalar)%dat(oldfirst:oldlast)
               child_data(1:ndofs,1:nChildren) &
                 & => var(iScalar)%dat(firstdof:lastdof)
+
+              if (associated(filtering)) then
+                call filtering(                                      &
+                  &    me             = me%filter_element,           &
+                  &    element_degree = prev(iScalar)%degree(iElem), &
+                  &    element_data   = parent_data                  )
+              end if
 
               call split_element( parent_degree    = prev(iScalar)        &
                 &                                    %degree(iElem),      &
