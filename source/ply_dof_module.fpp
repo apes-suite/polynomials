@@ -78,6 +78,8 @@ contains
     integer, intent(in) :: nDims
     integer :: nDofs
 
+    ndofs = -1
+
     select case(space)
     case (Q_space)
       nDofs = (deg+1)**nDims
