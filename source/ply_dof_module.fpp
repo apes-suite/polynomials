@@ -54,7 +54,7 @@ contains
     integer, intent(in) :: ndims
     integer :: deg
 
-    integer :: idim, fact, estimate
+    integer :: estimate
 
     select case(space)
     case (Q_space)
