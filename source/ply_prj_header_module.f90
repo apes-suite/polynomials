@@ -230,8 +230,9 @@ contains
   !> This function provides the test for equality of the header for two
   !! projections.
   !!
-  !! The headers are considered to be equal, if their kind, the fpt_ header
-  !! and the l2p header are equal.
+  !! The headers are considered to be equal, if their kind and the corresponding
+  !! headers are equal. For unknown kinds, the headers are not taken into
+  !! consideration.
   pure function isEqual( left, right ) result(equality)
     ! -------------------------------------------------------------------- !
     !> projection to compare
@@ -242,16 +243,14 @@ contains
     logical :: equality
     ! -------------------------------------------------------------------- !
 
+    equality = ( left%kind == right%kind )
     select case(left%kind)
       case ('fpt')
-         equality = ( left%kind == right%kind ) &
-           & .and. ( left%fpt_header == right%fpt_header )
+        equality = equality .and. ( left%fpt_header == right%fpt_header )
       case ('l2p')
-         equality = ( left%kind == right%kind ) &
-           & .and. ( left%l2p_header == right%l2p_header )
+        equality = equality .and. ( left%l2p_header == right%l2p_header )
       case ('fxt')
-         equality = ( left%kind == right%kind ) &
-           & .and. ( left%fxt_header == right%fxt_header )
+        equality = equality .and. ( left%fxt_header == right%fxt_header )
     end select
 
   end function isEqual

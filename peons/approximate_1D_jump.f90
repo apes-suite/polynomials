@@ -1,5 +1,5 @@
 ! Copyright (c) 2015 Harald Klimach <harald@klimachs.de>
-! Copyright (c) 2016 Peter Vitt <peter.vitt2@uni-siegen.de>
+! Copyright (c) 2016, 2019 Peter Vitt <peter.vitt2@uni-siegen.de>
 !
 ! Parts of this file were written by Harald Klimach and Peter Vitt
 ! for University of Siegen.

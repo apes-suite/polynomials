@@ -211,12 +211,15 @@ contains
       offset = me%subres_prop%offset(iColor)
 
       ! Figure out the target polynomial representation.
+      !
+      ! We moved this allocation in front of the loop to silence a compiler
+      ! warning about a potentially uninitialized variable.
+      target_dofs = target_degree+1
       select case(target_space)
         case (Q_Space)
-          target_dofs = (target_degree+1)**target_dim
+          target_dofs = target_dofs**target_dim
 
         case (P_Space)
-          target_dofs = target_degree+1
           do pdim=2,target_dim
             target_dofs = (target_dofs * (target_degree+pdim) ) / pdim
           end do
