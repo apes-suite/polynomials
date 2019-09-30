@@ -82,19 +82,19 @@ contains
     case (Q_space)
       nDofs = (deg+1)**nDims
     case (P_space)
-        select case (nDims)
-        case(3)
-          nDofs = ((deg + 1)  &
-            &   *  (deg + 2)  &
-            &   *  (deg + 3)) &
-            &   / 6
-        case(2)
-          nDofs = ((deg + 1)  &
-            &   *  (deg + 2)) &
-            &   / 3
-        case(1)
-          nDofs = (deg + 1)
-        end select
+      select case (nDims)
+      case(3)
+        nDofs = ((deg + 1)  &
+          &   *  (deg + 2)  &
+          &   *  (deg + 3)) &
+          &   / 6
+      case(2)
+        nDofs = ((deg + 1)  &
+          &   *  (deg + 2)) &
+          &   / 3
+      case(1)
+        nDofs = (deg + 1)
+      end select
     end select
 
   end function ply_degree_2dof
