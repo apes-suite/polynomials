@@ -144,6 +144,9 @@ program approximate_1D_jump
     end if
   end if
 
+  ! Initialize current to a value outside it's normal range to check whether it
+  ! was set during runtime.
+  current = -1
 
   ! Voxelization (in 1D just a bisection algorithm...)
   allocate(bisect(0:level+1))
@@ -329,6 +332,10 @@ program approximate_1D_jump
     end do
     exact(iMode) = exact(iMode) / scalprodleg(iMode)
   end do
+
+  if (current == -1) then
+    write(*,*) "Variable current is used unintialized. Results may be invalid."
+  endif
 
   l2err = 0.0_rk
   optierr = 0.0_rk
