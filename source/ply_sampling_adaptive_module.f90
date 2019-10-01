@@ -453,6 +453,8 @@ contains
 
     nMaxModes = maxval(var_degree+1)
     nChildren = 2**nDims
+    nullify(split_element)
+    nullify(filtering)
 
     select case(nDims)
     case (1)
@@ -710,6 +712,14 @@ contains
 
       variables: do iScalar=1,nScalars
 
+        ! The following code was moved in front of the condition to silence a
+        ! compiler warning about a potentially uninitialized maxtarget variable.
+        !
+        ! No refinement to be done, just a single degree of freedom per
+        ! element needed.
+        maxtarget = 1
+        containersize = newelems
+
         ! Allocate an array of sufficient size for the refined data.
         if (need2refine) then
           select case(me%reduction_mode)
@@ -721,11 +731,6 @@ contains
           end select
           containersize = newelems &
             &           + reducableElems(iScalar) * (maxtarget**nDims - 1)
-        else
-          ! No refinement to be done, just a single degree of freedom per
-          ! element needed.
-          maxtarget = 1
-          containersize = newelems
         end if
 
         call ply_sampling_var_allocate( var     = var(iScalar), &
