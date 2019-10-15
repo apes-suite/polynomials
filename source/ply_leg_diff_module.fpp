@@ -174,7 +174,7 @@ contains
     integer, optional :: dirVec(3)
     ! -------------------------------------------------------------------- !
     integer :: iVar
-    integer :: dofPos, dofPosPrev, dofPos2Prev
+    integer :: dofPos, dofPosPrev, dofPos2Prev, dofposprev_vec((mpd+1)**2), dofpos_vec((mpd+1)**2)
     integer :: leg(3), iDeg,iDeg1, iDeg2, iDeg3, DV(3)
     integer :: legprev(3)
     ! -------------------------------------------------------------------- !
@@ -191,42 +191,38 @@ contains
       endif
     endif
 
-    
-    do iVar = 1, nVars
-      !iDeg3 = mPd+1
-      !leg(3) = mPd+1
-      !legprev(3) = mPd
-
-      
-      do iDeg = 1, (mpd+1)**2
+    iDeg3 = mpd
+      do iVar = 1, nVars
+       
+       do iDeg = 1, (mpd+1)**2
         iDeg1 = (iDeg-1)/(mpd+1) + 1      !! do IDeg1 = 1, mPd+1
         iDeg2 = iDeg - (iDeg1-1)*(mpd+1)  !! do IDeg2 = 1, mPd=1   !! iDeg2 = mod(iDeg-1,mpd+1)+1
-        leg(1) = iDeg1
-        leg(2) = iDeg2
-        leg(3) = mPd+1
-        !leg = (/iDeg1, iDeg2, iDeg3/)
-?? copy :: posOfModgCoeffQTens(leg(DV(1)), leg(DV(2)), leg(DV(3)), mPd, dofposprev )
-       ! dofpos = posOfModgCoeffQTens(leg(dirVec(1)), &
-       !                              leg(dirVec(2)), &
-       !                              leg(dirVec(3)), &
-       !                              maxPolyDegree   )
 
-       !legCoeffsDiff(dofPos,:,iDir) = 0.0_rk
-        legCoeffsDiff(dofPosPrev,iVar) = 0.0_rk
-
-        !leg = (/iDeg1, iDeg2, iDeg3-1/)
-        leg(3) = mpd
+        leg = (/iDeg1, iDeg2, iDeg3/)
 ?? copy :: posOfModgCoeffQTens(leg(DV(1)), leg(DV(2)), leg(DV(3)), mPd, dofpos )
        ! dofpos = posOfModgCoeffQTens(leg(dirVec(1)), &
        !                              leg(dirVec(2)), &
        !                              leg(dirVec(3)), &
        !                              maxPolyDegree   )
+      legCoeffsDiff(dofPos,iVar) = 0.0_rk
+      dofPosPrev = dofPos
+       
+        ! dofpos_vec(iDeg) = dofpos
 
-       !legCoeffsDiff(dofPos,:,iDir) = legCoeffs(dofPosPrev,:)
+
+
+        legprev = (/iDeg1, iDeg2, iDeg3+1/)
+?? copy :: posOfModgCoeffQTens(legprev(DV(1)), legprev(DV(2)), legprev(DV(3)), mPd, dofposprev )
+       ! dofpos = posOfModgCoeffQTens(leg(dirVec(1)), &
+       !                              leg(dirVec(2)), &
+       !                              leg(dirVec(3)), &
+       !                              maxPolyDegree   )
+    !  legCoeffsDiff(dofPos,iVar) = legCoeffs(dofPosPrev,iVar) 
+
        legCoeffsDiff(dofPos,iVar) = legCoeffs(dofPosPrev,iVar)
-      end do
-
         
+       end do
+          
       do iDeg3 = mPd-1, 1, -1
       
        !NEC$ ivdep
