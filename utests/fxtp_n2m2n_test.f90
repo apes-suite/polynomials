@@ -38,8 +38,9 @@ program test_fxtd_n2m2n
   use ply_oversample_module,        only: ply_convert2oversample, &
     &                                     ply_convertFromOversample
 
+  !mpi!nprocs = 1
 
-implicit none
+  implicit none
 
 
   real(kind=rk) :: res1
