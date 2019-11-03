@@ -36,7 +36,6 @@ module ply_leg_diff_module
   public :: calcDiff_leg_1d
   public :: calcDiff_leg_normal
   public :: calcDiff_leg_2d_normal
-  public :: calcDiff_leg_normal_vec
 
 contains
 
@@ -308,6 +307,208 @@ contains
   ! ************************************************************************ !
 
   ! ************************************************************************ !
+  !> Compute the derivative in X direction for 3D Legendre polynomial.
+  subroutine calcDiff_leg_x_vec( legCoeffs, legCoeffsDiff, mPd, nVars, &
+    &                             elemLength )
+    ! -------------------------------------------------------------------- !
+    real(kind=rk), intent(in) :: legCoeffs(:,:)
+    !> Modal expansion of the derivative of legCoeffs in terms of Legendre
+    !! modal coefficients.
+    !! * First index is the number of modal coefficients.
+    !! * Second index is the number of variable components
+    real(kind=rk), intent(inout) :: legCoeffsDiff(:,:)
+    integer, intent(in) :: mPd
+    !> The number of varibales to differentiate
+    integer, intent(in) :: nVars
+    !> The physical length of the element to build the derivatives for.
+    real(kind=rk), intent(in):: elemLength
+    ! -------------------------------------------------------------------- !
+    integer :: iVar
+    integer :: dofPos, dofPosPrev
+    integer :: iDeg, iDeg1, iDeg2, iDeg3
+    real(kind=rk) :: derivative((mpd+1)**2,mpd+1)
+    ! -------------------------------------------------------------------- !
+
+    varloop: do iVar = 1, nVars
+
+      derivative(:,mpd+1) = 0.0_rk
+
+      iDeg1 = mpd
+
+      do iDeg = 1, (mpd+1)**2
+        iDeg3 = (iDeg-1)/(mpd+1) + 1
+        iDeg2 = iDeg - (iDeg3-1)*(mpd+1)
+
+?? copy :: posOfModgCoeffQTens(iDeg1+1, iDeg2, iDeg3, mPd, dofpos )
+        derivative(iDeg, mpd) = legCoeffs(dofpos,iVar)
+      end do
+
+      do iDeg1 = mPd-1, 1, -1
+
+        !NEC$ ivdep
+        do iDeg = 1, (mpd+1)**2
+          iDeg3 = (iDeg-1)/(mpd+1) + 1
+          iDeg2 = iDeg - (iDeg3-1)*(mpd+1)
+
+?? copy :: posOfModgCoeffQTens(iDeg1+1, iDeg2, iDeg3, mPd, dofposPrev)
+
+          derivative(iDeg, iDeg1) = derivative(iDeg, iDeg1+2) &
+            &                       + legCoeffs(dofposprev, iVar)
+        end do
+      end do
+
+      ! Scale the results due to the Jacobians of the mappings
+      do dofpos=1,(mpd+1)**3
+        ideg3 = (dofpos-1)/(mpd+1)**2 + 1
+        iDeg = dofpos - (ideg3-1)*(mpd+1)**2
+        iDeg2 = (iDeg-1)/(mpd+1) + 1
+        iDeg1 = mod(dofpos-1, mpd+1)  + 1
+        legCoeffsDiff(dofPos,iVar) = derivative(iDeg2+(iDeg3-1)*(mpd+1),iDeg1) &
+          &                          * (2.0_rk/elemLength)  &
+          &                          * (2.0_rk*iDeg1 - 1.0_rk)
+      end do
+
+    end do varloop
+
+  end subroutine calcDiff_leg_x_vec
+  ! ************************************************************************ !
+
+
+  ! ************************************************************************ !
+  !> Compute the derivative in Y direction for 3D Legendre polynomial.
+  subroutine calcDiff_leg_y_vec( legCoeffs, legCoeffsDiff, mPd, nVars, &
+    &                             elemLength )
+    ! -------------------------------------------------------------------- !
+    real(kind=rk), intent(in) :: legCoeffs(:,:)
+    !> Modal expansion of the derivative of legCoeffs in terms of Legendre
+    !! modal coefficients.
+    !! * First index is the number of modal coefficients.
+    !! * Second index is the number of variable components
+    real(kind=rk), intent(inout) :: legCoeffsDiff(:,:)
+    integer, intent(in) :: mPd
+    !> The number of varibales to differentiate
+    integer, intent(in) :: nVars
+    !> The physical length of the element to build the derivatives for.
+    real(kind=rk), intent(in):: elemLength
+    ! -------------------------------------------------------------------- !
+    integer :: iVar
+    integer :: dofPos, dofPosPrev
+    integer :: iDeg, iDeg1, iDeg2, iDeg3
+    real(kind=rk) :: derivative((mpd+1)**2,mpd+1)
+    ! -------------------------------------------------------------------- !
+
+    varloop: do iVar = 1, nVars
+
+      derivative(:,mpd+1) = 0.0_rk
+
+      iDeg2 = mpd
+
+      do iDeg = 1, (mpd+1)**2
+        iDeg3 = (iDeg-1)/(mpd+1) + 1
+        iDeg1 = iDeg - (iDeg3-1)*(mpd+1)
+
+?? copy :: posOfModgCoeffQTens(iDeg1, iDeg2+1, iDeg3, mPd, dofpos )
+        derivative(iDeg, mpd) = legCoeffs(dofpos,iVar)
+      end do
+
+      do iDeg2 = mPd-1, 1, -1
+
+        !NEC$ ivdep
+        do iDeg = 1, (mpd+1)**2
+          iDeg3 = (iDeg-1)/(mpd+1) + 1
+          iDeg1 = iDeg - (iDeg3-1)*(mpd+1)
+
+?? copy :: posOfModgCoeffQTens(iDeg1, iDeg2+1, iDeg3, mPd, dofposPrev)
+
+          derivative(iDeg, iDeg2) = derivative(iDeg, iDeg2+2) &
+            &                       + legCoeffs(dofposprev, iVar)
+        end do
+      end do
+
+      ! Scale the results due to the Jacobians of the mappings
+      do dofpos=1,(mpd+1)**3
+        ideg3 = (dofpos-1)/(mpd+1)**2 + 1
+        iDeg = dofpos - (ideg3-1)*(mpd+1)**2
+        iDeg2 = (iDeg-1)/(mpd+1) + 1
+        iDeg1 = mod(dofpos-1, mpd+1)  + 1
+        legCoeffsDiff(dofPos,iVar) = derivative(iDeg1+(iDeg3-1)*(mpd+1),iDeg2) &
+          &                          * (2.0_rk/elemLength)  &
+          &                          * (2.0_rk*iDeg2 - 1.0_rk)
+      end do
+
+    end do varloop
+
+  end subroutine calcDiff_leg_y_vec
+  ! ************************************************************************ !
+
+
+  ! ************************************************************************ !
+  !> Compute the derivative in Y direction for 3D Legendre polynomial.
+  subroutine calcDiff_leg_z_vec( legCoeffs, legCoeffsDiff, mPd, nVars, &
+    &                             elemLength )
+    ! -------------------------------------------------------------------- !
+    real(kind=rk), intent(in) :: legCoeffs(:,:)
+    !> Modal expansion of the derivative of legCoeffs in terms of Legendre
+    !! modal coefficients.
+    !! * First index is the number of modal coefficients.
+    !! * Second index is the number of variable components
+    real(kind=rk), intent(inout) :: legCoeffsDiff(:,:)
+    integer, intent(in) :: mPd
+    !> The number of varibales to differentiate
+    integer, intent(in) :: nVars
+    !> The physical length of the element to build the derivatives for.
+    real(kind=rk), intent(in):: elemLength
+    ! -------------------------------------------------------------------- !
+    integer :: iVar
+    integer :: dofPos, dofPosPrev
+    integer :: iDeg, iDeg1, iDeg2, iDeg3
+    real(kind=rk) :: derivative((mpd+1)**2,mpd+1)
+    ! -------------------------------------------------------------------- !
+
+    varloop: do iVar = 1, nVars
+
+      derivative(:,mpd+1) = 0.0_rk
+
+      iDeg3 = mpd
+
+      do iDeg = 1, (mpd+1)**2
+        iDeg2 = (iDeg-1)/(mpd+1) + 1
+        iDeg1 = iDeg - (iDeg2-1)*(mpd+1)
+
+?? copy :: posOfModgCoeffQTens(iDeg1, iDeg2, iDeg3+1, mPd, dofpos )
+        derivative(iDeg, mpd) = legCoeffs(dofpos,iVar)
+      end do
+
+      do iDeg3 = mPd-1, 1, -1
+
+        !NEC$ ivdep
+        do iDeg = 1, (mpd+1)**2
+          iDeg2 = (iDeg-1)/(mpd+1) + 1
+          iDeg1 = iDeg - (iDeg2-1)*(mpd+1)
+
+?? copy :: posOfModgCoeffQTens(iDeg1, iDeg2, iDeg3+1, mPd, dofposPrev)
+
+          derivative(iDeg, iDeg3) = derivative(iDeg, iDeg3+2) &
+            &                       + legCoeffs(dofposprev, iVar)
+        end do
+      end do
+
+      ! Scale the results due to the Jacobians of the mappings
+      do dofpos=1,(mpd+1)**3
+        ideg3 = (dofpos-1)/(mpd+1)**2 + 1
+        ideg = dofpos - (ideg3-1)*(mpd+1)**2
+        legCoeffsDiff(dofPos,iVar) = derivative(iDeg,iDeg3) &
+          &                          * (2.0_rk/elemLength)  &
+          &                          * (2.0_rk*iDeg3 - 1.0_rk)
+      end do
+
+    end do varloop
+
+  end subroutine calcDiff_leg_z_vec
+  ! ************************************************************************ !
+
+
+  ! ************************************************************************ !
   subroutine calcDiff_leg_2d_normal( legCoeffs, legCoeffsDiff, mPd, nVars, &
     &                                elemLength, iDir, dirVec              )
     ! -------------------------------------------------------------------- !
@@ -433,28 +634,29 @@ contains
     integer, intent(in) :: nVars
     !> The physical length of the element to build the derivatives for.
     real(kind=rk),intent(in) :: elemLength
-    !> The direction to evaluate the differentiation
-    integer :: iDir
     ! -------------------------------------------------------------------- !
-    integer :: dirvec(3,3)
     ! -------------------------------------------------------------------- !
     if (maxpolydegree > 0) then
-      dirvec(:,1) = [3, 1, 2]
-      dirvec(:,2) = [1, 3, 2]
-      dirvec(:,3) = [1, 2, 3]
-
       ! Loop over Directions
-      do iDir = 1,3
-        ! Calculate the differentiation for the particular direction
-        call calcDiff_leg_normal_vec( legCoeffs     = legCoeffs,               &
-          &                       legCoeffsDiff = legCoeffsDiff(:,:,iDir), &
-          &                       mPD           = maxPolyDegree,           &
-          &                       nVars         = nVars,                   &
-          &                       elemLength    = elemLength,              &
-          &                       dirvec        = dirvec(:,iDir),          &
-          &                       iDir          = iDir                     )
-      enddo
-    endif
+      call calcDiff_leg_x_vec( legCoeffs     = legCoeffs,            &
+        &                      legCoeffsDiff = legCoeffsDiff(:,:,1), &
+        &                      mPD           = maxPolyDegree,        &
+        &                      nVars         = nVars,                &
+        &                      elemLength    = elemLength            )
+      call calcDiff_leg_y_vec( legCoeffs     = legCoeffs,            &
+        &                      legCoeffsDiff = legCoeffsDiff(:,:,2), &
+        &                      mPD           = maxPolyDegree,        &
+        &                      nVars         = nVars,                &
+        &                      elemLength    = elemLength            )
+      call calcDiff_leg_z_vec( legCoeffs     = legCoeffs,            &
+        &                      legCoeffsDiff = legCoeffsDiff(:,:,3), &
+        &                      mPD           = maxPolyDegree,        &
+        &                      nVars         = nVars,                &
+        &                      elemLength    = elemLength            )
+    else
+      legCoeffsDiff = 0.0_rk
+    end if
+
   end subroutine calcDiff_leg
   ! ************************************************************************ !
   
