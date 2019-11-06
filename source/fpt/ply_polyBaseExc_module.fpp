@@ -1031,43 +1031,43 @@ contains
         gam((indep-1)*n+1) = 0.5_rk*gam((indep-1)*n+1)
       end if
 
-      ! Multiply with the entries near the diagonal
-      call ply_calculate_coeff_strip(                &
-        & nIndeps          = nIndeps,                &
-        & n                = params%n,               &
-        & s                = params%n,               &
-        & gam              = gam,                    &
-        & matrix           = params%diag,            &
-        & alph             = alph,                   &
-        & nDiagonals       = params%nDiagonals,      &
-        & block_offset     = 0,                      &
-        & remainder        = 0,                      &
-        & strip_lb         = indep-1,                &
-        & strip_ub         = indep,                  &
-        & subblockingWidth = params%subblockingWidth )
-
-      ! Multiply with entries in the adapters
-      do iBlock=1,params%nBlocks-1
-
-        block_off = (iBlock-1)*params%s
-
-        call ply_calculate_coeff_strip(                    &
-          & nIndeps          = nIndeps,                    &
-          & n                = params%n,                   &
-          & s                = params%s,                   &
-          & gam              = gam,                        &
-          & matrix           = params%adapter(:,:,iBlock), &
-          & alph             = alph,                       &
-          & nDiagonals       = params%nBlockDiagonals,     &
-          & block_offset     = block_off,                  &
-          & remainder        = remainder,                  &
-          & strip_lb         = indep-1,                    &
-          & strip_ub         = indep,                      &
-          & subblockingWidth = params%subblockingWidth     )
-
-      end do
-
     end do indeploop
+
+    ! Multiply with the entries near the diagonal
+    call ply_calculate_coeff_strip(                &
+      & nIndeps          = nIndeps,                &
+      & n                = params%n,               &
+      & s                = params%n,               &
+      & gam              = gam,                    &
+      & matrix           = params%diag,            &
+      & alph             = alph,                   &
+      & nDiagonals       = params%nDiagonals,      &
+      & block_offset     = 0,                      &
+      & remainder        = 0,                      &
+      & strip_lb         = 0,                      &
+      & strip_ub         = nIndeps,                &
+      & subblockingWidth = params%subblockingWidth )
+
+    ! Multiply with entries in the adapters
+    do iBlock=1,params%nBlocks-1
+
+      block_off = (iBlock-1)*params%s
+
+      call ply_calculate_coeff_strip(                    &
+        & nIndeps          = nIndeps,                    &
+        & n                = params%n,                   &
+        & s                = params%s,                   &
+        & gam              = gam,                        &
+        & matrix           = params%adapter(:,:,iBlock), &
+        & alph             = alph,                       &
+        & nDiagonals       = params%nBlockDiagonals,     &
+        & block_offset     = block_off,                  &
+        & remainder        = remainder,                  &
+        & strip_lb         = 0,                          &
+        & strip_ub         = nIndeps,                    &
+        & subblockingWidth = params%subblockingWidth     )
+
+    end do
 
   end subroutine ply_fpt_exec
   ! ************************************************************************ !

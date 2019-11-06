@@ -25,6 +25,7 @@
           row_off = m + block_offset
           col_off = row_off + remainder + diag_off
 
+          !NEC$ ivdep
           do indep = strip_lb + 1, strip_ub
             iFun = (indep - 1) * n
             iVal = iFun + row_off
@@ -50,6 +51,7 @@
           row_off = m + block_offset
           col_off = row_off + remainder + diag_off
 
+          !NEC$ ivdep
           do indep = strip_lb + 1, strip_ub
             iFun = (indep - 1) * n
             iVal = iFun + row_off
@@ -74,6 +76,7 @@
           row_off = m + block_offset
           col_off = row_off + remainder + diag_off
 
+          !NEC$ ivdep
           do indep = strip_lb + 1, strip_ub
             iFun = (indep - 1) * n
             iVal = iFun + row_off
@@ -97,6 +100,7 @@
           row_off = m + block_offset
           col_off = row_off + remainder + diag_off
 
+          !NEC$ ivdep
           do indep = strip_lb + 1, strip_ub
             iFun = (indep - 1) * n
             iVal = iFun + row_off
@@ -119,6 +123,7 @@
           row_off = m + block_offset
           col_off = row_off + remainder + diag_off
 
+          !NEC$ ivdep
           do indep = strip_lb + 1, strip_ub
             iFun = (indep - 1) * n
             iVal = iFun + row_off
@@ -140,6 +145,7 @@
           row_off = m + block_offset
           col_off = row_off + remainder + diag_off
 
+          !NEC$ ivdep
           do indep = strip_lb + 1, strip_ub
             iFun = (indep - 1) * n
             iVal = iFun + row_off
@@ -160,6 +166,7 @@
           row_off = m + block_offset
           col_off = row_off + remainder + diag_off
 
+          !NEC$ ivdep
           do indep = strip_lb + 1, strip_ub
             iFun = (indep - 1) * n
             iVal = iFun + row_off
@@ -179,6 +186,7 @@
           row_off = m + block_offset
           col_off = row_off + remainder + diag_off
 
+          !NEC$ ivdep
           do indep = strip_lb + 1, strip_ub
             iFun = (indep - 1) * n
             iVal = iFun + row_off
