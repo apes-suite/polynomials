@@ -236,7 +236,7 @@ contains
   !> Fill ups the bodys accroding to the DA.
   subroutine ply_fill_project_list( proj_list, dyn_projectArray, scheme_dim )
   !---------------------------------------------------------------------------!
-    type(ply_poly_project_type), intent(inout), allocatable :: proj_list(:)
+    type(ply_poly_project_type), intent(out), allocatable :: proj_list(:)
     type(dyn_ProjectionArray_type), intent(in) :: dyn_projectArray
     integer, intent(in) :: scheme_dim
     !-------------------------------------------------------------------------!
