@@ -1,6 +1,6 @@
 ! Copyright (c) 2013-2014 Jens Zudrop <j.zudrop@grs-sim.de>
 ! Copyright (c) 2013-2014, 2016 Peter Vitt <peter.vitt2@uni-siegen.de>
-! Copyright (c) 2013-2016, 2018 Harald Klimach <harald.klimach@uni-siegen.de>
+! Copyright (c) 2013-2016, 2018-2019 Harald Klimach <harald.klimach@uni-siegen.de>
 ! Copyright (c) 2013-2014 Verena Krupp
 ! Copyright (c) 2014 Nikhil Anand <nikhil.anand@uni-siegen.de>
 !
@@ -36,6 +36,8 @@ program ply_ifpt_3D_singVar_lobattoNodes_test
   use ply_modg_basis_module,    only: evalLegendreTensPoly
   use ply_dof_module,           only: Q_space
   use tem_general_module,       only: tem_general_type, tem_start
+
+  !mpi!nprocs = 1
 
   implicit none
 

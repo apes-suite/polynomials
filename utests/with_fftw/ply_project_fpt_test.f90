@@ -1,4 +1,4 @@
-! Copyright (c) 2013-2016 Harald Klimach <harald@klimachs.de>
+! Copyright (c) 2013-2016,2019 Harald Klimach <harald@klimachs.de>
 ! Copyright (c) 2013-2014, 2016 Peter Vitt <peter.vitt2@uni-siegen.de>
 ! Copyright (c) 2013-2014 Verena Krupp
 ! Copyright (c) 2014 Nikhil Anand <nikhil.anand@uni-siegen.de>
@@ -25,18 +25,19 @@ program ply_project_fpt_test
   use tem_logging_module,      only: logUnit
   use ply_dof_module,          only: Q_space
   use ply_dynArray_project_module, only: ply_prj_init_define, &
-                                    &    ply_prj_init_type
+    &                                    ply_prj_init_type
   use ply_poly_project_module,     only: ply_poly_project_fillbody, &
-                                    &    ply_poly_project_m2n,&
-                                    &    ply_poly_project_n2m, &
-                                    &    ply_poly_project_type
+    &                                    ply_poly_project_m2n,      &
+    &                                    ply_poly_project_n2m,      &
+    &                                    ply_poly_project_type
   use ply_prj_header_module,       only: ply_prj_header_type
   use ply_fpt_header_module,       only: ply_fpt_default_blocksize, &
     &                                    ply_fpt_default_subblockingWidth
   use tem_general_module,          only: tem_general_type, tem_start
 
+  !mpi!nprocs = 1
 
-implicit none
+  implicit none
 
 
   real(kind=rk) :: res, newRes

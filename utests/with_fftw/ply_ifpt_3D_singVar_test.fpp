@@ -1,6 +1,6 @@
 ! Copyright (c) 2013-2014 Jens Zudrop <j.zudrop@grs-sim.de>
 ! Copyright (c) 2013-2014, 2016-2017 Peter Vitt <peter.vitt2@uni-siegen.de>
-! Copyright (c) 2013-2016, 2018 Harald Klimach <harald.klimach@uni-siegen.de>
+! Copyright (c) 2013-2016, 2018-2019 Harald Klimach <harald.klimach@uni-siegen.de>
 ! Copyright (c) 2013-2014 Verena Krupp
 ! Copyright (c) 2014 Nikhil Anand <nikhil.anand@uni-siegen.de>
 !
@@ -35,6 +35,8 @@ program ply_ifpt_3D_singVar_test
   use ply_legFpt_module,        only: ply_legFpt_type, ply_init_legFPT
   use ply_legFpt_3D_module,     only: ply_pntToLeg_3D
   use ply_modg_basis_module,    only: legendre_1D
+
+  !mpi!nprocs = 1
 
   implicit none
 

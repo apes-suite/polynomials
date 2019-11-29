@@ -36,6 +36,8 @@ program ply_fpt_2D_singVar_lobattoNodes_test
   use ply_modg_basis_module,    only: evalLegendreTensPoly
   use ply_dof_module,           only: Q_space
 
+  !mpi!nprocs = 1
+
   implicit none
 
   integer :: iPower

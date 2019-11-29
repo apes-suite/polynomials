@@ -1,6 +1,6 @@
 ! Copyright (c) 2013-2014 Jens Zudrop <j.zudrop@grs-sim.de>
 ! Copyright (c) 2013-2014 Peter Vitt <peter.vitt2@uni-siegen.de>
-! Copyright (c) 2013-2016 Harald Klimach <harald@klimachs.de>
+! Copyright (c) 2013-2016,2019 Harald Klimach <harald@klimachs.de>
 ! Copyright (c) 2013-2014 Verena Krupp
 ! Copyright (c) 2014 Nikhil Anand <nikhil.anand@uni-siegen.de>
 !
@@ -35,6 +35,8 @@ program ply_ifpt_lobattoNodes_test
   use ply_legFpt_module,        only: ply_init_legFpt, ply_legFpt_type, &
     &                                 ply_pntToLeg
   use ply_modg_basis_module,    only: legendre_1D
+
+  !mpi!nprocs = 1
 
   implicit none
 

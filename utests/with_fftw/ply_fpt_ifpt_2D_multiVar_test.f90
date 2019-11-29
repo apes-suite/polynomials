@@ -1,5 +1,5 @@
 ! Copyright (c) 2012, 2014 Jens Zudrop <j.zudrop@grs-sim.de>
-! Copyright (c) 2012-2016, 2018 Harald Klimach <harald.klimach@uni-siegen.de>
+! Copyright (c) 2012-2016, 2018-2019 Harald Klimach <harald.klimach@uni-siegen.de>
 ! Copyright (c) 2013 Simon Zimny <s.zimny@grs-sim.de>
 ! Copyright (c) 2013-2014 Peter Vitt <peter.vitt2@uni-siegen.de>
 ! Copyright (c) 2013-2014 Verena Krupp
@@ -33,6 +33,8 @@ program ply_fpt_ifpt_2D_multiVar_test
   use ply_legFpt_module,        only: ply_legFpt_type, ply_init_legFPT
   use ply_legFpt_2D_module,     only: ply_legToPnt_2D, &
     &                                 ply_pntToLeg_2D
+
+  !mpi!nprocs = 1
 
   implicit none
 

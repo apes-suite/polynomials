@@ -32,46 +32,63 @@ out = 'build'
 def configure(conf):
     from waflib import Errors, Logs
 
-    # Check for FFTW lib
-    fftw_libpath = None
-    fftw_omplibpath = None
-
-    if conf.options.fftw_libpath:
-      fftw_libpath = conf.options.fftw_libpath
-    elif conf.options.fftw_path:
-      fftw_libpath = conf.options.fftw_path + '/lib'
-
-    conf.setenv("cenv")
-    if fftw_libpath:
-       Logs.info('Checking path to FFTW lib: ' + fftw_libpath)
-       conf.check(lib='fftw3', libpath=fftw_libpath, uselib_store='FFTW3', mandatory=False)
-       if conf.options.fftw_incpath:
-         conf.env.INCLUDES_FFTW3 = conf.options.fftw_incpath
-       elif conf.options.fftw_path:
-         conf.env.INCLUDES_FFTW3 = conf.options.fftw_path+'/include'
+    if conf.env.FC_NAME == 'NFORT':
+        conf.setenv("cenv")
+        conf.check(lib='asl_sequential', uselib_store='ASL', mandatory=False)
+        conf.check(lib='aslfftw3', uselib_store='FFTW3', use='ASL', mandatory=False)
+        if conf.env.LIB_FFTW3:
+           conf.all_envs[''].LIB_ASL = conf.env.LIB_ASL
+           conf.all_envs[''].LIB_FFTW3 = conf.env.LIB_FFTW3 + conf.env.LIB_ASL
+        conf.setenv('')
     else:
-       # Try to use pkg-config to find the FFTW library.
-       conf.check_cfg(package='fftw3', uselib_store='FFTW3',
-                      args=['--cflags', '--libs'], mandatory=False)
-       if not conf.env.LIB_FFTW3:
-          # Try to link the fftw without any further options.
-          conf.check(lib='fftw3', uselib_store='FFTW3', mandatory=False)
+        # Check for FFTW lib (if not on Aurora with nfort)
+        fftw_libpath = None
+        fftw_omplibpath = None
+
+        if conf.options.fftw_libpath:
+          fftw_libpath = conf.options.fftw_libpath
+        elif conf.options.fftw_path:
+          fftw_libpath = conf.options.fftw_path + '/lib'
+
+        conf.setenv("cenv")
+        if fftw_libpath:
+           Logs.info('Checking path to FFTW lib: ' + fftw_libpath)
+           conf.check(lib='fftw3', libpath=fftw_libpath, uselib_store='FFTW3', mandatory=False)
+           if conf.options.fftw_incpath:
+             conf.env.INCLUDES_FFTW3 = conf.options.fftw_incpath
+           elif conf.options.fftw_path:
+             conf.env.INCLUDES_FFTW3 = conf.options.fftw_path+'/include'
+        else:
+           # Try to use pkg-config to find the FFTW library.
+           conf.check_cfg(package='fftw3', uselib_store='FFTW3',
+                          args=['--cflags', '--libs'], mandatory=False)
+           if not conf.env.LIB_FFTW3:
+              # Try to link the fftw without any further options.
+              conf.check(lib='fftw3', uselib_store='FFTW3', mandatory=False)
+
+        if conf.env.LIB_FFTW3:
+           conf.all_envs[''].FCFLAGS_FFTW3 = conf.env.CFLAGS_FFTW3
+           conf.all_envs[''].LIB_FFTW3 = conf.env.LIB_FFTW3
+           conf.all_envs[''].LIBPATH_FFTW3 = conf.env.LIBPATH_FFTW3
+           conf.all_envs[''].INCLUDES_FFTW3 = conf.env.INCLUDES_FFTW3
+        conf.setenv('')
 
     if conf.env.LIB_FFTW3:
-       conf.all_envs[''].FCFLAGS_FFTW3 = conf.env.CFLAGS_FFTW3
-       conf.all_envs[''].LIB_FFTW3 = conf.env.LIB_FFTW3
-       conf.all_envs[''].LIBPATH_FFTW3 = conf.env.LIBPATH_FFTW3
-       conf.all_envs[''].INCLUDES_FFTW3 = conf.env.INCLUDES_FFTW3
-    conf.setenv('')
-
-    if conf.env.LIB_FFTW3:
-       # Check for the fftw3.f03 header:
        try:
-          conf.check_fc(fragment= "program test\n use, intrinsic :: iso_c_binding\n include 'fftw3.f03'\nend program test",
-                        includes= conf.env.INCLUDES_FFTW3,
-                        msg     = "Checking for the fftw3.f03 header",
-                        errmsg  = "FFTW lib seems to be available, but no compatible Fortran header (need FFTW >=3.3.1)!"
-                       )
+         # Check for the fftw3.f03 header:
+         if conf.env.LIB_ASL:
+           conf.check_fc(fragment= "program test\n use, intrinsic :: iso_c_binding\n include 'aslfftw3.f03'\nend program test",
+                         includes= conf.env.INCLUDES_FFTW3,
+                         msg     = "Checking for the fftw3.f03 header",
+                         errmsg  = "ASLFFTW header not found, make sure to source /opt/nec/ve/nlc/X.X.X/bin/nlcvars.sh!"
+                        )
+           conf.env.WITH_ASL = True
+         else:
+            conf.check_fc(fragment= "program test\n use, intrinsic :: iso_c_binding\n include 'fftw3.f03'\nend program test",
+                          includes= conf.env.INCLUDES_FFTW3,
+                          msg     = "Checking for the fftw3.f03 header",
+                          errmsg  = "FFTW lib seems to be available, but no compatible Fortran header (need FFTW >=3.3.1)!"
+                         )
        except Errors.ConfigurationError:
           conf.env.LIB_FFTW3 = None
 
@@ -165,8 +182,12 @@ def build(bld):
     if bld.cmd != 'gendoxy':
        if bld.env.LIB_FFTW3:
           fftwdep = 'FFTW3'
+          if bld.env.WITH_ASL:
+             fftwrapsource = 'external/fftw/aslfftw_wrap.f90'
+          else:
+             fftwrapsource = 'external/fftw/fftw_wrap.f90'
           bld( features = 'fc',
-               source = 'external/fftw/fftw_wrap.f90',
+               source = fftwrapsource,
                use = fftwdep,
                target = 'fftw_mod_obj')
        else:
@@ -223,9 +244,8 @@ def build(bld):
 
        utests(bld = bld, use = test_dep)
 
-       if bld.env.LIB_FFTW3:
+       if bld.env.LIB_FFTW3 or bld.env.WITH_ASL:
           utests(bld = bld, use = test_dep, path = 'utests/with_fftw')
-
 
     else:
        bld(

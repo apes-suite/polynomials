@@ -203,28 +203,52 @@ contains
 
     if (.not.lob) then
       ! Init the DCT III ( Leg -> Point values )
-      fpt%planChebToPnt = fftw_plan_r2r_1d( n     = n,             &
-        &                                   in    = tmpIn,         &
-        &                                   out   = tmpOut,        &
-        &                                   kind  = FFTW_REDFT01,  &
-        &                                   flags = planning_flags )
+      !NEC: The NEC FFTW interface use n0 as parameter name instead of n
+      !NEC: (nlc 2.0.0).
+      !NEC: Omitting keywords to be compatible.
+      !!fpt%planChebToPnt = fftw_plan_r2r_1d( n     = n,             &
+      !!  &                                   in    = tmpIn,         &
+      !!  &                                   out   = tmpOut,        &
+      !!  &                                   kind  = FFTW_REDFT01,  &
+      !!  &                                   flags = planning_flags )
+      fpt%planChebToPnt = fftw_plan_r2r_1d( n,             &
+        &                                   tmpIn,         &
+        &                                   tmpOut,        &
+        &                                   FFTW_REDFT01,  &
+        &                                   planning_flags )
 
       ! Init the DCT II ( Point values -> Leg )
-      fpt%planPntToCheb = fftw_plan_r2r_1d( n     = n,             &
-        &                                   in    = tmpIn,         &
-        &                                   out   = tmpOut,        &
-        &                                   kind  = FFTW_REDFT10,  &
-        &                                   flags = planning_flags )
+      !NEC: The NEC FFTW interface use n0 as parameter name instead of n
+      !NEC: (nlc 2.0.0).
+      !NEC: Omitting keywords to be compatible.
+      !!fpt%planPntToCheb = fftw_plan_r2r_1d( n     = n,             &
+      !!  &                                   in    = tmpIn,         &
+      !!  &                                   out   = tmpOut,        &
+      !!  &                                   kind  = FFTW_REDFT10,  &
+      !!  &                                   flags = planning_flags )
+      fpt%planPntToCheb = fftw_plan_r2r_1d( n,             &
+        &                                   tmpIn,         &
+        &                                   tmpOut,        &
+        &                                   FFTW_REDFT10,  &
+        &                                   planning_flags )
 
     else
 
       ! Init the DCT I  (Leg -> nodal):
       !   To be used with a normalization factor for trafo ...
-      fpt%planChebToPnt = fftw_plan_r2r_1d( n     = n,             &
-        &                                   in    = tmpIn,         &
-        &                                   out   = tmpOut,        &
-        &                                   kind  = FFTW_REDFT00,  &
-        &                                   flags = planning_flags )
+      !NEC: The NEC FFTW interface use n0 as parameter name instead of n
+      !NEC: (nlc 2.0.0).
+      !NEC: Omitting keywords to be compatible.
+      !!fpt%planChebToPnt = fftw_plan_r2r_1d( n     = n,             &
+      !!  &                                   in    = tmpIn,         &
+      !!  &                                   out   = tmpOut,        &
+      !!  &                                   kind  = FFTW_REDFT00,  &
+      !!  &                                   flags = planning_flags )
+      fpt%planChebToPnt = fftw_plan_r2r_1d( n,             &
+        &                                   tmpIn,         &
+        &                                   tmpOut,        &
+        &                                   FFTW_REDFT00,  &
+        &                                   planning_flags )
 
       ! Init the DCT I  (nodal -> Leg):
       !   To be used with a normalization factor for trafo ...

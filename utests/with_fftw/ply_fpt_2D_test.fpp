@@ -1,6 +1,6 @@
 ! Copyright (c) 2012, 2014 Jens Zudrop <j.zudrop@grs-sim.de>
 ! Copyright (c) 2013-2014, 2016 Peter Vitt <peter.vitt2@uni-siegen.de>
-! Copyright (c) 2012-2016, 2018 Harald Klimach <harald@klimachs.de>
+! Copyright (c) 2012-2016, 2018-2019 Harald Klimach <harald@klimachs.de>
 ! Copyright (c) 2013-2014 Verena Krupp <v.krupp@grs-sim.de>
 ! Copyright (c) 2014 Nikhil Anand <nikhil.anand@uni-siegen.de>
 !
@@ -35,6 +35,8 @@ program ply_fpt_2D_test
   use ply_legFpt_2D_module,     only: ply_legToPnt_2D
   use ply_modg_basis_module,    only: evalLegendreTensPoly
   use ply_dof_module,           only: Q_space
+
+  !mpi!nprocs = 1
 
   implicit none
 

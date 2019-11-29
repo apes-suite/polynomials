@@ -1,6 +1,6 @@
 ! Copyright (c) 2012, 2014 Jens Zudrop <j.zudrop@grs-sim.de>
 ! Copyright (c) 2013-2014 Peter Vitt <peter.vitt2@uni-siegen.de>
-! Copyright (c) 2013-2016 Harald Klimach <harald@klimachs.de>
+! Copyright (c) 2013-2016,2019 Harald Klimach <harald@klimachs.de>
 ! Copyright (c) 2013-2014 Verena Krupp
 ! Copyright (c) 2014 Nikhil Anand <nikhil.anand@uni-siegen.de>
 !
@@ -34,6 +34,8 @@ program ply_fpt_test
     &                                 ply_legToPnt
   use ply_modg_basis_module,    only: legendre_1D
   use tem_general_module,       only: tem_general_type, tem_start
+
+  !mpi!nprocs = 1
 
   implicit none
 

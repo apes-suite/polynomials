@@ -1,6 +1,6 @@
 ! Copyright (c) 2013-2014 Jens Zudrop <j.zudrop@grs-sim.de>
 ! Copyright (c) 2013-2014 Peter Vitt <peter.vitt2@uni-siegen.de>
-! Copyright (c) 2013-2016, 2018 Harald Klimach <harald.klimach@uni-siegen.de>
+! Copyright (c) 2013-2016, 2018-2019 Harald Klimach <harald.klimach@uni-siegen.de>
 ! Copyright (c) 2013-2014 Verena Krupp
 ! Copyright (c) 2014 Nikhil Anand <nikhil.anand@uni-siegen.de>
 !
@@ -31,6 +31,8 @@ program ply_fpt_ifpt_2D_singVar_test
   use tem_general_module,       only: tem_general_type, tem_start
   use ply_legFpt_module,        only: ply_legFpt_type, ply_init_legFPT
   use ply_legFpt_2D_module,     only: ply_legToPnt_2D, ply_pntToLeg_2D
+
+  !mpi!nprocs = 1
 
   implicit none
 
