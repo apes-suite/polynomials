@@ -1,5 +1,5 @@
-! Copyright (c) 2017 Harald Klimach <harald.klimach@uni-siegen.de>
-! Copyright (c) 2018 Peter Vitt <peter.vitt2@uni-siegen.de>
+! Copyright (c) 2017,2019 Harald Klimach <harald.klimach@uni-siegen.de>
+! Copyright (c) 2018-2019 Peter Vitt <peter.vitt2@uni-siegen.de>
 !
 ! Parts of this file were written by Harald Klimach and Peter Vitt for
 ! University of Siegen.
@@ -93,7 +93,7 @@ contains
     integer :: m
     integer :: orig
     integer :: sign_factor
-    ! We only consider the split into the two halves, thus the according
+    ! We only consider the split into the two halves. Thus, the according
     ! coordinate transformation factors in x = scaling*xi + shifting, are
     ! constant.
     real(kind=rk), parameter :: shifting = 0.5_rk
@@ -169,24 +169,13 @@ contains
       ! the shifting with a changed sign), we can fill the other half of
       ! the matrix by copying the already computed values accordingly with
       ! a change in sign, as needed (alternatingly).
-      !
-      ! With O4, the Aurora compiler produces code that is not correct:
-      !   do orig=1,nModes
-      !     sign_factor = mod(orig,2)*2 - 1
-      !     do m=1, orig-1
-      !       split_matrix(orig, m) = sign_factor * split_matrix(m, orig)
-      !       sign_factor = -sign_factor
-      !     end do
-      !   end do
-      ! To mitigate this, we split the loop into to, each with a stride of 2.
-
       do orig=1,nModes
         sign_factor = mod(orig,2)*2 - 1
-        !$NEC ivdep
+        !NEC$ ivdep
         do m=1, orig-1, 2
           split_matrix(orig, m) = sign_factor * split_matrix(m, orig)
         end do
-        !$NEC ivdep
+        !NEC$ ivdep
         do m=2, orig-1, 2
           split_matrix(orig, m) = -sign_factor * split_matrix(m, orig)
         end do
