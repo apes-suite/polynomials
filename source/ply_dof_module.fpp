@@ -93,7 +93,7 @@ contains
       case(2)
         nDofs = ((deg + 1)  &
           &   *  (deg + 2)) &
-          &   / 3
+          &   / 2
       case(1)
         nDofs = (deg + 1)
       end select
