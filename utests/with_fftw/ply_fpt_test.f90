@@ -50,9 +50,9 @@ program ply_fpt_test
   integer, parameter :: blocksize(nBSizes) = [36, 37, 64]
 
   ! Init the Treelm environment, needed to init the log Unit
-  call tem_start(codeName = 'Ateles unit test', &
-    &            version  = 'utest',            &
-    &            general  = general             )
+  call tem_start(codeName = 'ply_fpt_test', &
+    &            version  = 'utest',        &
+    &            general  = general         )
 
 
   res = 0.0_rk
