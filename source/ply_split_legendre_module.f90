@@ -1,3 +1,22 @@
+! Copyright (c) 2017,2019 Harald Klimach <harald.klimach@uni-siegen.de>
+! Copyright (c) 2018-2019 Peter Vitt <peter.vitt2@uni-siegen.de>
+!
+! Parts of this file were written by Harald Klimach and Peter Vitt for
+! University of Siegen.
+!
+! Permission to use, copy, modify, and distribute this software for any
+! purpose with or without fee is hereby granted, provided that the above
+! copyright notice and this permission notice appear in all copies.
+!
+! THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHORS DISCLAIM ALL WARRANTIES
+! WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+! MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR
+! ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+! WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+! ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+! OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+! **************************************************************************** !
+
 !> This module provides the functionality to split Legendre polynomials into
 !! a left and right subinterval with transformed coordinates.
 !!
@@ -74,7 +93,7 @@ contains
     integer :: m
     integer :: orig
     integer :: sign_factor
-    ! We only consider the split into the two halves, thus the according
+    ! We only consider the split into the two halves. Thus, the according
     ! coordinate transformation factors in x = scaling*xi + shifting, are
     ! constant.
     real(kind=rk), parameter :: shifting = 0.5_rk
@@ -152,9 +171,13 @@ contains
       ! a change in sign, as needed (alternatingly).
       do orig=1,nModes
         sign_factor = mod(orig,2)*2 - 1
-        do m=1, orig-1
+        !NEC$ ivdep
+        do m=1, orig-1, 2
           split_matrix(orig, m) = sign_factor * split_matrix(m, orig)
-          sign_factor = -sign_factor
+        end do
+        !NEC$ ivdep
+        do m=2, orig-1, 2
+          split_matrix(orig, m) = -sign_factor * split_matrix(m, orig)
         end do
       end do
 

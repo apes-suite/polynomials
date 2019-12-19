@@ -1,9 +1,29 @@
+! Copyright (c) 2015, 2019 Harald Klimach <harald@klimachs.de>
+! Copyright (c) 2015 Kay Langhammer <kay.langhammer@student.uni-siegen.de>
+!
+! Parts of this file were written by Harald Klimach and Kay Langhammer
+! for University of Siegen.
+!
+! Permission to use, copy, modify, and distribute this software for any
+! purpose with or without fee is hereby granted, provided that the above
+! copyright notice and this permission notice appear in all copies.
+!
+! THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHORS DISCLAIM ALL WARRANTIES
+! WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+! MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR
+! ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+! WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+! ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+! OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+! **************************************************************************** !
+
 !> This module provides the ISO_C_Binding interfaces to the fxtpack routines.
 !!
 !! falt: Fast Associated Legendre Transform (spherical harmonics)
 !! flpt: Fast Legendre Polynomial Transform
 !! vecld: Array of doubles
 module fxt_fif
+  use, intrinsic :: iso_c_binding
   implicit none
 
   interface
@@ -26,7 +46,7 @@ module fxt_fif
       character(kind=c_char) :: fname
     end subroutine fxt_faltld_preproc
 
-! TODO: write the routine in C 
+! TODO: write the routine in C
 !    type(c_ptr) function fxt_faltld_init(p, n, prec) bind(c)
 !      use, intrinsic :: iso_c_binding
 !      integer(c_long), value :: p
@@ -43,17 +63,19 @@ module fxt_fif
 
     ! size of working array
     ! long fxt_faltld_wsize(fxt_faltld *falt, long m);
-    integer(c_long) function fxt_faltld_wsize(falt, m) bind(c)
+    function fxt_faltld_wsize(falt, m) bind(c)
       use, intrinsic :: iso_c_binding
       type(c_ptr) :: falt            !fxt_faltld
-      integer(c_long), value :: m
+      integer(kind=c_long), value :: m
+      integer(kind=c_long) :: fxt_faltld_wsize
     end function fxt_faltld_wsize
 
     !  /*** maximum size of working array ***/
     ! long fxt_faltld_wsizemax(fxt_faltld *falt);
-    integer(c_long) function fxt_faltld_wsizemax(falt) bind(c)
+    function fxt_faltld_wsizemax(falt) bind(c)
        use, intrinsic :: iso_c_binding
        type(c_ptr) :: falt          !fxt_faltld
+      integer(kind=c_long) :: fxt_faltld_wsizemax
     end function fxt_faltld_wsizemax
 
     ! /*** evaluate fast spherical harmonic transform ***/
@@ -63,7 +85,7 @@ module fxt_fif
        use, intrinsic :: iso_c_binding
        type(c_ptr) :: u, v, w                 !fxt_vecld
        type(c_ptr) :: falt                   !fxt_faltld
-       integer(c_long), value :: m
+       integer(kind=c_long), value :: m
     end subroutine fxt_faltld_evl
 
     !  /*** expand fast spherical harmonic transform ***/
@@ -73,7 +95,7 @@ module fxt_fif
        use, intrinsic :: iso_c_binding
        type(c_ptr) :: u, v, w            !fxt_vecld
        type(c_ptr) :: falt              !fxt_faltld
-       integer(c_long), value :: m
+       integer(kind=c_long), value :: m
     end subroutine fxt_faltld_exp
     ! ------------------------------------------------------------------------ !
 
@@ -82,17 +104,18 @@ module fxt_fif
     ! FLPTLD routines:
     subroutine fxt_flptld_preproc(p, n, prec, fname) bind(c)
       use, intrinsic :: iso_c_binding
-      integer(c_long), value :: p
+      integer(kind=c_long), value :: p
       integer(c_long), value :: n
       real(c_double), value :: prec
       character(c_char) :: fname
     end subroutine fxt_flptld_preproc
 
-    type(c_ptr) function fxt_flptld_init(p, n, prec) bind(c)
+    function fxt_flptld_init(p, n, prec) bind(c)
       use, intrinsic :: iso_c_binding
-      integer(c_long), value :: p
-      integer(c_long), value :: n
+      integer(kind=c_long), value :: p
+      integer(kind=c_long), value :: n
       real(c_double), value :: prec
+      type(c_ptr) :: fxt_flptld_init
     end function fxt_flptld_init
 
     ! deallocate fast Legendre polynomial transform
@@ -104,9 +127,10 @@ module fxt_fif
 
     ! size of working array
     ! long fxt_flptld_wsize(fxt_flptld *flpt);
-    integer(c_long) function fxt_flptld_wsize(flpt) bind(c)
+    function fxt_flptld_wsize(flpt) bind(c)
       use, intrinsic :: iso_c_binding
       type(c_ptr), value :: flpt              !fxt_flptld
+      integer(kind=c_long) :: fxt_flptld_wsize
     end function fxt_flptld_wsize
 
     ! evaluate fast Legendre Polynomial transform
@@ -131,14 +155,16 @@ module fxt_fif
 
     ! ........................................................................ !
     ! VECL / VECLD
-    type(c_ptr) function fxt_vecl_new(size) bind(c)
+    function fxt_vecl_new(size) bind(c)
       use, intrinsic :: iso_c_binding
-      integer(c_long) :: size
+      integer(kind=c_long) :: size
+      type(c_ptr) :: fxt_vecl_new
     end function fxt_vecl_new
 
-    type(c_ptr) function fxt_vecld_new(size) bind(c)
+    function fxt_vecld_new(size) bind(c)
       use, intrinsic :: iso_c_binding
-      integer(c_long), value :: size
+      integer(kind=c_long), value :: size
+      type(c_ptr) :: fxt_vecld_new
     end function fxt_vecld_new
     ! ------------------------------------------------------------------------ !
 

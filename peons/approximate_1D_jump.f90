@@ -1,3 +1,22 @@
+! Copyright (c) 2015 Harald Klimach <harald@klimachs.de>
+! Copyright (c) 2016, 2019 Peter Vitt <peter.vitt2@uni-siegen.de>
+!
+! Parts of this file were written by Harald Klimach and Peter Vitt
+! for University of Siegen.
+!
+! Permission to use, copy, modify, and distribute this software for any
+! purpose with or without fee is hereby granted, provided that the above
+! copyright notice and this permission notice appear in all copies.
+!
+! THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHORS DISCLAIM ALL WARRANTIES
+! WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+! MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR
+! ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+! WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+! ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+! OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+! **************************************************************************** !
+
 !> This is a small utility to approximate a discontinuity at a given
 !! location in the interval [-1,1].
 !!
@@ -125,6 +144,9 @@ program approximate_1D_jump
     end if
   end if
 
+  ! Initialize current to a value outside it's normal range to check whether it
+  ! was set during runtime.
+  current = -1
 
   ! Voxelization (in 1D just a bisection algorithm...)
   allocate(bisect(0:level+1))
@@ -310,6 +332,10 @@ program approximate_1D_jump
     end do
     exact(iMode) = exact(iMode) / scalprodleg(iMode)
   end do
+
+  if (current == -1) then
+    write(*,*) "Variable current is used unintialized. Results may be invalid."
+  endif
 
   l2err = 0.0_rk
   optierr = 0.0_rk

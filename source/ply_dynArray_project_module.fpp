@@ -1,3 +1,23 @@
+! Copyright (c) 2014 Verena Krupp
+! Copyright (c) 2014 Harald Klimach <harald.klimach@uni-siegen.de>
+! Copyright (c) 2017 Peter Vitt <peter.vitt2@uni-siegen.de>
+! Copyright (c) 2019 Neda Ebrahimi Pour <neda.epour@uni-siegen.de>
+!
+! Parts of this file were written by Verena Krupp, Harald Klimach, Peter Vitt
+! and Neda Ebrahimi Pour for University of Siegen.
+!
+! Permission to use, copy, modify, and distribute this software for any
+! purpose with or without fee is hereby granted, provided that the above
+! copyright notice and this permission notice appear in all copies.
+!
+! THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHORS DISCLAIM ALL WARRANTIES
+! WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+! MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR
+! ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+! WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+! ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+! OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+! **************************************************************************** !
 ?? include 'arrayMacros.inc'
 !> Module providing datatypes and routines for a fast
 !! transformation of Legendre expansion to point values.
@@ -8,12 +28,7 @@ module ply_dynarray_project_module
   use aotus_module,           only: flu_State
   use tem_logging_module,     only: logUnit
 
-  use ply_prj_header_module,  only: ply_prj_header_load,        &
-    &                               ply_prj_header_type,        &
-    &                               assignment(=),              &
-    &                               operator(==), operator(>=), &
-    &                               operator(/=), operator(<),  &
-    &                               operator(<=), operator(>)
+  use ply_prj_header_module
 
 
   implicit none

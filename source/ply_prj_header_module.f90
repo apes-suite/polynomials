@@ -1,3 +1,25 @@
+! Copyright (c) 2013-2014 Verena Krupp
+! Copyright (c) 2013-2014, 2016-2017 Peter Vitt <peter.vitt2@uni-siegen.de>
+! Copyright (c) 2014-2015 Harald Klimach <harald.klimach@uni-siegen.de>
+! Copyright (c) 2014-2015 Nikhil Anand <nikhil.anand@uni-siegen.de>
+! Copyright (c) 2017 Daniel Petró <daniel.petro@student.uni-siegen.de>
+! Copyright (c) 2019 Neda Ebrahimi Pour <neda.epour@uni-siegen.de>
+!
+! Parts of this file were written by Verena Krupp, Peter Vitt, Harald Klimach,
+! Nikhil Anand, Daniel Petró and Neda Ebrahimi Pour for University of Siegen.
+!
+! Permission to use, copy, modify, and distribute this software for any
+! purpose with or without fee is hereby granted, provided that the above
+! copyright notice and this permission notice appear in all copies.
+!
+! THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHORS DISCLAIM ALL WARRANTIES
+! WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+! MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR
+! ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+! WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+! ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+! OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+! **************************************************************************** !
 module ply_prj_header_module
   use env_module,               only: labelLen
 
@@ -10,30 +32,9 @@ module ply_prj_header_module
   use tem_tools_module,         only: upper_to_lower
   use tem_logging_module,       only: logUnit
 
-  use ply_fpt_header_module,    only: ply_fpt_header_type,        &
-    &                                 ply_fpt_header_load,        &
-    &                                 ply_fpt_header_display,     &
-    &                                 ply_fpt_header_out,         &
-    &                                 assignment(=),              &
-    &                                 operator(==), operator(/=), &
-    &                                 operator(<), operator(<=),  &
-    &                                 operator(>),operator(>=)
-  use ply_l2p_header_module,    only: ply_l2p_header_type,        &
-    &                                 ply_l2p_header_load,        &
-    &                                 ply_l2p_header_display,     &
-    &                                 ply_l2p_header_out,         &
-    &                                 assignment(=),              &
-    &                                 operator(==), operator(/=), &
-    &                                 operator(<), operator(<=),  &
-    &                                 operator(>),operator(>=)
-  use ply_fxt_header_module,    only: ply_fxt_header_type,        &
-    &                                 ply_fxt_header_load,        &
-    &                                 ply_fxt_header_display,     &
-    &                                 ply_fxt_header_out,         &
-    &                                 assignment(=),              &
-    &                                 operator(==), operator(/=), &
-    &                                 operator(<), operator(<=),  &
-    &                                 operator(>),operator(>=)
+  use ply_fpt_header_module
+  use ply_l2p_header_module
+  use ply_fxt_header_module
 
   implicit none
 
@@ -229,8 +230,9 @@ contains
   !> This function provides the test for equality of the header for two
   !! projections.
   !!
-  !! The headers are considered to be equal, if their kind, the fpt_ header
-  !! and the l2p header are equal.
+  !! The headers are considered to be equal, if their kind and the corresponding
+  !! headers are equal. For unknown kinds, the headers are not taken into
+  !! consideration.
   pure function isEqual( left, right ) result(equality)
     ! -------------------------------------------------------------------- !
     !> projection to compare
@@ -241,16 +243,14 @@ contains
     logical :: equality
     ! -------------------------------------------------------------------- !
 
+    equality = ( left%kind == right%kind )
     select case(left%kind)
       case ('fpt')
-         equality = ( left%kind == right%kind ) &
-           & .and. ( left%fpt_header == right%fpt_header )
+        equality = equality .and. ( left%fpt_header == right%fpt_header )
       case ('l2p')
-         equality = ( left%kind == right%kind ) &
-           & .and. ( left%l2p_header == right%l2p_header )
+        equality = equality .and. ( left%l2p_header == right%l2p_header )
       case ('fxt')
-         equality = ( left%kind == right%kind ) &
-           & .and. ( left%fxt_header == right%fxt_header )
+        equality = equality .and. ( left%fxt_header == right%fxt_header )
     end select
 
   end function isEqual

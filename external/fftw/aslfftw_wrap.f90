@@ -1,6 +1,7 @@
-! Copyright (c) 2016 Harald Klimach <harald.klimach@uni-siegen.de>
+! Copyright (c) 2019 Harald Klimach <harald.klimach@uni-siegen.de>
 !
-! Parts of this file were written by Harald Klimach for University of Siegen.
+! Parts of this file were written by Harald Klimach for German Research School
+! for Simulation Sciences GmbH.
 !
 ! Permission to use, copy, modify, and distribute this software for any
 ! purpose with or without fee is hereby granted, provided that the above
@@ -15,31 +16,13 @@
 ! OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 ! **************************************************************************** !
 
-program ply_transfer_test
-  use env_module, only: stdOutUnit
-  use ply_transfer_test_module
+module fftw_wrap
+  use, intrinsic :: iso_c_binding
 
   implicit none
 
+  include 'aslfftw3.f03'
 
-  logical :: test_ok
-  logical :: passed_tests
+  logical, parameter :: fftw_available = .true.
 
-  call ply_test_transfer_1d( success = test_ok,   &
-    &                        lu      = stdOutUnit )
-
-  passed_tests = test_ok
-
-  call ply_test_transfer_2d( success = test_ok,   &
-    &                        lu      = stdOutUnit )
-
-  passed_tests = passed_tests .and. test_ok
-
-  call ply_test_transfer_3d( success = test_ok,   &
-    &                        lu      = stdOutUnit )
-
-  passed_tests = passed_tests .and. test_ok
-
-  if (passed_tests) write(*,*) 'PASSED'
-
-end program ply_transfer_test
+end module fftw_wrap

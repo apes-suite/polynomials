@@ -1,3 +1,32 @@
+! Copyright (c) 2013-2014 Jens Zudrop <j.zudrop@grs-sim.de>
+! Copyright (c) 2013-2014, 2016-2017 Peter Vitt <peter.vitt2@uni-siegen.de>
+! Copyright (c) 2013-2015 Nikhil Anand <nikhil.anand@uni-siegen.de>
+! Copyright (c) 2013-2018 Harald Klimach <harald.klimach@uni-siegen.de.de>
+! Copyright (c) 2013-2014 Verena Krupp <v.krupp@grs-sim.de>
+! Copyright (c) 2015 Kay Langhammer <kay.langhammer@student.uni-siegen.de>
+! Copyright (c) 2016-2017, 2019 Neda Ebrahimi Pour <neda.epour@uni-siegen.de>
+! Copyright (c) 2016 Tobias Girresser <tobias.girresser@student.uni-siegen.de>
+! Copyright (c) 2016 Kannan Masilamani <kannan.masilamani@uni-siegen.de>
+!
+! Parts of this file were written by Jens Zudrop for German Research School
+! for Simulation Sciences GmbH.
+!
+! Parts of this file were written by Harald Klimach, Verena Krupp, Peter Vitt,
+! Tobias Girresser, Nikhil Anand, Kay Langhammer, Kannan Masilamani and Neda
+! Ebrahimi Pour for University of Siegen.
+!
+! Permission to use, copy, modify, and distribute this software for any
+! purpose with or without fee is hereby granted, provided that the above
+! copyright notice and this permission notice appear in all copies.
+!
+! THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHORS DISCLAIM ALL WARRANTIES
+! WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+! MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR
+! ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+! WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+! ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+! OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+! **************************************************************************** !
 ?? include "ply_dof_module.inc"
 module ply_poly_project_module
   use env_module,                only: rk, labelLen
@@ -7,11 +36,7 @@ module ply_poly_project_module
   use tem_tools_module,          only: tem_horizontalSpacer
   use ply_dof_module,            only: Q_space, &
    &                                   P_space
-  use ply_prj_header_module,     only: ply_prj_header_type,        &
-    &                                  assignment(=),              &
-    &                                  operator(==), operator(>=), &
-    &                                  operator(/=), operator(<),  &
-    &                                  operator(<=), operator(>)
+  use ply_prj_header_module
   use ply_dynArray_project_module, only: dyn_ProjectionArray_type, &
     &                                    ply_fill_dynProjectArray, &
     &                                    ply_prj_init_type
@@ -211,7 +236,7 @@ contains
   !> Fill ups the bodys accroding to the DA.
   subroutine ply_fill_project_list( proj_list, dyn_projectArray, scheme_dim )
   !---------------------------------------------------------------------------!
-    type(ply_poly_project_type), intent(inout), allocatable :: proj_list(:)
+    type(ply_poly_project_type), intent(out), allocatable :: proj_list(:)
     type(dyn_ProjectionArray_type), intent(in) :: dyn_projectArray
     integer, intent(in) :: scheme_dim
     !-------------------------------------------------------------------------!

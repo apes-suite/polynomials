@@ -1,3 +1,25 @@
+! Copyright (c) 2014 Jens Zudrop <j.zudrop@grs-sim.de>
+! Copyright (c) 2014 Nikhil Anand <nikhil.anand@uni-siegen.de>
+! Copyright (c) 2014, 2016-2018 Peter Vitt <peter.vitt2@uni-siegen.de>
+! Copyright (c) 2014, 2017-2019 Harald Klimach <harald.klimach@uni-siegen.de>
+! Copyright (c) 2014 Verena Krupp
+! Copyright (c) 2016 Tobias Girresser <tobias.girresser@student.uni-siegen.de>
+!
+! Parts of this file were written by Jens Zudrop, Nikhil Anand, Harald Klimach,
+! Verena Krupp, Peter Vitt, and Tobias Girresser for University of Siegen.
+!
+! Permission to use, copy, modify, and distribute this software for any
+! purpose with or without fee is hereby granted, provided that the above
+! copyright notice and this permission notice appear in all copies.
+!
+! THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHORS DISCLAIM ALL WARRANTIES
+! WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+! MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR
+! ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+! WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+! ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+! OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+! **************************************************************************** !
 ?? include "ply_dof_module.inc"
 !> This module provides functions to transfer polynomials from and to the
 !! oversampled representation for nodal treatments.
@@ -155,11 +177,10 @@ contains
     nScalars = size(modalCoeffs,2)
     maxorders = 3*(poly_proj%min_degree + 1)-2
 
-    modalCoeffs = 0.0_rk
-
     if (poly_proj%basisType == Q_Space) then
       posQ: if (present(ensure_positivity)) then
         ord_lim = maxorders
+        modalCoeffs = 0.0_rk
         varQ: do iVar=1,nScalars
           if (ensure_positivity(iVar)) then
             ordersum = 0.0_rk
@@ -195,21 +216,26 @@ contains
           end do
         end do
       else posQ
-        do dof = 1, mpd1_cube
-          iDegZ = (dof-1)/mpd1_square + 1
-          iDegY = (dof-1-(iDegZ-1)*mpd1_square)/mpd1+1
-          iDegX = mod(dof-1,mpd1)+1
-          dofOverSamp = iDegX + ( iDegY-1  &
-            &                     + (iDegZ-1)*(oversamp_degree+1) &
-            &                   ) * (oversamp_degree+1)
-          do iVar=1,nScalars
-            modalCoeffs(dofOverSamp,iVar) = state(dof,iVar)
+        if (oversamp_degree == poly_proj%min_degree) then
+          modalCoeffs = state
+        else
+          modalCoeffs = 0.0_rk
+          do dof = 1, mpd1_cube
+            iDegZ = (dof-1)/mpd1_square + 1
+            iDegY = (dof-1-(iDegZ-1)*mpd1_square)/mpd1+1
+            iDegX = mod(dof-1,mpd1)+1
+            dofOverSamp = iDegX + ( iDegY-1  &
+              &                     + (iDegZ-1)*(oversamp_degree+1) &
+              &                   ) * (oversamp_degree+1)
+            do iVar=1,nScalars
+              modalCoeffs(dofOverSamp,iVar) = state(dof,iVar)
+            end do
           end do
-        end do
+        end if
       end if posQ
 
     else !P_Space
-
+      modalCoeffs = 0.0_rk
       posP: if (present(ensure_positivity)) then
         ord_lim = maxorders
         varP: do iVar=1,nScalars
@@ -302,17 +328,21 @@ contains
     nScalars = size(modalCoeffs,2)
 
     if (poly_proj%basisType == Q_Space) then
-      do iVar=1,nScalars
-        do dof = 1, mpd1_cube
-          iDegZ = (dof-1)/mpd1_square + 1
-          iDegY = (dof-1-(iDegZ-1)*mpd1_square)/mpd1+1
-          iDegX = mod(dof-1,mpd1)+1
-          dofOverSamp = iDegX + ( iDegY-1  &
-            &                     + (iDegZ-1)*(oversamp_degree+1) &
-            &                   ) * (oversamp_degree+1)
-          state(dof,iVar) = modalCoeffs(dofOverSamp,iVar)
+      if (oversamp_degree == poly_proj%min_degree) then
+        state = modalCoeffs
+      else
+        do iVar=1,nScalars
+          do dof = 1, mpd1_cube
+            iDegZ = (dof-1)/mpd1_square + 1
+            iDegY = (dof-1-(iDegZ-1)*mpd1_square)/mpd1+1
+            iDegX = mod(dof-1,mpd1)+1
+            dofOverSamp = iDegX + ( iDegY-1  &
+              &                     + (iDegZ-1)*(oversamp_degree+1) &
+              &                   ) * (oversamp_degree+1)
+            state(dof,iVar) = modalCoeffs(dofOverSamp,iVar)
+          end do
         end do
-      end do
+      end if
 
     else !P_Space
 
@@ -368,7 +398,7 @@ contains
     ! -------------------------------------------------------------------- !
     integer :: oversamp_degree
     integer :: mpd1, mpd1_square
-    integer :: iDegX, iDegY, iDegZ, idof, dof, dofOverSamp, nPVars
+    integer :: iDegX, iDegY, idof, dof, dofOverSamp, nPVars
     integer :: iVar
     real(kind=rk) :: ordersum(2*(poly_proj%min_degree + 1)-1)
     real(kind=rk) :: varsum

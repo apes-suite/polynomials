@@ -1,3 +1,28 @@
+! Copyright (c) 2012-2014, 2016, 2018 Jens Zudrop <j.zudrop@grs-sim.de>
+! Copyright (c) 2012-2014 Harald Klimach <harald@klimachs.de>
+! Copyright (c) 2013-2014, 2017 Peter Vitt <peter.vitt2@uni-siegen.de>
+! Copyright (c) 2013-2014 Verena Krupp
+! Copyright (c) 2016 Langhammer Kay <kay.langhammer@student.uni-siegen.de>
+!
+! Parts of this file were written by Jens Zudrop and Harald Klimach
+! for German Research School for Simulation Sciences GmbH.
+!
+! Parts of this file were written by Verena Krupp, Harald Klimach, Peter Vitt
+! and Kay Langhammer for University of Siegen.
+!
+! Permission to use, copy, modify, and distribute this software for any
+! purpose with or without fee is hereby granted, provided that the above
+! copyright notice and this permission notice appear in all copies.
+!
+! THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHORS DISCLAIM ALL WARRANTIES
+! WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+! MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR
+! ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+! WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+! ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+! OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+! **************************************************************************** !
+
 !> Module providing datatypes and routines for a fast
 !! transformation of Legendre expansion to point values.
 !! \author{Jens Zudrop}
@@ -178,28 +203,52 @@ contains
 
     if (.not.lob) then
       ! Init the DCT III ( Leg -> Point values )
-      fpt%planChebToPnt = fftw_plan_r2r_1d( n     = n,             &
-        &                                   in    = tmpIn,         &
-        &                                   out   = tmpOut,        &
-        &                                   kind  = FFTW_REDFT01,  &
-        &                                   flags = planning_flags )
+      !NEC: The NEC FFTW interface use n0 as parameter name instead of n
+      !NEC: (nlc 2.0.0).
+      !NEC: Omitting keywords to be compatible.
+      !!fpt%planChebToPnt = fftw_plan_r2r_1d( n     = n,             &
+      !!  &                                   in    = tmpIn,         &
+      !!  &                                   out   = tmpOut,        &
+      !!  &                                   kind  = FFTW_REDFT01,  &
+      !!  &                                   flags = planning_flags )
+      fpt%planChebToPnt = fftw_plan_r2r_1d( n,             &
+        &                                   tmpIn,         &
+        &                                   tmpOut,        &
+        &                                   FFTW_REDFT01,  &
+        &                                   planning_flags )
 
       ! Init the DCT II ( Point values -> Leg )
-      fpt%planPntToCheb = fftw_plan_r2r_1d( n     = n,             &
-        &                                   in    = tmpIn,         &
-        &                                   out   = tmpOut,        &
-        &                                   kind  = FFTW_REDFT10,  &
-        &                                   flags = planning_flags )
+      !NEC: The NEC FFTW interface use n0 as parameter name instead of n
+      !NEC: (nlc 2.0.0).
+      !NEC: Omitting keywords to be compatible.
+      !!fpt%planPntToCheb = fftw_plan_r2r_1d( n     = n,             &
+      !!  &                                   in    = tmpIn,         &
+      !!  &                                   out   = tmpOut,        &
+      !!  &                                   kind  = FFTW_REDFT10,  &
+      !!  &                                   flags = planning_flags )
+      fpt%planPntToCheb = fftw_plan_r2r_1d( n,             &
+        &                                   tmpIn,         &
+        &                                   tmpOut,        &
+        &                                   FFTW_REDFT10,  &
+        &                                   planning_flags )
 
     else
 
       ! Init the DCT I  (Leg -> nodal):
       !   To be used with a normalization factor for trafo ...
-      fpt%planChebToPnt = fftw_plan_r2r_1d( n     = n,             &
-        &                                   in    = tmpIn,         &
-        &                                   out   = tmpOut,        &
-        &                                   kind  = FFTW_REDFT00,  &
-        &                                   flags = planning_flags )
+      !NEC: The NEC FFTW interface use n0 as parameter name instead of n
+      !NEC: (nlc 2.0.0).
+      !NEC: Omitting keywords to be compatible.
+      !!fpt%planChebToPnt = fftw_plan_r2r_1d( n     = n,             &
+      !!  &                                   in    = tmpIn,         &
+      !!  &                                   out   = tmpOut,        &
+      !!  &                                   kind  = FFTW_REDFT00,  &
+      !!  &                                   flags = planning_flags )
+      fpt%planChebToPnt = fftw_plan_r2r_1d( n,             &
+        &                                   tmpIn,         &
+        &                                   tmpOut,        &
+        &                                   FFTW_REDFT00,  &
+        &                                   planning_flags )
 
       ! Init the DCT I  (nodal -> Leg):
       !   To be used with a normalization factor for trafo ...

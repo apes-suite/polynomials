@@ -1,3 +1,28 @@
+! Copyright (c) 2012, 2014 Jens Zudrop <j.zudrop@grs-sim.de>
+! Copyright (c) 2012-2016, 2018-2019 Harald Klimach <harald.klimach@uni-siegen.de>
+! Copyright (c) 2013-2014 Peter Vitt <peter.vitt2@uni-siegen.de>
+! Copyright (c) 2013-2014 Verena Krupp
+! Copyright (c) 2014 Nikhil Anand <nikhil.anand@uni-siegen.de>
+!
+! Parts of this file were written by Jens Zudrop and Harald Klimach for
+! German Research School for Simulation Sciences GmbH.
+!
+! Parts of this file were written by Harald Klimach, Peter Vitt, Verena Krupp,
+! and Nikhil Anand for University of Siegen.
+!
+! Permission to use, copy, modify, and distribute this software for any
+! purpose with or without fee is hereby granted, provided that the above
+! copyright notice and this permission notice appear in all copies.
+!
+! THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHORS DISCLAIM ALL WARRANTIES
+! WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+! MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR
+! ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+! WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+! ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+! OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+! **************************************************************************** !
+
 !> Unit test to check functionallity of fast polynomial transformations.
 !! \author{Jens Zudrop}
 program ply_fpt_3D_performance_test
@@ -8,6 +33,8 @@ program ply_fpt_3D_performance_test
   use ply_legFpt_module,        only: ply_legFpt_type, ply_init_legFPT
   use ply_legFpt_3D_module,     only: ply_legToPnt_3D, &
     &                                 ply_pntToLeg_3D
+
+  !mpi!nprocs = 1
 
   implicit none
 
@@ -34,7 +61,7 @@ program ply_fpt_3D_performance_test
   write(*,*) 'Maximal deviation:', res
   if (res <  1.e-08) then
     write(logUnit(1),*) 'PASSED'
-  end if 
+  end if
 
   call fin_env()
 
@@ -57,32 +84,32 @@ contains
       & ' Number of Legendre coefficients (per dim): ', maxPolyDegree+1
     write(logUnit(10),*) '------------------------------------' // &
       & ' Number of Legendre coefficients (total): ',(maxPolyDegree+1)**3
-  
+
     ! Create the Legendre expansion coefficients
-    allocate(legCoeffs((maxPolyDegree+1)**3,nVars)) 
-    allocate(legCoeffsIn((maxPolyDegree+1)**3,nVars)) 
+    allocate(legCoeffs((maxPolyDegree+1)**3,nVars))
+    allocate(legCoeffsIn((maxPolyDegree+1)**3,nVars))
     do iVar = 1, nVars
       legCoeffs(:,iVar) = real(iVar, rk)
     end do
-  
-    ! Init the FPT 
+
+    ! Init the FPT
     call ply_init_legFpt( maxPolyDegree = maxPolyDegree,        &
       &                   nIndeps       = (maxpolydegree+1)**2, &
       &                   fpt           = fpt                   )
-  
+
     ! now transform to the Chebyshev nodes
-    allocate(pntVal( (maxPolyDegree+1)**3, nVars )) 
+    allocate(pntVal( (maxPolyDegree+1)**3, nVars ))
     legCoeffsIn = legCoeffs
     starttime = MPI_Wtime()
     call ply_legToPnt_3D( fpt       = fpt,         &
       &                   legCoeffs = legCoeffsIn, &
       &                   pntVal    = pntVal,      &
-      &                   nVars     = nVars        ) 
+      &                   nVars     = nVars        )
     stoptime = MPI_Wtime()
     write(*,*) 'Time for degree ', maxpolydegree, ' trafo:   ', stoptime - starttime
 
     ! now transform back to Legendre coefficients
-    allocate(legVal( (maxPolyDegree+1)**3,nVars )) 
+    allocate(legVal( (maxPolyDegree+1)**3,nVars ))
     starttime = MPI_Wtime()
     call ply_pntToLeg_3D( fpt       = fpt,    &
       &                   pntVal    = pntVal, &

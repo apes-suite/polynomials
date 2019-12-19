@@ -1,3 +1,38 @@
+! Copyright (c) 2012-2013 Jens Zudrop <j.zudrop@grs-sim.de>
+! Copyright (c) 2012-2014 Simon Zimny <s.zimny@grs-sim.de>
+! Copyright (c) 2012 Khaled Ibrahim <k.ibrahim@grs-sim.de>
+! Copyright (c) 2012 Jan Hueckelheim <j.hueckelheim@grs-sim.de>
+! Copyright (c) 2013 Manuel Hasert <m.hasert@grs-sim.de>
+! Copyright (c) 2013-2018 Harald Klimach <harald.klimach@uni-siegen.de>
+! Copyright (c) 2013-2014 Nikhil Anand <nikhil.anand@uni-siegen.de>
+! Copyright (c) 2013-2014, 2016 Verena Krupp <v.krupp@grs-sim.de>
+! Copyright (c) 2016-2018 Peter Vitt <peter.vitt2@uni-siegen.de>
+! Copyright (c) 2016-2018 Daniel Fleischer <daniel.fleischer@student.uni-siegen.de>
+! Copyright (c) 2014, 2016 Kannan Masilamani <kannan.masilamani@uni-siegen.de>
+! Copyright (c) 2016 Tobias Girresser <tobias.girresser@student.uni-siegen.de>
+! Copyright (c) 2017 Daniel Petró <daniel.petro@student.uni-siegen.de>
+!
+! Parts of this file were written by Jens Zudrop, Simon Zimny, Khaled Ibrahim,
+! Jan Hueckelheim and Manuel Hasert for German Research School for Simulation
+! Sciences GmbH.
+!
+! Parts of this file were written by Harald Klimach, Verena Krupp, Peter Vitt,
+! Daniel Fleischer, Kannan Masilamani, Tobias Girresser and Daniel Petró for
+! University of Siegen.
+!
+! Permission to use, copy, modify, and distribute this software for any
+! purpose with or without fee is hereby granted, provided that the above
+! copyright notice and this permission notice appear in all copies.
+!
+! THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHORS DISCLAIM ALL WARRANTIES
+! WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+! MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR
+! ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+! WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+! ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+! OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+! **************************************************************************** !
+
 ?? include "ply_dof_module.inc"
 !> This module provides the means to sample polynomial data to break it down
 !! into voxels for visualization.
@@ -225,9 +260,9 @@ contains
   !> Sampling polynomial data from a given array and mesh to a new mesh with
   !! a new data array, where just a single degree of freedom per element is
   !! used.
-  subroutine ply_sample_data( me, orig_mesh, orig_bcs, varsys, var_degree,    &
-    &                         var_space, ndims, trackInst, trackConfig, time, &
-    &                         new_mesh, resvars                               )
+  subroutine ply_sample_data( me, orig_mesh, orig_bcs, varsys, var_degree, &
+    &                         lvl_degree, var_space, ndims, trackInst,     &
+    &                         trackConfig, time, new_mesh, resvars         )
     ! -------------------------------------------------------------------- !
     !> A ply_sampling_type to describe the sampling method.
     type(ply_sampling_type), intent(in) :: me
@@ -247,6 +282,9 @@ contains
     !!       Possibly by defining a variable in the varsys, providing the
     !!       degree.
     integer, intent(in) :: var_degree(:)
+
+    !> Maximal polynomial degree for each level.
+    integer, intent(in) :: lvl_degree(:)
 
     !> Polynomial space for each variable.
     !!
@@ -272,30 +310,21 @@ contains
     type(treelmesh_type) :: tmp_mesh(0:1)
     type(tem_BC_prop_type) :: tmp_bcs(0:1)
     type(tem_subtree_type) :: tmp_subtree
-    type(tem_subtree_type) :: refined_sub
     type(capsule_array_type), pointer :: res
-    type(ply_array_type), allocatable :: meshData(:)
-    type(ply_array_type), allocatable :: newMeshData(:)
-    type(ply_array_type), allocatable :: work_dat(:)
-    type(ply_subsample_type) :: subsamp
     real(kind=rk), allocatable :: vardat(:)
     real(kind=rk), allocatable :: points(:)
     real(kind=rk), allocatable :: pointval(:,:)
     integer, allocatable :: vardofs(:)
-    integer, allocatable :: newVardofs(:)
-    integer, allocatable :: work_vardofs(:)
     integer, allocatable :: elempos(:)
-    integer, allocatable :: varcomps(:)
     integer :: pointCoord(4)
-    integer :: iElem, nOrigElems, nElemsToRefine
+    integer :: iElem, nOrigElems
     integer :: iVar, nVars, varPos
-    integer :: iDof, nDofs, maxDofs, maxdofs_left
+    integer :: iDof, nDofs, maxDofs
     integer :: iComp, nComponents
     integer :: iChild, nChilds, n1D_childs
     integer :: cur, prev
     integer :: ans(3)
     integer :: i, ii
-    integer :: iError
     integer :: iMesh
     integer :: iLevel
     integer :: iProp
@@ -305,8 +334,6 @@ contains
     integer :: bitlevel
     real(kind=rk) :: legval
     real(kind=rk) :: point_spacing, point_start
-    logical, allocatable :: refine_tree(:)
-    logical, allocatable :: new_refine_tree(:)
     procedure(tem_varSys_proc_element), pointer :: get_element
     procedure(tem_varSys_proc_point), pointer :: get_point
     procedure(tem_varSys_proc_setParams), pointer :: set_params
@@ -593,6 +620,7 @@ contains
         &                       orig_bcs    = orig_bcs,    &
         &                       varsys      = varsys,      &
         &                       var_degree  = var_degree,  &
+        &                       lvl_degree  = lvl_degree,  &
         &                       trackInst   = trackInst,   &
         &                       trackConfig = trackConfig, &
         &                       time        = time,        &

@@ -1,3 +1,22 @@
+! Copyright (c) 2017-2019 Harald Klimach <harald.klimach@uni-siegen.de>
+! Copyright (c) 2018 Peter Vitt <peter.vitt2@uni-siegen.de>
+! Copyright (c) 2017-2018 Daniel Fleischer <daniel.fleischer@student.uni-siegen.de>
+!
+! Parts of this file were written by Harald Klimach, Peter Vitt and Daniel
+! Fleischer for University of Siegen.
+!
+! Permission to use, copy, modify, and distribute this software for any
+! purpose with or without fee is hereby granted, provided that the above
+! copyright notice and this permission notice appear in all copies.
+!
+! THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHORS DISCLAIM ALL WARRANTIES
+! WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+! MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR
+! ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+! WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+! ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+! OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+! **************************************************************************** !
 !> Adaptive sampling of polynomial data.
 !!
 !! This module implements the sampling of polynomials with data dependent
@@ -20,7 +39,7 @@ module ply_sampling_adaptive_module
   use mpi
 
   use iso_c_binding, only: c_f_pointer, c_loc
-  use env_module, only: rk
+  use env_module, only: rk, labelLen
 
   use aotus_module, only: flu_state,   &
     &                     aot_get_val
@@ -41,6 +60,7 @@ module ply_sampling_adaptive_module
   use tem_topology_module, only: tem_levelOf
   use tem_tracking_module, only: tem_tracking_instance_type, &
     &                            tem_tracking_config_type
+  use tem_tools_module, only: upper_to_lower
   use tem_varsys_module, only: tem_varSys_proc_element,       &
     &                          tem_varSys_proc_point,         &
     &                          tem_varSys_proc_getParams,     &
@@ -63,6 +83,9 @@ module ply_sampling_adaptive_module
     &                                 ply_split_element_1D,   &
     &                                 ply_split_element_2D,   &
     &                                 ply_split_element_3D
+  use ply_filter_element_module, only: ply_filter_element,      &
+    &                                  ply_filter_element_type, &
+    &                                  ply_filter_element_load
 
   implicit none
 
@@ -72,6 +95,12 @@ module ply_sampling_adaptive_module
   public :: ply_sampling_adaptive_type
   public :: ply_sampling_adaptive_load
 
+
+  !> Constant to indicate the factor reduction mode.
+  integer, parameter :: redux_factor = 1
+
+  !> Constant to indicate the decrement reduction mode.
+  integer, parameter :: redux_decrement = 2
 
   !> Configuration of the adaptive sampling.
   !!
@@ -92,6 +121,35 @@ module ply_sampling_adaptive_module
     !! For adaptive subsampling only.
     real(kind=rk) :: eps_osci
 
+    !> Method to use for the reduction.
+    !!
+    !! This may either be:
+    !!
+    !! - redux_factor: multiply the maximal polynomial degree by the
+    !!               given factor in each refinement level. This allows to
+    !!               maintain the same total number of degrees of freedom by
+    !!               halfing the modes during each refinement.
+    !!               This is the default reduction mode
+    !! - redux_decrement: Cut off the given dof_decrement last modes in each
+    !!                    refinement. This can be used to filter off the most
+    !!                    oscillatory modes while affecting the solution
+    !!                    minimally otherwise.
+    integer :: reduction_mode
+
+    !> Indication whether to filter modes during refinement by ignoring
+    !! all modes in the parent, that exceed the target polynomial degree
+    !! of the child elements.
+    !!
+    !! This provides a simple lowpass filtering method if activated.
+    !! Defaults to false.
+    logical :: ignore_highmodes = .false.
+
+    !> Number of modes to cut off in each refinement.
+    !!
+    !! If the decrement mode for reduction is used, this setting will
+    !! be used to cut off as many modes from the refined elements.
+    integer :: dof_decrement = 1
+
     !> Factor to Reduce dofs for every sampling level.
     !! Can be used to avoid too drastic increase of memory consumption.
     !! For adaptive subsampling only.
@@ -102,6 +160,13 @@ module ply_sampling_adaptive_module
 
     !> Absolute upper bound level to refine to.
     integer :: AbsUpperBoundLevel
+
+    !> Filtering the poylnomial modes during adaptive refinement.
+    !!
+    !! This filtering provides the possibility to change the applied
+    !! filtering based on the polynomials and thereby attempting to
+    !! capture discontinuities more sharply.
+    type(ply_filter_element_type) :: filter_element
   end type ply_sampling_adaptive_type
 
 
@@ -134,6 +199,7 @@ contains
     integer, intent(in), optional :: parent
     ! -------------------------------------------------------------------- !
     integer :: iError
+    character(len=labelLen) :: reduction_mode
     ! -------------------------------------------------------------------- !
 
     call aot_get_val( L       = conf,           &
@@ -165,46 +231,96 @@ contains
       write(logunit(1),*) '  level.'
     end if
 
+    call aot_get_val( L       = conf,                &
+      &               thandle = parent,              &
+      &               key     = 'ignore_highmodes',  &
+      &               val     = me%ignore_highmodes, &
+      &               ErrCode = iError,              &
+      &               default = .false.              )
+
+    if (me%ignore_highmodes) then
+      write(logunit(1),*) 'The highest modes that exceed the target degree'
+      write(logunit(1),*) 'will be ignored during each refinement!'
+    end if
+
     call aot_get_val( L       = conf,              &
       &               thandle = parent,            &
-      &               key     = 'dof_reduction',   &
-      &               val     = me%dofReducFactor, &
+      &               key     = 'reduction_mode',  &
+      &               val     = reduction_mode,    &
       &               ErrCode = iError,            &
-      &               default = 0.5_rk             )
+      &               default = 'factor'           )
 
-    if (me%dofReducFactor > 1.0_rk .or. me%dofReducFactor <= 0.0_rk) then
-      write(logunit(1),*) 'ERROR: dof_reduction has invalid setting:', &
-        &                 me%dofReducFactor
-      call tem_abort( 'dof_reduction needs to be in ' &
-        & // '0.0 < dof_reduction <= 1.0'             )
-    end if
+    reduction_mode = upper_to_lower(reduction_mode)
+    select case(trim(reduction_mode))
+    case ('factor')
+      me%reduction_mode = redux_factor
+      call aot_get_val( L       = conf,              &
+        &               thandle = parent,            &
+        &               key     = 'dof_reduction',   &
+        &               val     = me%dofReducFactor, &
+        &               ErrCode = iError,            &
+        &               default = 0.5_rk             )
 
-    call aot_get_val( L       = conf,                    &
-      &               thandle = parent,                  &
-      &               key     = 'adaptiveDofReduction',  &
-      &               val     = me%adaptiveDofReduction, &
-      &               ErrCode = iError,                  &
-      &               default = .FALSE.                  )
+      if (me%dofReducFactor > 1.0_rk .or. me%dofReducFactor <= 0.0_rk) then
+        write(logunit(1),*) 'ERROR: dof_reduction has invalid setting:', &
+          &                 me%dofReducFactor
+        call tem_abort( 'dof_reduction needs to be in ' &
+          & // '0.0 < dof_reduction <= 1.0'             )
+      end if
 
-    if (me%adaptiveDofReduction) then
+      call aot_get_val( L       = conf,                    &
+        &               thandle = parent,                  &
+        &               key     = 'adaptiveDofReduction',  &
+        &               val     = me%adaptiveDofReduction, &
+        &               ErrCode = iError,                  &
+        &               default = .FALSE.                  )
 
-      write(logunit(1),*) '  Reducing the degrees of freedom adaptively.'
-      write(logunit(1),*) '  This option tries to keep as many degrees of' &
-        &                 // ' freedom'
-      write(logunit(1),*) '  as possible while not increasing the required'
-      write(logunit(1),*) '  memory.'
-      write(logunit(1),*) '  However, the factor for the reduction will be'
-      write(logunit(1),*) '  at least ', me%dofReducFactor
-      write(logunit(1),*) '  Even if this results in an increased memory'
-      write(logunit(1),*) '  consumption after the refinement.'
+      if (me%adaptiveDofReduction) then
 
-    else
+        write(logunit(1),*) '  Reducing the degrees of freedom adaptively.'
+        write(logunit(1),*) '  This option tries to keep as many degrees of' &
+          &                 // ' freedom'
+        write(logunit(1),*) '  as possible while not increasing the required'
+        write(logunit(1),*) '  memory.'
+        write(logunit(1),*) '  However, the factor for the reduction will be'
+        write(logunit(1),*) '  at least ', me%dofReducFactor
+        write(logunit(1),*) '  Even if this results in an increased memory'
+        write(logunit(1),*) '  consumption after the refinement.'
 
-      write(logunit(1),*) 'Reducing the degrees of freedom on each ' &
-        &                 // 'refinement by a factor of', &
-        &                 me%dofReducFactor
+      else
 
-    end if
+        write(logunit(1),*) 'Reducing the degrees of freedom on each ' &
+          &                 // 'refinement by a factor of', &
+          &                 me%dofReducFactor
+
+      end if
+
+    case ('decrement')
+      me%reduction_mode = redux_decrement
+
+      call aot_get_val( L       = conf,             &
+        &               thandle = parent,           &
+        &               key     = 'dof_decrement',  &
+        &               val     = me%dof_decrement, &
+        &               ErrCode = iError,           &
+        &               default = 1                 )
+
+      write(logunit(1),*) '  Degrees of freedom will be decremented', &
+        &                 ' on each level by ', me%dof_decrement
+
+    case default
+      write(logunit(1),*) 'ERROR: Unknown reduction mode: ', &
+        &                 trim(reduction_mode)
+      write(logunit(1),*) 'Available reduction modes are:'
+      write(logunit(1),*) '* factor'
+      write(logunit(1),*) '* decrement'
+      call tem_abort( 'Unknown reduction mode!' )
+    end select
+
+    call ply_filter_element_load(      &
+      &    me     = me%filter_element, &
+      &    conf   = conf,              &
+      &    parent = parent             )
 
   end subroutine ply_sampling_adaptive_load
   ! ------------------------------------------------------------------------- !
@@ -217,8 +333,8 @@ contains
   !!
   !! Only works for Q-Polynomials.
   subroutine ply_sample_adaptive( me, ndims, orig_mesh, orig_bcs, varsys,   &
-    &                             var_degree, trackInst, trackConfig, time, &
-    &                             new_mesh, resvars                         )
+    &                             var_degree, lvl_degree, trackInst,        &
+    &                             trackConfig, time, new_mesh, resvars      )
     ! -------------------------------------------------------------------- !
     !> A ply_sampling_type to describe the sampling method.
     type(ply_sampling_adaptive_type), intent(in) :: me
@@ -239,6 +355,9 @@ contains
     !!       Possibly by defining a variable in the varsys, providing the
     !!       degree.
     integer, intent(in) :: var_degree(:)
+
+    !> Maximal polynomial degree for each level.
+    integer, intent(in) :: lvl_degree(:)
 
     !> Number of dimensions in the polynomial representation.
     integer, intent(in) :: ndims
@@ -264,12 +383,10 @@ contains
 
     type(sampled_method_data_type), pointer :: vardat => NULL()
 
-    real(kind=rk), allocatable :: elemdat(:)
     real(kind=rk), allocatable :: reduction_factor(:)
     real(kind=rk), allocatable :: maxmean(:)
     real(kind=rk), allocatable :: minmean(:)
     real(kind=rk) :: memprefac
-    real(kind=rk) :: variation
 
     real(kind=rk), pointer :: parent_data(:,:) => NULL()
     real(kind=rk), pointer :: child_data(:,:) => NULL()
@@ -290,7 +407,6 @@ contains
     integer :: refinedElems
 
     integer :: varpos
-    integer :: elempos
     integer :: bcpos
     integer :: firstdof, lastdof
     integer :: oldfirst, oldlast
@@ -326,6 +442,7 @@ contains
     type(tem_subTree_type) :: tracked_subtree
 
     procedure(ply_split_element), pointer :: split_element
+    procedure(ply_filter_element), pointer :: filtering
     procedure(tem_varSys_proc_element), pointer :: get_element
     procedure(tem_varSys_proc_point), pointer :: get_point
     procedure(tem_varSys_proc_setParams), pointer :: set_params
@@ -336,14 +453,19 @@ contains
 
     nMaxModes = maxval(var_degree+1)
     nChildren = 2**nDims
+    nullify(split_element)
+    nullify(filtering)
 
     select case(nDims)
     case (1)
       split_element => ply_split_element_1D
+      filtering     => me%filter_element%filter1D
     case (2)
       split_element => ply_split_element_2D
+      filtering     => me%filter_element%filter2D
     case (3)
       split_element => ply_split_element_3D
+      filtering     => me%filter_element%filter3D
     end select
 
     call ply_split_element_init(nMaxModes)
@@ -353,6 +475,7 @@ contains
       &                                 mesh          = orig_mesh,  &
       &                                 nDims         = nDims,      &
       &                                 var_degree    = var_degree, &
+      &                                 lvl_degree    = lvl_degree, &
       &                                 sample_varsys = resvars,    &
       &                                 var           = var,        &
       &                                 time          = time        )
@@ -435,6 +558,9 @@ contains
       allocate(is_varying(curmesh%nElems))
       refinedElems = 0
 
+      write(logunit(5),*) 'Adaptive sampling refinement ', iRefLevel
+      write(logunit(5),*) '        Parent local mesh has ', curmesh%nelems, &
+        &                 ' elements.'
       ! The decision whether an element needs to be refined or not depends
       ! on all variable components. Thus, this needs to be checked once
       ! beforehand.
@@ -474,6 +600,10 @@ contains
 
       end do
 
+      write(logunit(5),*) '        The new mesh will have ', newelems, &
+        &                 ' elements.'
+      flush(logunit(5))
+
       need2refine = (newElems > curmesh%nElems)
 
       call MPI_Allreduce( MPI_IN_PLACE,        & !sendbuf
@@ -485,6 +615,7 @@ contains
         &                 iError               ) !ierror
 
       if (need2refine) then
+        write(logunit(5),*) '        Need to do a refinement!'
         ! Mesh needs to be refined, and we need to create a new one.
         if (allocated(map2global)) deallocate(map2global)
         allocate(map2global(refinedElems))
@@ -534,7 +665,9 @@ contains
         ReducableElems(iScalar) = var(iScalar)%nDeviating*nChildren
       end do
 
-      if (me%adaptiveDofReduction .and. need2refine) then
+      if (me%reduction_mode == redux_factor &
+        & .and. me%adaptiveDofReduction     &
+        & .and. need2refine                 ) then
         ! If adaptive reduction is active, we may increase the factor and
         ! keep more dofs after the refinement for improved accuracy without
         ! increased memory. This is computed individually for each variable
@@ -579,23 +712,30 @@ contains
 
       variables: do iScalar=1,nScalars
 
+        ! The following code was moved in front of the condition to silence a
+        ! compiler warning about a potentially uninitialized maxtarget variable.
+        !
+        ! No refinement to be done, just a single degree of freedom per
+        ! element needed.
+        maxtarget = 1
+        containersize = newelems
+
         ! Allocate an array of sufficient size for the refined data.
         if (need2refine) then
-          maxtarget = ceiling( reduction_factor(iScalar) &
-            &                  * (maxdeg(iScalar)+1) )
-          maxtarget = max(maxtarget, 1)
+          select case(me%reduction_mode)
+          case(redux_factor)
+            maxtarget = ceiling( reduction_factor(iScalar) &
+              &                  * (maxdeg(iScalar)+1) )
+          case(redux_decrement)
+            maxtarget = max(maxdeg(iScalar) - me%dof_decrement + 1, 1)
+          end select
           containersize = newelems &
             &           + reducableElems(iScalar) * (maxtarget**nDims - 1)
-        else
-          ! No refinement to be done, just a single degree of freedom per
-          ! element needed.
-          maxtarget = 1
-          containersize = newelems
         end if
 
-        call ply_sampling_var_allocate( var     = var(iScalar),  &
-          &                             nElems  = newElems,      &
-          &                             datalen = containersize  )
+        call ply_sampling_var_allocate( var     = var(iScalar), &
+          &                             nElems  = newElems,     &
+          &                             datalen = containersize )
 
         iNewElem = 1
         var(iScalar)%first(1) = 1
@@ -633,8 +773,14 @@ contains
                 ! degree of freedom.
                 targetdeg = 0
               else
-                targetdeg = ceiling( reduction_factor(iScalar)             &
-                  &                  * (prev(iScalar)%degree(iElem)+1) ) - 1
+                select case(me%reduction_mode)
+                case(redux_factor)
+                  targetdeg = ceiling( reduction_factor(iScalar)             &
+                    &                  * (prev(iScalar)%degree(iElem)+1) ) - 1
+                case(redux_decrement)
+                  targetdeg = prev(iScalar)%degree(iElem) - me%dof_decrement
+                end select
+                targetdeg = max(targetdeg, 0)
               end if
 
               oldlast = prev(iScalar)%first(iElem+1) - 1
@@ -650,10 +796,19 @@ contains
               child_data(1:ndofs,1:nChildren) &
                 & => var(iScalar)%dat(firstdof:lastdof)
 
-              call split_element( parent_degree = prev(iScalar)%degree(iElem), &
-                &                 child_degree  = targetdeg,                   &
-                &                 parent_data   = parent_data,                 &
-                &                 child_data    = child_data                   )
+              if (associated(filtering)) then
+                call filtering(                                      &
+                  &    me             = me%filter_element,           &
+                  &    element_degree = prev(iScalar)%degree(iElem), &
+                  &    element_data   = parent_data                  )
+              end if
+
+              call split_element( parent_degree    = prev(iScalar)        &
+                &                                    %degree(iElem),      &
+                &                 child_degree     = targetdeg,           &
+                &                 ignore_highmodes = me%ignore_highmodes, &
+                &                 parent_data      = parent_data,         &
+                &                 child_data       = child_data           )
 
             else
               ! This scalar does not vary more than the threshold, just keep

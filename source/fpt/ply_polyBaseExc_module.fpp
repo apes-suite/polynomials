@@ -1,3 +1,32 @@
+! Copyright (c) 2012-2014, 2016-2018 Harald Klimach <harald.klimach@uni-siegen.de>
+! Copyright (c) 2012, 2014 Jens Zudrop <j.zudrop@grs-sim.de>
+! Copyright (c) 2013-2014, 2017 Peter Vitt <peter.vitt2@uni-siegen.de>
+! Copyright (c) 2013-2014 Verena Krupp
+! Copyright (c) 2014 Nikhil Anand <nikhil.anand@uni-siegen.de>
+! Copyright (c) 2016 Langhammer Kay <kay.langhammer@student.uni-siegen.de>
+! Copyright (c) 2017 Daniel Petró <daniel.petro@student.uni-siegen.de>
+! Copyright (c) 2019 Neda Ebrahimi Pour <neda.epour@uni-siegen.de>
+!
+! Parts of this file were written by Jens Zudrop and Harald Klimach
+! for German Research School for Simulation Sciences GmbH.
+!
+! Parts of this file were written by Verena Krupp, Harald Klimach, Peter Vitt,
+! Nikhil Anand, Kay Langhammer, Daniel Petró and Neda Ebrahimi Pour for
+! University of Siegen.
+!
+! Permission to use, copy, modify, and distribute this software for any
+! purpose with or without fee is hereby granted, provided that the above
+! copyright notice and this permission notice appear in all copies.
+!
+! THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHORS DISCLAIM ALL WARRANTIES
+! WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+! MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR
+! ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+! WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+! ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+! OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+! **************************************************************************** !
+
 ?? include "ply_polyBaseExc_module.inc"
 
 ! Make sure unroll is defined to an integer value.
@@ -29,7 +58,7 @@
 module ply_polyBaseExc_module
   use, intrinsic :: iso_c_binding
   use env_module,            only: rk
-  use tem_float_module,      only: operator(.fne.)
+  use tem_float_module
   use tem_param_module,      only: pi
   use tem_gamma_module
   use tem_logging_module,    only: logUnit
@@ -1002,43 +1031,43 @@ contains
         gam((indep-1)*n+1) = 0.5_rk*gam((indep-1)*n+1)
       end if
 
-      ! Multiply with the entries near the diagonal
-      call ply_calculate_coeff_strip(                &
-        & nIndeps          = nIndeps,                &
-        & n                = params%n,               &
-        & s                = params%n,               &
-        & gam              = gam,                    &
-        & matrix           = params%diag,            &
-        & alph             = alph,                   &
-        & nDiagonals       = params%nDiagonals,      &
-        & block_offset     = 0,                      &
-        & remainder        = 0,                      &
-        & strip_lb         = indep-1,                &
-        & strip_ub         = indep,                  &
-        & subblockingWidth = params%subblockingWidth )
-
-      ! Multiply with entries in the adapters
-      do iBlock=1,params%nBlocks-1
-
-        block_off = (iBlock-1)*params%s
-
-        call ply_calculate_coeff_strip(                    &
-          & nIndeps          = nIndeps,                    &
-          & n                = params%n,                   &
-          & s                = params%s,                   &
-          & gam              = gam,                        &
-          & matrix           = params%adapter(:,:,iBlock), &
-          & alph             = alph,                       &
-          & nDiagonals       = params%nBlockDiagonals,     &
-          & block_offset     = block_off,                  &
-          & remainder        = remainder,                  &
-          & strip_lb         = indep-1,                    &
-          & strip_ub         = indep,                      &
-          & subblockingWidth = params%subblockingWidth     )
-
-      end do
-
     end do indeploop
+
+    ! Multiply with the entries near the diagonal
+    call ply_calculate_coeff_strip(                &
+      & nIndeps          = nIndeps,                &
+      & n                = params%n,               &
+      & s                = params%n,               &
+      & gam              = gam,                    &
+      & matrix           = params%diag,            &
+      & alph             = alph,                   &
+      & nDiagonals       = params%nDiagonals,      &
+      & block_offset     = 0,                      &
+      & remainder        = 0,                      &
+      & strip_lb         = 0,                      &
+      & strip_ub         = nIndeps,                &
+      & subblockingWidth = params%subblockingWidth )
+
+    ! Multiply with entries in the adapters
+    do iBlock=1,params%nBlocks-1
+
+      block_off = (iBlock-1)*params%s
+
+      call ply_calculate_coeff_strip(                    &
+        & nIndeps          = nIndeps,                    &
+        & n                = params%n,                   &
+        & s                = params%s,                   &
+        & gam              = gam,                        &
+        & matrix           = params%adapter(:,:,iBlock), &
+        & alph             = alph,                       &
+        & nDiagonals       = params%nBlockDiagonals,     &
+        & block_offset     = block_off,                  &
+        & remainder        = remainder,                  &
+        & strip_lb         = 0,                          &
+        & strip_ub         = nIndeps,                    &
+        & subblockingWidth = params%subblockingWidth     )
+
+    end do
 
   end subroutine ply_fpt_exec
   ! ************************************************************************ !

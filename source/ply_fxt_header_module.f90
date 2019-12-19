@@ -1,3 +1,24 @@
+! Copyright (c) 2015 Nikhil Anand <nikhil.anand@uni-siegen.de>
+! Copyright (c) 2015 Harald Klimach <harald.klimach@uni-siegen.de>
+! Copyright (c) 2017 Daniel Petró <daniel.petro@student.uni-siegen.de>
+! Copyright (c) 2017 Peter Vitt <peter.vitt2@uni-siegen.de>
+! Copyright (c) 2019 Neda Ebrahimi Pour <neda.epour@uni-siegen.de>
+!
+! Parts of this file were written by Nikhil Anand, Harald Klimach, Daniel Petró,
+! Peter Vitt and Neda Ebrahimi Pour for University of Siegen.
+!
+! Permission to use, copy, modify, and distribute this software for any
+! purpose with or without fee is hereby granted, provided that the above
+! copyright notice and this permission notice appear in all copies.
+!
+! THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHORS DISCLAIM ALL WARRANTIES
+! WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+! MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR
+! ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+! WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+! ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+! OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+! **************************************************************************** !
 !> Module contains the header for the fxt projection method
 
 module ply_fxt_header_module
@@ -8,13 +29,9 @@ module ply_fxt_header_module
 
   use tem_aux_module,          only: tem_abort
   use tem_logging_module,      only: logUnit
-  use tem_float_module,        only: operator(.feq.), operator(.fne.)
+  use tem_float_module
 
-  use ply_nodes_header_module, only: ply_nodes_header_type,      &
-    &                                assignment(=),              &
-    &                                operator(==), operator(>=), &
-    &                                operator(/=), operator(<),  &
-    &                                operator(<=), operator(>)
+  use ply_nodes_header_module
 
   implicit none
 
@@ -94,7 +111,7 @@ contains
     integer :: iError
     ! -------------------------------------------------------------------- !
 
-    ! for fxt gauss-legendre points are used 
+    ! for fxt gauss-legendre points are used
     me%nodes_header%nodes_kind = 'gauss-legendre'
 
     ! fill up fxt header
@@ -183,7 +200,7 @@ contains
   ! ************************************************************************ !
   !> This function provides the test for equality of two projections.
   !!
-  !! Two fxt header are considered to be equal, if their node_header, 
+  !! Two fxt header are considered to be equal, if their node_header,
   !! and the factor are equal.
   pure function isEqual( left, right ) result( equality )
     ! -------------------------------------------------------------------- !
@@ -205,7 +222,7 @@ contains
   ! ************************************************************************ !
   !> This function provides the test for unequality of two projections.
   !!
-  !! Two fxt header are considered to be unequal, if their node_header, 
+  !! Two fxt header are considered to be unequal, if their node_header,
   !! or the factor are not equal.
   pure function isUnequal( left, right ) result( unequality )
     ! -------------------------------------------------------------------- !
