@@ -108,7 +108,6 @@ contains
     integer, allocatable :: elempos(:)
     real(kind=rk), allocatable :: elemdat(:)
     ! -------------------------------------------------------------------- !
-    !$OMP PARALLEL DEFAULT(SHARED), PRIVATE(iVar, iComponent, iElem, iTotComp)
 
     nVars = trackInst%varmap%varPos%nVals
 
@@ -146,7 +145,6 @@ contains
     variables: do iVar=1,nVars
       varpos = trackInst%varmap%varPos%val(iVar)
       nComponents = varsys%method%val(varpos)%nComponents
-      !$OMP DO
       do iComponent=1,nComponents
         iTotComp = iScalar+iComponent-1
         call ply_sampling_var_allocate( var     = var(iTotComp), &
@@ -154,7 +152,6 @@ contains
           &                             datalen = total_dofs     )
         var(iTotComp)%first(1) = 1
       end do
-      !$OMP END DO
 
       ! Varying polynomial degree for elements is possible.
       ! Need to copy data element by element.
@@ -166,7 +163,6 @@ contains
         upper_bound = lower_bound-1 + nDofs
 
         allocate(elemDat(nComponents*nDofs))
-        !$OMP DO
         call varSys%method%val(varpos)%get_element( &
           &    varSys  = varSys,                    &
           &    elempos = elempos(iElem:iElem),      &
@@ -175,6 +171,7 @@ contains
           &    nElems  = 1,                         &
           &    nDofs   = nDofs,                     &
           &    res     = elemdat                    )
+
         do iComponent=1,nComponents
           iTotComp = iScalar+iComponent-1
           var(iTotComp)%dat(lower_bound:upper_bound) &
@@ -182,20 +179,15 @@ contains
           var(iTotComp)%first(iElem+1) = upper_bound+1
           var(iTotComp)%degree(iElem) = lvl_degree(iLevel)
         end do
-        !$OMP END DO
 
         lower_bound = upper_bound + 1
 
         deallocate(elemDat)
-      !$OMP DO
       end do
-      !$OMP END DO
 
       iScalar = iScalar + nComponents
 
     end do variables
-
-    !$OMP END PARALLEL
 
   end subroutine ply_sampling_varsys_for_track
   ! ------------------------------------------------------------------------ !
@@ -317,7 +309,6 @@ contains
     integer :: nElems
     integer :: ndofs
     ! -------------------------------------------------------------------- !
-    !$OMP PARALLEL DEFAULT(SHARED), PRIVATE(iElem, ndofs, absmean, variation)
 
     if (allocated(var%deviates)) deallocate(var%deviates)
     var%nDeviating = 0
@@ -325,7 +316,6 @@ contains
     if (allocated(var%first)) then
       nElems = size(var%first)-1
       allocate(var%deviates(nElems))
-      !$OMP DO
       do iElem=1,nElems
         ndofs = var%first(iElem+1) - var%first(iElem) - 1
         absmean = max( abs(var%dat(var%first(iElem))), min_mean )
@@ -333,10 +323,7 @@ contains
         var%deviates(iElem) = (variation > threshold*absmean)
         if (var%deviates(iElem)) var%nDeviating = var%nDeviating + 1
       end do
-      !$OMP END DO
     end if
-
-    !$OMP END PARALLEL
 
   end subroutine ply_sampling_var_compute_elemdev
   ! ------------------------------------------------------------------------ !

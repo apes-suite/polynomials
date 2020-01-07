@@ -80,13 +80,13 @@ contains
    real(kind=rk), dimension(:), allocatable :: alph
    real(kind=rk), dimension(:), allocatable :: gam
    ! --------------------------------------------------------------------- !
-    !$OMP PARALLEL DEFAULT(SHARED), PRIVATE(iStrip, iAlph, nIndeps)
 
    striplen = fpt%legToChebParams%striplen
    n = fpt%legToChebParams%n
 
    allocate(alph(min(striplen, n)*n))
    allocate(gam(min(striplen, n)*n))
+
    ! original layout (n = 3):
    !  1  2  3
    !  4  5  6
@@ -96,7 +96,7 @@ contains
    !  1  4  7
    !  2  5  8
    !  3  6  9
-   !$OMP DO
+
    yStripLoop: do iStrip = 1, n, striplen
      ! iAlph is the index of the first element in a line for the transformation
      ! in y-direction.
@@ -116,10 +116,8 @@ contains
      pntVal((iStrip-1)*n+1 : (iStrip+nIndeps-1)*n) = gam(1:nIndeps*n)
 
    end do yStripLoop
-   !$OMP END DO
 
    ! x-direction
-   !$OMP DO
    xStripLoop: do iStrip = 1, n, striplen
      do iAlph = iStrip, min(iStrip+striplen-1, n)
        alph((iAlph-iStrip)*n+1:(iAlph-iStrip+1)*n) = pntVal(iAlph::n) !ztrafo
@@ -136,9 +134,6 @@ contains
      pntVal((iStrip-1)*n+1 : (iStrip+nIndeps-1)*n) = gam(1:nIndeps*n)
 
    end do xStripLoop
-   !$OMP END DO
-
-   !$OMP END PARALLEL
 
   end subroutine ply_legToPnt_2D_singVar
   ! ************************************************************************ !
@@ -193,7 +188,6 @@ contains
     real(kind=rk), dimension(:), allocatable :: alph
     real(kind=rk), dimension(:), allocatable :: gam
    ! --------------------------------------------------------------------- !
-    !$OMP PARALLEL DEFAULT(SHARED), PRIVATE(nIndeps, iStrip, iAlph)
 
     striplen = fpt%chebToLegParams%striplen
     n = fpt%legToChebParams%n
@@ -202,7 +196,6 @@ contains
     allocate(alph(min(striplen, n)*n))
     allocate(gam(min(striplen, n)*n))
 
-    !$OMP DO
     yStripLoop: do iStrip = 1, n, striplen
       do iAlph = iStrip, min(iStrip+striplen-1, n) !y_Trafo
         alph((iAlph-iStrip)*n+1:(iAlph-iStrip+1)*n) = pntVal(iAlph::n)
@@ -220,10 +213,8 @@ contains
       legCoeffs((iStrip-1)*n+1 : (iStrip+nIndeps-1)*n)  = gam(1:nIndeps*n)
 
     end do yStripLoop ! iStrip
-    !$OMP END DO
 
     ! x-direction
-    !$OMP DO
     xStripLoop: do iStrip = 1,n,striplen
       do iAlph = iStrip, min(iStrip+striplen-1, n)
         !ztrafo
@@ -241,9 +232,6 @@ contains
       legCoeffs((iStrip-1)*n+1 : (iStrip+nIndeps-1)*n)  = gam(1:nIndeps*n)
 
     end do xStripLoop
-    !$OMP END DO
-
-    !$OMP END PARALLEL
 
   end subroutine ply_pntToLeg_2D_singVar
   ! ************************************************************************ !

@@ -63,17 +63,13 @@ contains
     ! -------------------------------------------------------------------- !
     integer :: iPoint
     ! -------------------------------------------------------------------- !
-    !$OMP PARALLEL DEFAULT(SHARED), PRIVATE(iPoint)
 
     allocate(chebPnt1D(nPoints))
-    !$OMP DO
+
     do iPoint = 1, nPoints
       chebPnt1D(iPoint) = -1.0_rk &
         & * cos( PI / nPoints * ( (iPoint - 1.0_rk) + 1.0_rk / 2.0_rk ) )
     end do
-    !$OMP END DO
-
-    !$OMP END PARALLEL
 
   end subroutine ply_chebPoint_1D
   ! ************************************************************************ !
@@ -94,16 +90,12 @@ contains
     ! -------------------------------------------------------------------- !
     integer :: iPoint
     ! -------------------------------------------------------------------- !
-    !$OMP PARALLEL DEFAULT(SHARED), PRIVATE(iPoint)
 
     allocate(chebPnt1D(nPoints))
-    !$OMP DO
+
     do iPoint = 1, nPoints
       chebPnt1D(iPoint) = cos( ( iPoint - 1.0_rk ) * PI / ( nPoints - 1.0_rk ) )
     end do
-    !$OMP END DO
-
-    !$OMP END PARALLEL
 
   end subroutine ply_lobattoChebPoint_1D
   ! ************************************************************************ !
@@ -120,14 +112,13 @@ contains
     real(kind=rk), allocatable :: chebPnt1D(:)
     integer :: nquadpoints
     ! -------------------------------------------------------------------- !
-    !$OMP PARALLEL DEFAULT(SHARED), PRIVATE(k, j, i, pointNumber)
+
     nquadpoints = num_intp_per_direction**3
+
     allocate(points(nquadpoints,3))
 
     call ply_chebPoint_1D( num_intp_per_direction, chebPnt1D )
 
-    pointNumber = 1
-    !$OMP DO
     do k = 1, num_intp_per_direction
       do j = 1, num_intp_per_direction
         do i = 1, num_intp_per_direction
@@ -140,9 +131,6 @@ contains
         end do
       end do
     end do
-    !$OMP END DO
-
-    !$OMP END PARALLEL
 
   end subroutine create_volume_cheb_points_cube
   ! ************************************************************************ !
@@ -160,14 +148,14 @@ contains
     real(kind=rk), allocatable :: chebPnt1D(:)
     integer :: nquadpoints
     ! -------------------------------------------------------------------- !
-    !$OMP PARALLEL DEFAULT(SHARED), PRIVATE(k, j, i, pointNumber)
+
     nquadpoints = num_intp_per_direction**3
+
     allocate(points(nquadpoints,3))
 
     call ply_lobattoChebPoint_1D( num_intp_per_direction, chebPnt1D )
 
     pointNumber = 1
-    !$OMP DO
     do k = 1, num_intp_per_direction
       do j = 1, num_intp_per_direction
         do i = 1, num_intp_per_direction
@@ -180,9 +168,6 @@ contains
         end do
       end do
     end do
-    !$OMP END DO
-
-    !$OMP END PARALLEL
 
   end subroutine create_volume_lobattocheb_points_cube
   ! ************************************************************************ !
@@ -200,16 +185,14 @@ contains
     real(kind=rk), allocatable :: chebPnt1D(:)
     integer :: nquadpoints
     ! -------------------------------------------------------------------- !
-    !$OMP PARALLEL DEFAULT(SHARED), PRIVATE(j, i, pointNumber)
-
 
     nquadpoints = num_intp_per_direction**2
+
     allocate(points(nquadpoints,3))
 
     call ply_chebPoint_1D( num_intp_per_direction, chebPnt1D )
 
     pointNumber = 1
-    !$OMP DO
     do j = 1, num_intp_per_direction
       do i = 1, num_intp_per_direction
         ! here we build all possible combinations of the one-dimensional
@@ -220,9 +203,6 @@ contains
         pointNumber = pointNumber + 1
       end do
     end do
-    !$OMP END DO
-
-    !$OMP END PARALLEL
 
   end subroutine create_volume_cheb_points_cube_2d
   ! ************************************************************************ !
@@ -242,14 +222,14 @@ contains
     real(kind=rk), allocatable :: chebPnt1D(:)
     integer :: nquadpoints
     ! -------------------------------------------------------------------- !
-    !$OMP PARALLEL DEFAULT(SHARED), PRIVATE(j, i, pointNumber)
+
     nquadpoints = num_intp_per_direction**2
+
     allocate(points(nquadpoints,3))
 
     call ply_lobattoChebPoint_1D( num_intp_per_direction, chebPnt1D )
 
     pointNumber = 1
-    !$OMP DO
     do j = 1, num_intp_per_direction
       do i = 1, num_intp_per_direction
         ! here we build all possible combinations of the one-dimensional
@@ -260,9 +240,6 @@ contains
         pointNumber = pointNumber + 1
       end do
     end do
-    !$OMP END DO
-
-    !$OMP END PARALLEL
 
   end subroutine create_volume_lobattocheb_points_cube_2d
   ! ************************************************************************ !
@@ -278,13 +255,12 @@ contains
     integer :: pointNumber
     real(kind=rk), allocatable :: chebPnt1D(:)
     ! -------------------------------------------------------------------- !
-    !$OMP PARALLEL DEFAULT(SHARED), PRIVATE(i, pointNumber)
 
     allocate(points(num_intp_per_direction,3))
+
     call ply_chebPoint_1D( num_intp_per_direction, chebPnt1D )
 
     pointNumber = 1
-    !$OMP DO
     do i = 1, num_intp_per_direction
       ! here we build all possible combinations of the one-dimensional
       ! points to get the three dimensional values.
@@ -293,9 +269,6 @@ contains
       points(pointNumber, 3) = 0.0_rk
       pointNumber = pointNumber + 1
     end do
-    !$OMP END DO
-
-    !$OMP END PARALLEL
 
   end subroutine create_volume_cheb_points_cube_1d
   ! ************************************************************************ !
@@ -314,13 +287,12 @@ contains
     integer :: pointNumber
     real(kind=rk), allocatable :: chebPnt1D(:)
     ! -------------------------------------------------------------------- !
-    !$OMP PARALLEL DEFAULT(SHARED), PRIVATE(i, pointNumber)
 
     allocate(points(num_intp_per_direction,3))
+
     call ply_lobattoChebPoint_1D( num_intp_per_direction, chebPnt1D )
 
     pointNumber = 1
-    !$OMP DO
     do i = 1, num_intp_per_direction
       ! here we build all possible combinations of the one-dimensional
       ! points to get the three dimensional values.
@@ -329,9 +301,6 @@ contains
       points(pointNumber, 3) = 0.0_rk
       pointNumber = pointNumber + 1
     end do
-    !$OMP END DO
-
-    !$OMP END PARALLEL
 
   end subroutine create_volume_lobattocheb_points_cube_1d
   ! ************************************************************************ !
@@ -357,9 +326,9 @@ contains
     real(kind=rk), allocatable :: chebPnt1D(:)
     integer :: nquadpoints
     ! -------------------------------------------------------------------- !
-    !$OMP PARALLEL DEFAULT(SHARED), PRIVATE(j, i, pointNumber)
 
     nquadpoints = num_intp_per_direction**2
+
     allocate(points(nquadpoints,3))
 
     call ply_chebPoint_1D( num_intp_per_direction, chebPnt1D )
@@ -368,7 +337,6 @@ contains
 
     select case(dir)
     case(1) ! face in x direction, x coord is fixed
-      !$OMP DO
       do j = 1, num_intp_per_direction
         do i = 1, num_intp_per_direction
           points(pointNumber, 1) = (-1.0_rk)**align
@@ -377,9 +345,7 @@ contains
           pointNumber = pointNumber + 1
         end do
       end do
-      !$OMP END DO
     case(2) ! face in y direction, y coord is fixed
-      !$OMP DO
       do j = 1, num_intp_per_direction
         do i = 1, num_intp_per_direction
           points(pointNumber, 1) = chebPnt1D(i)
@@ -388,9 +354,7 @@ contains
           pointNumber = pointNumber + 1
         end do
       end do
-      !$OMP END DO
     case(3) ! face in z direction, z coord is fixes
-      !$OMP DO
       do j = 1, num_intp_per_direction
         do i = 1, num_intp_per_direction
           points(pointNumber , 1) = chebPnt1D(i)
@@ -399,13 +363,10 @@ contains
           pointNumber = pointNumber + 1
         end do
       end do
-      !$OMP END DO
     case default
       call tem_abort( 'ERROR in create_surface_cheb_points_cube: unknown ' &
         & // 'face direction'                                              )
     end select
-
-    !$OMP END PARALLEL
 
   end subroutine create_surface_cheb_points_cube
   ! ************************************************************************ !
@@ -431,9 +392,9 @@ contains
     real(kind=rk), allocatable :: chebPnt1D(:)
     integer :: nquadpoints
     ! -------------------------------------------------------------------- !
-    !$OMP PARALLEL DEFAULT(SHARED), PRIVATE(j, i, pointNumber)
 
     nquadpoints = num_intp_per_direction**2
+
     allocate(points(nquadpoints,3))
 
     call ply_lobattoChebPoint_1D( num_intp_per_direction, chebPnt1D )
@@ -442,7 +403,6 @@ contains
 
     select case(dir)
     case(1) ! face in x direction, x coord is fixed
-      !$OMP DO
       do j = 1, num_intp_per_direction
         do i = 1, num_intp_per_direction
           points(pointNumber, 1) = (-1.0_rk)**align
@@ -451,9 +411,7 @@ contains
           pointNumber = pointNumber + 1
         end do
       end do
-      !$OMP END DO
     case(2) ! face in y direction, y coord is fixed
-      !$OMP DO
       do j = 1, num_intp_per_direction
         do i = 1, num_intp_per_direction
           points(pointNumber, 1) = chebPnt1D(i)
@@ -462,9 +420,7 @@ contains
           pointNumber = pointNumber + 1
         end do
       end do
-      !$OMP END DO
     case(3) ! face in z direction, z coord is fixes
-      !$OMP DO
       do j = 1, num_intp_per_direction
         do i = 1, num_intp_per_direction
           points(pointNumber, 1) = chebPnt1D(i)
@@ -473,13 +429,10 @@ contains
           pointNumber = pointNumber + 1
         end do
       end do
-      !$OMP END DO
     case default
       call tem_abort( 'ERROR in create_surface_lobattocheb_points_cube:' &
         & // ' unknown face direction'                                   )
     end select
-
-    !$OMP END PARALLEL
 
   end subroutine create_surface_lobattocheb_points_cube
   ! ************************************************************************ !
@@ -504,9 +457,9 @@ contains
     real(kind=rk), allocatable :: chebPnt1D(:)
     integer :: nquadpoints
     ! -------------------------------------------------------------------- !
-    !$OMP PARALLEL DEFAULT(SHARED), PRIVATE(i, pointNumber)
 
     nquadpoints = num_intp_per_direction
+
     allocate(points(nquadpoints,3))
 
     call ply_chebPoint_1D( num_intp_per_direction, chebPnt1D )
@@ -515,29 +468,23 @@ contains
 
     select case(dir)
     case(1) ! face in x direction, x coord is fixed
-      !$OMP DO
       do i = 1, num_intp_per_direction
         points(pointNumber, 1) = (-1.0_rk)**align
         points(pointNumber, 2) = chebPnt1D(i)
         points(pointNumber, 3) = 0.0_rk
         pointNumber = pointNumber + 1
       end do
-      !$OMP END DO
     case(2) ! face in y direction, y coord is fixed
-      !$OMP DO
       do i = 1, num_intp_per_direction
         points(pointNumber, 1) = chebPnt1D(i)
         points(pointNumber, 2) = (-1.0_rk)**align
         points(pointNumber, 3) = 0.0_rk
         pointNumber = pointNumber + 1
       end do
-      !$OMP END DO
     case default
       call tem_abort( 'ERROR in create_surface_cheb_points_cube_2d:' &
         & // ' unknown face direction'                               )
     end select
-
-    !$OMP END PARALLEL
 
   end subroutine create_surface_cheb_points_cube_2d
   ! ************************************************************************ !
@@ -562,9 +509,9 @@ contains
     real(kind=rk), allocatable :: chebPnt1D(:)
     integer :: nquadpoints
     ! -------------------------------------------------------------------- !
-    !$OMP PARALLEL DEFAULT(SHARED), PRIVATE(i, pointNumber)
 
     nquadpoints = num_intp_per_direction
+
     allocate(points(nquadpoints,3))
 
     call ply_lobattoChebPoint_1D( num_intp_per_direction, chebPnt1D )
@@ -573,29 +520,23 @@ contains
 
     select case(dir)
     case(1) ! face in x direction, x coord is fixed
-      !$OMP DO
       do i = 1, num_intp_per_direction
         points(pointNumber, 1) = (-1.0_rk)**align
         points(pointNumber, 2) = chebPnt1D(i)
         points(pointNumber, 3) = 0.0_rk
         pointNumber = pointNumber + 1
       end do
-      !$OMP END DO
     case(2) ! face in y direction, y coord is fixed
-      !$OMP DO
       do i = 1, num_intp_per_direction
         points(pointNumber, 1) = chebPnt1D(i)
         points(pointNumber, 2) = (-1.0_rk)**align
         points(pointNumber, 3) = 0.0_rk
         pointNumber = pointNumber + 1
       end do
-      !$OMP END DO
     case default
       call tem_abort( 'ERROR in create_surface_cheb_points_cube_2d:' &
         & // ' unknown face direction'                               )
     end select
-
-    !$OMP END PARALLEL
 
   end subroutine create_surface_lobattocheb_points_cube_2d
   ! ************************************************************************ !

@@ -67,8 +67,6 @@ contains
     integer :: leg(3), iDeg, iDeg1, iDeg2, iDeg3, DV(3)
     ! -------------------------------------------------------------------- !
 
-    !$OMP PARALLEL DEFAULT(SHARED), PRIVATE(iDeg1, dofPosPrev, iDeg2, iDeg3, iVar,leg, dofPos, iDeg)
-
     if (present(dirVec)) then
       DV = dirvec
     else
@@ -81,7 +79,6 @@ contains
       endif
     endif
 
-    !$OMP DO
     do iDeg = 1, (mpd+1)**2
       iDeg1 = (iDeg-1)/(mpd+1) + 1      !! do IDeg1 = 1, mPd+1
       iDeg2 = iDeg - (iDeg1-1)*(mpd+1)  !! do IDeg2 = 1, mPd=1   !! iDeg2 = mod(iDeg-1,mpd+1)+1
@@ -140,9 +137,7 @@ contains
         end do
       end do
     end do
-    !$OMP END DO
 
-    !$OMP DO
     ! Scale the results due to the Jacobians of the mappings
     do dofpos=1,(mpd+1)**3
       ideg3 = (dofpos-1)/(mpd+1)**2 + 1
@@ -154,7 +149,6 @@ contains
         &                         * (2.0_rk/elemLength)         &
         &                         * (2.0_rk*leg(iDir) - 1.0_rk)
     end do
-    !$OMP END DO
 
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
    ! Uncollapsed version of the scaling !
@@ -173,8 +167,6 @@ contains
 !!       end do
 !!     end do
 !!   end do
-
-    !$OMP END PARALLEL
 
   end subroutine calcDiff_leg_normal
   ! ************************************************************************ !
@@ -543,8 +535,6 @@ contains
     integer :: leg(2), iDeg1, iDeg2, DV(2)
     ! -------------------------------------------------------------------- !
 
-    !$OMP PARALLEL DEFAULT(SHARED), PRIVATE(iDeg1, iDeg2, leg, dofPos, dofPosPrev, iVar)
-
     if (present(dirVec)) then
       DV = dirvec
     else
@@ -555,7 +545,6 @@ contains
       endif
     endif
 
-    !$OMP DO
     do iDeg1 = 1, mPd+1
       iDeg2 =  mPd+1
       leg = (/iDeg1, iDeg2/)
@@ -612,9 +601,7 @@ contains
         end do
       end do
     end do
-    !$OMP END DO
 
-    !$OMP DO
     ! Scale the results due to the Jacobians of the mappings
     do iDeg1 = 1, mPd+1
       do iDeg2 = 1, mPd+1
@@ -626,9 +613,6 @@ contains
           &                         * (2.0_rk*leg(iDir) - 1.0_rk)
       end do
     end do
-    !$OMP END DO
-
-    !$OMP END PARALLEL
 
   end subroutine calcDiff_leg_2d_normal
   ! ************************************************************************ !
@@ -735,8 +719,6 @@ contains
     integer :: dofPos, dofPosPrev, dofPos2Prev
     ! -------------------------------------------------------------------- !
 
-    !$OMP PARALLEL DEFAULT(SHARED), PRIVATE(dofPos, iDegX, dofPosPrev, dofPos2Prev)
-
     ! Build the derivative in x direction
     dofPos = 1 + maxPolyDegree
     legCoeffsDiff(dofPos,:) = 0.0_rk
@@ -744,7 +726,6 @@ contains
       dofPosPrev = dofPos
       dofPos = 1 + (maxPolyDegree-1)
       legCoeffsDiff(dofPos,:) = legCoeffs(dofPosPrev,:)
-      !$OMP DO
       do iDegX = maxPolyDegree-1, 1, -1
         dofPos = 1 + (iDegX-1)
         dofPosPrev = 1 + (iDegX)
@@ -752,19 +733,14 @@ contains
         legCoeffsDiff(dofPos,:) = legCoeffsDiff(dofPos2Prev,:) &
           &                         + legCoeffs(dofPosPrev,:)
       end do
-      !$OMP END DO
     end if
 
-    !$OMP DO
     do iDegX = 1, maxPolyDegree+1
       dofPos = 1 + (iDegX-1)
       legCoeffsDiff(dofPos,:) = legCoeffsDiff(dofPos,:)     &
         &                         * (2.0_rk/elemLength)     &
         &                         * (2.0_rk*iDegX - 1.0_rk)
     end do
-    !$OMP END DO
-
-    !$OMP END PARALLEL
 
   end subroutine calcDiff_leg_1d
   ! ************************************************************************ !

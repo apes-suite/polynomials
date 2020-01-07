@@ -252,7 +252,6 @@ contains
     integer :: nParents
     integer :: parentpos, childpos
     ! -------------------------------------------------------------------- !
-    !$OMP PARALLEL DEFAULT(SHARED), PRIVATE(iDir, parentMode, iParent, childMode, indep)
 
     nParents = size(parent_data,2)
 
@@ -266,18 +265,15 @@ contains
     ! The number of independent modes (in normal directions) is given
     ! by the product of the length in all directions, except the last one.
     nIndeps = 1
-    !$OMP DO
     do iDir=1,nDims-1
       nIndeps = nIndeps*inLen(iDir)
     end do
-    !$OMP END DO
 
     if (ignore) then
       maxcol = min(outLen(1), inLen(nDims))
     else
       maxcol = inLen(nDims)
     end if
-    !$OMP DO
     oldmodes: do parentMode=1,maxcol
       ! Maximal number modes to compute, as this is a triangular matrix
       ! it is limited by the diagonal (parentMode). However, it may be
@@ -308,9 +304,6 @@ contains
       end do elemloop
 
     end do oldmodes
-    !$OMP END DO
-
-    !$OMP END PARALLEL
 
   end subroutine ply_split_element_singleD
   ! ======================================================================== !

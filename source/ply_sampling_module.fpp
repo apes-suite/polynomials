@@ -680,21 +680,16 @@ contains
     integer :: iElem
     integer :: nComps
     ! -------------------------------------------------------------------- !
-    !$OMP PARALLEL DEFAULT(SHARED), PRIVATE(iElem)
 
     nComps = fun%nComponents
     datlen = tree%nElems * nComps
 
     call c_f_pointer(fun%method_data, p)
 
-    !$OMP DO
     do iElem=1,n
       res(1+(iElem-1)*nComps:iElem*nComps) &
         & = p%dat(1+(elempos(iElem)-1)*nComps:elempos(iElem)*nComps)
     end do
-    !$OMP END DO
-
-    !$OMP END PARALLEL
 
   end subroutine get_sampled_element
   ! ************************************************************************ !
