@@ -276,10 +276,12 @@ contains
     integer :: n
     ! -------------------------------------------------------------------- !
 
+    !$OMP PARALLEL DEFAULT(SHARED), PRIVATE(n, iDof, cheb)
     n = fpt%legToChebParams%n
 
     if (.not. fpt%use_lobatto_points) then
 
+      !$OMP DO
       do iDof = 1, nIndeps*n, n
         call ply_fpt_single( alph   = legCoeffs(iDof:iDof+n-1), &
           &                  gam    = cheb,                     &
@@ -294,9 +296,11 @@ contains
           &                    cheb,                 &
           &                    pntVal(iDof:iDof+n-1) )
       end do
+      !$OMP END DO
 
     else
 
+      !$OMP DO
       do iDof = 1, nIndeps*n, n
         call ply_fpt_single( alph   = legCoeffs(iDof:iDof+n-1), &
           &                  gam    = cheb,                     &
@@ -310,8 +314,10 @@ contains
           &                    cheb,                 &
           &                    pntVal(iDof:iDof+n-1) )
       end do
+      !$OMP END DO
 
     end if ! lobattoPoints
+    !$OMP END PARALLEL
 
   end subroutine ply_legToPnt
   ! ************************************************************************ !

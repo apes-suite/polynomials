@@ -271,8 +271,11 @@ contains
     ! integer, parameter :: vlen = nIndeps
     ! -------------------------------------------------------------------- !
 
+    !$OMP PARALLEL DEFAULT(SHARED), &
+    !$OMP PRIVATE(iStrip, iRow, iCell, iCol, strip_ub, mval)
     if (nDofs > 1) then
 
+      !$OMP DO
       do iStrip=0,nIndeps-1,vlen
 
         ! Calculate the upper bound of the current strip
@@ -295,12 +298,16 @@ contains
 
         end do ! iRow = 1, nRows
       end do ! iStrip
+      !$OMP END DO
 
     else
 
+      !$OMP SINGLE
       projected = matrix(nDofs,1) * original
+      !$OMP END SINGLE
 
     end if
+    !$OMP END PARALLEL
 
   end subroutine ply_l2_projection
   ! ************************************************************************ !

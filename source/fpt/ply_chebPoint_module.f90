@@ -119,6 +119,7 @@ contains
 
     call ply_chebPoint_1D( num_intp_per_direction, chebPnt1D )
 
+    pointNumber = 1
     do k = 1, num_intp_per_direction
       do j = 1, num_intp_per_direction
         do i = 1, num_intp_per_direction
