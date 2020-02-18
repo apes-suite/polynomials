@@ -1,7 +1,7 @@
 ! Copyright (c) 2013-2014 Jens Zudrop <j.zudrop@grs-sim.de>
 ! Copyright (c) 2013-2014, 2016-2017 Peter Vitt <peter.vitt2@uni-siegen.de>
 ! Copyright (c) 2013-2015 Nikhil Anand <nikhil.anand@uni-siegen.de>
-! Copyright (c) 2013-2018 Harald Klimach <harald.klimach@uni-siegen.de.de>
+! Copyright (c) 2013-2018, 2020 Harald Klimach <harald.klimach@uni-siegen.de.de>
 ! Copyright (c) 2013-2014 Verena Krupp <v.krupp@grs-sim.de>
 ! Copyright (c) 2015 Kay Langhammer <kay.langhammer@student.uni-siegen.de>
 ! Copyright (c) 2016-2017, 2019 Neda Ebrahimi Pour <neda.epour@uni-siegen.de>
@@ -28,6 +28,55 @@
 ! OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 ! **************************************************************************** !
 ?? include "ply_dof_module.inc"
+!> The polynomial projection describes the change from modal to nodal
+!! representation and vice-versa.
+!!
+!! The method to be used for this transformation is configured in a table that
+!! contains the `kind` of transformation and then further options to the
+!! transformation.
+!! There are three kinds of transformation available:
+!!
+!! * 'fpt' Fast polynomial transformation, only available if linked against
+!!   FFTW.
+!! * 'l2p' Standard projection, evaluate each polynomial for each point.
+!! * 'fxt' Fast transformation based on multipole method, enabled by the
+!!   (included) FXTPACK library.
+!!
+!! By default the nodal representation uses as many nodes as there are modes
+!! in the modal representation. This can be changed with the `factor` setting.
+!! There will `factor` times number of modes nodes used in the transformation.
+!! This oversampling allows for dealiasing of the nodal representation.
+!! A different set of points will be used depending on the kind of transformation
+!! to be used:
+!!
+!! * FPT uses Chebyshev integration nodes
+!! * L2P and FXT uses Gauss-Legendre integration nodes
+!!
+!! It is recommended to use the FPT if available.
+!! If FPT is configured but the executable is not linked against the FFTW, there
+!! will be a warning, and the simulation uses the L2P method instead.
+!! The L2P method is also the default when no kind is provided at all.
+!!
+!! For further options of the individual projection kinds, see their respective
+!! descriptions:
+!!
+!! * L2P: no further options
+!! * FPT: [[ply_fpt_header_module]]
+!! * FXT: [[ply_fxt_header_module]]
+!!
+!! A minimalistic configuration for the projection method looks as follows:
+!!
+!!```lua
+!!  projection = {
+!!    kind = 'l2p',
+!!    factor = 1.5
+!!  }
+!!```
+!!
+!! The name of the table (here `projection`) is arbitrary and defined by the
+!! application.
+!! An application may load multiple projection definitions with differing names.
+!!
 module ply_poly_project_module
   use env_module,                only: rk, labelLen
 
@@ -183,16 +232,19 @@ module ply_poly_project_module
   public :: get_quadpoints_faces_1d
   public :: ply_prj_body_type
 
+
 contains
 
-  !**************************************************************************!
+
+  ! ------------------------------------------------------------------------ !
   subroutine Copy_poly_project(left,right)
-    !------------------------------------------------------------------------!
+    ! -------------------------------------------------------------------- !
     !> fpt to copy to
     type(ply_poly_project_type), intent(out) :: left
     !> fpt to copy from
     type(ply_poly_project_type), intent(in) :: right
-    !------------------------------------------------------------------------!
+    ! -------------------------------------------------------------------- !
+    ! -------------------------------------------------------------------- !
 
     left%body_1d = right%body_1d
     left%body_2d = right%body_2d
@@ -207,17 +259,18 @@ contains
     left%lobattoPoints = right%lobattoPoints
 
   end subroutine copy_poly_project
-  !**************************************************************************!
+  ! ------------------------------------------------------------------------ !
 
 
-  !**************************************************************************!
+  ! ------------------------------------------------------------------------ !
   subroutine Copy_poly_project_body(left,right)
-    !------------------------------------------------------------------------!
+    ! -------------------------------------------------------------------- !
     ! fpt to copy to
     type(ply_prj_body_type), intent(out) :: left
     ! fpt to copy from
     type(ply_prj_body_type), intent(in) :: right
-    !------------------------------------------------------------------------!
+    ! -------------------------------------------------------------------- !
+    ! -------------------------------------------------------------------- !
 
     left%fpt = right%fpt
     left%l2p = right%l2p
@@ -229,19 +282,19 @@ contains
     left%oversamp_dofs = right%oversamp_dofs
 
   end subroutine copy_poly_project_body
-  !**************************************************************************!
+  ! ------------------------------------------------------------------------ !
 
 
-  !***************************************************************************!
+  ! ------------------------------------------------------------------------ !
   !> Fill ups the bodys accroding to the DA.
   subroutine ply_fill_project_list( proj_list, dyn_projectArray, scheme_dim )
-  !---------------------------------------------------------------------------!
+    ! -------------------------------------------------------------------- !
     type(ply_poly_project_type), intent(out), allocatable :: proj_list(:)
     type(dyn_ProjectionArray_type), intent(in) :: dyn_projectArray
     integer, intent(in) :: scheme_dim
-    !-------------------------------------------------------------------------!
+    ! -------------------------------------------------------------------- !
     integer :: ipos
-    !-------------------------------------------------------------------------!
+    ! -------------------------------------------------------------------- !
     call tem_horizontalSpacer(fUnit=logUnit(2))
     write(logUnit(2),*) 'Loading list of projection methods ... '
 
@@ -276,19 +329,19 @@ contains
     end do
 
   end subroutine ply_fill_project_list
-  !****************************************************************************!
+  ! ------------------------------------------------------------------------ !
 
 
-  !****************************************************************************!
+  ! ------------------------------------------------------------------------ !
   !> Fill the body of the projection with all required data,
   !! ply_poly_project_define has to be used beforehand to set necessary header
   !! information.
   subroutine ply_poly_project_fillbody(me, proj_init, scheme_dim)
-    !--------------------------------------------------------------------------!
+    ! -------------------------------------------------------------------- !
     type(ply_poly_project_type), intent(inout)  :: me
     type(ply_prj_init_type), intent (in)    :: proj_init
     integer, intent(in) :: scheme_dim
-    !--------------------------------------------------------------------------!
+    ! -------------------------------------------------------------------- !
     ! the oversampling order, need to get the number of modes in when
     ! oversampling is used
     integer :: oversampling_order
@@ -297,7 +350,7 @@ contains
     real(kind=rk) :: log_order, rem_log
     real(kind=rk) :: over_factor
     integer :: lb_log
-    !-------------------------------------------------------------------------!
+    ! -------------------------------------------------------------------- !
     ! set the kind in the final projection type
     me%kind = trim(proj_init%header%kind)
     me%maxPolyDegree = proj_init%maxPolyDegree
@@ -505,14 +558,15 @@ contains
 
     end select
   end subroutine ply_poly_project_fillbody
-  !****************************************************************************!
+  ! ------------------------------------------------------------------------ !
 
 
   !****************** MODAL to NODAL ******************************************!
+  ! ------------------------------------------------------------------------ !
   !> Convert nDoF modes to nodal values.
   subroutine ply_poly_project_m2n_multiVar(me, dim, nVars, modal_data, &
     &                                      nodal_data)
-    !--------------------------------------------------------------------------!
+    ! -------------------------------------------------------------------- !
     type(ply_poly_project_type), intent(inout) :: me
     integer, intent(in) :: dim
     !> The number of variables to project. If a variable consists of more than
@@ -522,9 +576,9 @@ contains
     integer, intent(in) :: nVars
     real(kind=rk), intent(inout) :: modal_data(:,:)
     real(kind=rk), intent(inout) :: nodal_data(:,:)
-    !--------------------------------------------------------------------------!
+    ! -------------------------------------------------------------------- !
     integer :: iVar
-    !--------------------------------------------------------------------------!
+    ! -------------------------------------------------------------------- !
 
     select case(trim(me%kind))
     case ('l2p')
@@ -602,23 +656,24 @@ contains
     end select
 
   end subroutine ply_poly_project_m2n_multivar
-  !****************************************************************************!
+  ! ------------------------------------------------------------------------ !
 
 
 
   !***************** NODAL to MODAL *******************************************!
+  ! ------------------------------------------------------------------------ !
   !> Convert nodal values to nDoFs modes.
   subroutine ply_poly_project_n2m_multiVar(me, dim, nVars, nodal_data, &
     &                                      modal_data)
-    !--------------------------------------------------------------------------!
+    ! -------------------------------------------------------------------- !
     type(ply_poly_project_type), intent(inout) :: me
     integer, intent(in) :: dim
     integer, intent(in) :: nVars
     real(kind=rk), intent(inout) :: nodal_data(:,:)
     real(kind=rk), intent(inout) :: modal_data(:,:)
-    !--------------------------------------------------------------------------!
+    ! -------------------------------------------------------------------- !
     integer :: iVar
-    !--------------------------------------------------------------------------!
+    ! -------------------------------------------------------------------- !
 
     select case(trim(me%kind))
     case ('l2p')
@@ -699,55 +754,58 @@ contains
     end select
 
   end subroutine ply_poly_project_n2m_multivar
-  !***************************************************************************!
+  ! ------------------------------------------------------------------------ !
 
 
-  !****************************************************************************!
+  ! ------------------------------------------------------------------------ !
   !> function to provide the coordinates from the quadrature points on the faces
   ! idir and ialign are inputs which identify which face is needed
   ! faces is allocated as face(dir,align)
   subroutine get_quadpoints_faces(poly_proj, idir, ialign, points)
-    !--------------------------------------------------------------------------!
+    ! -------------------------------------------------------------------- !
     type(ply_poly_project_type), intent(in) :: poly_proj
     integer, intent(in)                     :: idir
     integer, intent(in)                     :: ialign
     real(kind=rk), allocatable, intent(inout) :: points (:,:)
-    !--------------------------------------------------------------------------!
+    ! -------------------------------------------------------------------- !
+    ! -------------------------------------------------------------------- !
 
      allocate (points(poly_proj%body_3d%faces(idir,iAlign)%nquadpoints,3))
      points = poly_proj%body_3d%faces(idir,iAlign)%points
 
   end subroutine get_quadpoints_faces
-  !****************************************************************************!
+  ! ------------------------------------------------------------------------ !
 
 
-  !****************************************************************************!
+  ! ------------------------------------------------------------------------ !
   subroutine get_quadpoints_faces_2d(poly_proj, idir, ialign, points)
-    !--------------------------------------------------------------------------!
+    ! -------------------------------------------------------------------- !
     type(ply_poly_project_type), intent(in) :: poly_proj
     integer, intent(in)                     :: idir
     integer, intent(in)                     :: ialign
     real(kind=rk), allocatable, intent(out) :: points (:,:)
-    !--------------------------------------------------------------------------!
+    ! -------------------------------------------------------------------- !
+    ! -------------------------------------------------------------------- !
 
      allocate (points(poly_proj%body_2d%faces(idir,iAlign)%nquadpoints,3))
      points = poly_proj%body_2d%faces(idir,iAlign)%points
 
   end subroutine get_quadpoints_faces_2d
-  !****************************************************************************!
+  ! ------------------------------------------------------------------------ !
 
 
-  !****************************************************************************!
+  ! ------------------------------------------------------------------------ !
   subroutine get_quadpoints_faces_1d(poly_proj, idir, ialign, points)
-    !--------------------------------------------------------------------------!
+    ! -------------------------------------------------------------------- !
     type(ply_poly_project_type), intent(in) :: poly_proj
     integer, intent(in)                     :: idir
     integer, intent(in)                     :: ialign
     real(kind=rk), allocatable, intent(out) :: points (:,:)
-    !--------------------------------------------------------------------------!
+    ! -------------------------------------------------------------------- !
+    ! -------------------------------------------------------------------- !
      allocate (points(poly_proj%body_1d%faces(idir,iAlign)%nquadpoints,3))
      points = poly_proj%body_1d%faces(idir,iAlign)%points
   end subroutine get_quadpoints_faces_1d
-  !****************************************************************************!
+  ! ------------------------------------------------------------------------ !
 
 end module ply_poly_project_module
