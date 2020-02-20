@@ -1,5 +1,5 @@
 ! Copyright (c) 2013-2014 Verena Krupp
-! Copyright (c) 2013-2014,2016 Harald Klimach <harald.klimach@uni-siegen.de>
+! Copyright (c) 2013-2014,2016,2020 Harald Klimach <harald.klimach@uni-siegen.de>
 ! Copyright (c) 2013-2014,2016-2017 Peter Vitt <peter.vitt2@uni-siegen.de>
 ! Copyright (c) 2014 Nikhil Anand <nikhil.anand@uni-siegen.de>
 ! Copyright (c) 2017 Daniel Petró <daniel.petro@student.uni-siegen.de>
@@ -21,10 +21,74 @@
 ! OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 ! **************************************************************************** !
 !
-!> ply_fpt_header_module
+!> Parameters for the FPT method
 !!
-!! This module contains all information for the header for the fpt method.
-
+!! The Fast Polynomial Transformation implements the approach described in
+!! B. K. Alpert und V. Rokhlin, „A Fast Algorithm for the Evaluation of
+!! Legendre Expansions“, SIAM Journal on Scientific and Statistical Computing,
+!! Vol. 12, Nr. 1, pp. 158–179, Jan. 1991, doi: 10.1137/0912009.
+!!
+!! It utilizes the Fast Fourier Transformation by first converting the
+!! Legendre modes into Chebyshev modes.
+!! The conversion between Legendre and Chebyshev modes is done approximately
+!! by approximating increasingly larger blocks away from the diagonal.
+!! This method is only available if the executable is linked against the
+!! [FFTW](http://fftw.org/).
+!!
+!! As with the other projection methods, a `factor` can be specified to
+!! use more points in the nodal representation and achieve some de-aliasing.
+!! Because the FFT works especially well for powers of two, it is possible to
+!! choose the oversampling such, that the oversampled modes have count of the
+!! next larger power of 2.
+!! To achieve this, the option `adapt_factor_pow2` has to be set to `true`,
+!! by default it is assumed to be `false`.
+!! Further it is possible to make use of `lobattoPoints` with this
+!! transformation method.
+!! If `lobattoPoints = true`, the points on the interval boundary will be
+!! included in the set of points in the nodal representation. This is for
+!! example necessary when positivity is to be preserved for the numerical
+!! fluxes.
+!! By default this setting is `false`.
+!!
+!! All other options tune the transformation algorithm:
+!!
+!! * `blocksize` defines the minimal block size that is to be approximated in
+!!   the transformation matrix. It defaults to 64, which is the recommendation
+!!   for double precision computations, but requires high polynomial degrees to
+!!   attain any approximation at all. The (oversampled) number of nodes needs to
+!!   be larger than two times the blocksize, to have at least one approximated
+!!   block. As long as the number modes is below this threshold the method is
+!!   not "fast" and a computational complexity of number of modes squared is
+!!   required for the operation. Smaller values push the approximation closer
+!!   to the diagonal. This can speed up the computation for smaller number of
+!!   modes but also detoriates the accuracy of the transformation.
+!! * `approx_terms` number of terms to use in the approximation of blocks,
+!!   defaults to 18, which is recommended for double precision computations.
+!!   In each block only `approx_terms` will be used to represent rows in the
+!!   block. Smaller values make the transformation faster, but less accurate
+!!   (if blocks are actually approximated).
+!! * `striplen` determines the length for vectorized loops to be used in the
+!!   matrix operation. It defaults to the `vlen` setting defined in
+!!   [[tem_compileconf_module]] during compilation.
+!!   Depending on the computing architecture, different values may provide
+!!   more efficient computations.
+!! * `subblockingWidth` defines striding in the multiplication of the diagonal
+!!   elements in the transformation matrix. The default for this setting is 8.
+!!
+!! The configuration table for the FPT table may, for example, look as follows:
+!!
+!!```lua
+!!  projection = {
+!!    kind              = 'fpt',
+!!    factor            = 1.5,
+!!    adapt_factor_pow2 = true,
+!!    lobattoPoints     = false,
+!!    blocksize         = 16,
+!!    approx_terms      = 12,
+!!    striplen          = 256,
+!!    subblockingWidth  = 8
+!!  }
+!!```
 module ply_fpt_header_module
 
   use env_module,              only: rk
@@ -142,7 +206,8 @@ module ply_fpt_header_module
 contains
 
 
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
+  !> Copy the FPT header information.
   pure subroutine Copy_fpt_header(left,right)
     ! -------------------------------------------------------------------- !
     !> fpt to copy to
@@ -160,10 +225,12 @@ contains
     left%subblockingWidth = right%subblockingWidth
 
   end subroutine Copy_fpt_header
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
 
 
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
+  !> Read the FPT configuration options from the provided Lua script in
+  !! `conf`.
   subroutine ply_fpt_header_load(me, conf, thandle)
     ! -------------------------------------------------------------------- !
     type(ply_fpt_header_type), intent(out) :: me
@@ -245,26 +312,17 @@ contains
       &               ErrCode = iError,                        &
       &               default = .false.                        )
 
-    ! check for the multi-threading of the FFTW version
-    call aot_get_val( L       = conf,             &
-      &               thandle = thandle,          &
-      &               key     = 'fftMultiThread', &
-      &               val     = fftMultiThread,   &
-      &               ErrCode = iError,           &
-      &               default = .false.           )
-
-   write(logUnit(1),*) ' * using fftMultithread = ', fftMultiThread
-
   end subroutine ply_fpt_header_load
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
 
 
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
   !> Write FPT settings into a Lua table.
   subroutine ply_fpt_header_out(me, conf)
     ! -------------------------------------------------------------------- !
     type(ply_fpt_header_type), intent(in) :: me
     type(aot_out_type), intent(inout) :: conf
+    ! -------------------------------------------------------------------- !
     ! -------------------------------------------------------------------- !
 
     ! fill up the fpt_header
@@ -297,13 +355,15 @@ contains
        &              val      = me%nodes_header%lobattoPoints )
 
   end subroutine ply_fpt_header_out
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
 
 
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
+  !> Print the FPT settings to the log output.
   subroutine ply_fpt_header_display (me)
     ! -------------------------------------------------------------------- !
     type(ply_fpt_header_type), intent(in) :: me
+    ! -------------------------------------------------------------------- !
     ! -------------------------------------------------------------------- !
 
     write(logUnit(1),*) ' Using fast polynomial transforms for projection.'
@@ -317,7 +377,6 @@ contains
       &                 //' polynomial degrees < 2*blocksize.'
     write(logUnit(1),*) ' * using LobattoPoints =', &
       &                 me%nodes_header%lobattoPoints
-!>TODO VK: writing the parameter approx_terms or not?
     write(logUnit(1),*) ' * Block approximation:'
     write(logUnit(1),*) '   * Blocksize for FPT =', me%blocksize
     write(logUnit(1),*) '   * Number of approximation terms = ', me%approx_terms
@@ -325,10 +384,10 @@ contains
     write(logUnit(1),*) '   * Subblocking width = ', me%subblockingWidth
     write(logUnit(1),*) ''
   end subroutine ply_fpt_header_display
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
 
 
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
   !> This function provides the test for equality of two projections.
   !!
   !! Two fpt header are considered to be equal, if their  node_header,
@@ -342,6 +401,7 @@ contains
     !> is equal??
     logical :: equality
     ! -------------------------------------------------------------------- !
+    ! -------------------------------------------------------------------- !
 
     equality = ( left%nodes_header == right%nodes_header )           &
       & .and. ( left%factor .feq. right%factor )                     &
@@ -352,10 +412,10 @@ contains
       & .and. ( left%adapt_factor_pow2 .eqv. right%adapt_factor_pow2 )
 
   end function isEqual
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
 
 
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
   !> This function provides the test for unequality of two projections.
   !!
   !! Two fpt header are considered to be unequal, if their  node_header,
@@ -369,6 +429,7 @@ contains
     !> is unequal??
     logical :: unequality
     ! -------------------------------------------------------------------- !
+    ! -------------------------------------------------------------------- !
 
     unequality = ( left%nodes_header /= right%nodes_header )         &
       & .or. ( left%factor .fne. right%factor )                      &
@@ -379,10 +440,10 @@ contains
       & .or. ( left%adapt_factor_pow2 .neqv. right%adapt_factor_pow2 )
 
   end function isUnequal
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
 
 
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
   !> This function provides a < comparison of two projections.
   !!
   !! Sorting of fpt header is given by node_header, fpt_blocksize and
@@ -434,10 +495,10 @@ contains
     end if
 
   end function isSmaller
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
 
 
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
   !> This function provides a <= comparison of two projections.
   !!
   !! Sorting of fpt header is given by node_header, fpt_blocksize and
@@ -489,10 +550,10 @@ contains
     end if
 
   end function isSmallerOrEqual
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
 
 
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
   !> This function provides a > comparison of two projections.
   !!
   !! Sorting of fpt header is given by node_header, fpt_blocksize and
@@ -544,10 +605,10 @@ contains
     end if
 
   end function isGreater
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
 
 
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
   !> This function provides a >= comparison of two projections.
   !!
   !! Sorting of fpt header is given by node_header, fpt_blocksize and
@@ -598,6 +659,6 @@ contains
       end if
     end if
   end function isGreaterOrEqual
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
 
 end module ply_fpt_header_module

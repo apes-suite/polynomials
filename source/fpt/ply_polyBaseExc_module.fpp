@@ -851,9 +851,9 @@ contains
     do iDiag=1, nDiagonals-7, 8
       diag_off = (iDiag-1)*2 + mod(remainder,2)
 
-      ! We are calculating two diagonals at once, thus we also have to stop two
+      ! We are calculating two diagonals at once. Thus, we also have to stop two
       ! rows before the end. Every diagonal is one row shorter than the
-      ! previous diagonal, an din matrix only every second diagonal is
+      ! previous diagonal, and in matrix only every second diagonal is
       ! contained.
       ! We start with the first line and get back (in m_next) the first line
       ! that wasn't calculatable with the current loop unrolling length.
