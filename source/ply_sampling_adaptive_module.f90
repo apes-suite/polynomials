@@ -1027,13 +1027,11 @@ contains
     real(kind=rk), intent(out) :: res(:)
     ! -------------------------------------------------------------------- !
     type(sampled_method_data_type), pointer :: p
-    integer :: datlen(1)
     integer :: iElem
     integer :: iComp
     integer :: nComps
     ! -------------------------------------------------------------------- !
     nComps = fun%nComponents
-    datlen = tree%nElems * nComps
 
     call c_f_pointer(fun%method_data, p)
 

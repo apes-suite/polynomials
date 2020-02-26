@@ -676,12 +676,10 @@ contains
     real(kind=rk), intent(out) :: res(:)
     ! -------------------------------------------------------------------- !
     type(capsule_array_type), pointer :: p
-    integer :: datlen(1)
     integer :: iElem
     integer :: nComps
     ! -------------------------------------------------------------------- !
     nComps = fun%nComponents
-    datlen = tree%nElems * nComps
 
     call c_f_pointer(fun%method_data, p)
 
