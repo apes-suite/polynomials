@@ -1,5 +1,5 @@
 ! Copyright (c) 2017-2019 Harald Klimach <harald.klimach@uni-siegen.de>
-! Copyright (c) 2018 Peter Vitt <peter.vitt2@uni-siegen.de>
+! Copyright (c) 2018, 2020 Peter Vitt <peter.vitt2@uni-siegen.de>
 ! Copyright (c) 2017-2018 Daniel Fleischer <daniel.fleischer@student.uni-siegen.de>
 !
 ! Parts of this file were written by Harald Klimach, Peter Vitt and Daniel
