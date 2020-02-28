@@ -46,8 +46,8 @@
 !! in the modal representation. This can be changed with the `factor` setting.
 !! There will `factor` times number of modes nodes used in the transformation.
 !! This oversampling allows for dealiasing of the nodal representation.
-!! A different set of points will be used depending on the kind of transformation
-!! to be used:
+!! A different set of points will be used depending on the kind of
+!! transformation to be used:
 !!
 !! * FPT uses Chebyshev integration nodes
 !! * L2P and FXT uses Gauss-Legendre integration nodes
@@ -92,8 +92,6 @@ module ply_poly_project_module
 
   use ply_LegFpt_module,           only: ply_legFpt_type, &
     &                                    ply_init_legFpt, &
-    &                                    ply_legToPnt,    &
-    &                                    ply_PntToLeg,    &
     &                                    assignment(=)
   use ply_legFpt_2D_module,        only: ply_pntToLeg_2D, &
     &                                    ply_legToPnt_2D
@@ -304,15 +302,15 @@ contains
     write(logUnit(5),*) 'the number of elements in proj_pos is =', &
       &                 dyn_projectArray%nVals
     do ipos=1, dyn_projectArray%nVals
-      write(logUnit(5),*) 'for pos=', ipos, 'dyn array is', &
-        &                 dyn_projectArray%val(ipos)%basisType,&
+      write(logUnit(5),*) 'for pos=', ipos, 'dyn array is',         &
+        &                 dyn_projectArray%val(ipos)%basisType,     &
         &                 dyn_projectArray%val(ipos)%maxpolydegree, &
         &                 dyn_projectArray%val(ipos)%header%kind
 
-      call ply_poly_project_fillbody(              &
-        & me         = proj_list(ipos),            &
-        & proj_init  = dyn_projectArray%val(ipos), &
-        & scheme_dim = scheme_dim                  )
+      call ply_poly_project_fillbody(                 &
+        &    me         = proj_list(ipos),            &
+        &    proj_init  = dyn_projectArray%val(ipos), &
+        &    scheme_dim = scheme_dim                  )
 
       write(logUnit(5),*) ' for position', ipos, &
         &                 'of projection list, projection type is'
@@ -391,6 +389,7 @@ contains
 
       end if
     end if
+
     if (trim(proj_init%header%kind) == 'fxt') then
       ! Ensure an even order for the oversampled polynomial representation.
       ! There is a bug in FXTPACK resulting faulty conversions for odd
@@ -446,81 +445,81 @@ contains
       me%lobattopoints = proj_init%header%fpt_header%nodes_header%lobattopoints
 
       !> Initialize the fpt data type
-      call ply_init_legfpt(                                               &
-        & maxPolyDegree    = me%oversamp_degree,                          &
-        & nIndeps          = 1,                                           &
-        & fpt              = me%body_1d%fpt,                              &
-        & lobattoPoints    = me%lobattoPoints,                            &
-        & blocksize        = proj_init%header%fpt_header%blocksize,       &
-        & approx_terms     = proj_init%header%fpt_header%approx_terms,    &
-        & striplen         = proj_init%header%fpt_header%striplen,        &
-        & subblockingWidth = proj_init%header%fpt_header%subblockingWidth )
+      call ply_init_legfpt(                                                  &
+        &    maxPolyDegree    = me%oversamp_degree,                          &
+        &    nIndeps          = 1,                                           &
+        &    fpt              = me%body_1d%fpt,                              &
+        &    lobattoPoints    = me%lobattoPoints,                            &
+        &    blocksize        = proj_init%header%fpt_header%blocksize,       &
+        &    approx_terms     = proj_init%header%fpt_header%approx_terms,    &
+        &    striplen         = proj_init%header%fpt_header%striplen,        &
+        &    subblockingWidth = proj_init%header%fpt_header%subblockingWidth )
       !> Initialization/Create  of the volume quadrature  nodes and the
       !! quadrature points on the face
-      call init_cheb_nodes_1d(                                          &
-        & me                = proj_init%header%fpt_header%nodes_header, &
-        & nodes             = me%body_1d%nodes,                         &
-        & faces             = me%body_1d%faces,                         &
-        & nQuadPointsPerDir = me%nQuadPointsPerDir                      )
+      call init_cheb_nodes_1d(                                             &
+        &    me                = proj_init%header%fpt_header%nodes_header, &
+        &    nodes             = me%body_1d%nodes,                         &
+        &    faces             = me%body_1d%faces,                         &
+        &    nQuadPointsPerDir = me%nQuadPointsPerDir                      )
 
       if (scheme_dim >= 2) then
-        call ply_init_legfpt(                                               &
-          & maxPolyDegree    = me%oversamp_degree,                          &
-          & nIndeps          = me%oversamp_degree+1,                        &
-          & fpt              = me%body_2d%fpt,                              &
-          & lobattoPoints    = me%lobattoPoints,                            &
-          & blocksize        = proj_init%header%fpt_header%blocksize,       &
-          & approx_terms     = proj_init%header%fpt_header%approx_terms,    &
-          & striplen         = proj_init%header%fpt_header%striplen,        &
-          & subblockingWidth = proj_init%header%fpt_header%subblockingWidth )
-        call init_cheb_nodes_2d(                                          &
-          & me                = proj_init%header%fpt_header%nodes_header, &
-          & nodes             = me%body_2d%nodes,                         &
-          & faces             = me%body_2d%faces,                         &
-          & nQuadPointsPerDir = me%nQuadPointsPerDir                      )
+        call ply_init_legfpt(                                                  &
+          &    maxPolyDegree    = me%oversamp_degree,                          &
+          &    nIndeps          = me%oversamp_degree+1,                        &
+          &    fpt              = me%body_2d%fpt,                              &
+          &    lobattoPoints    = me%lobattoPoints,                            &
+          &    blocksize        = proj_init%header%fpt_header%blocksize,       &
+          &    approx_terms     = proj_init%header%fpt_header%approx_terms,    &
+          &    striplen         = proj_init%header%fpt_header%striplen,        &
+          &    subblockingWidth = proj_init%header%fpt_header%subblockingWidth )
+        call init_cheb_nodes_2d(                                             &
+          &    me                = proj_init%header%fpt_header%nodes_header, &
+          &    nodes             = me%body_2d%nodes,                         &
+          &    faces             = me%body_2d%faces,                         &
+          &    nQuadPointsPerDir = me%nQuadPointsPerDir                      )
       end if
 
       if (scheme_dim >= 3) then
-        call ply_init_legfpt(                                               &
-          & maxPolyDegree    = me%oversamp_degree,                          &
-          & nIndeps          = (me%oversamp_degree+1)**2,                   &
-          & fpt              = me%body_3D%fpt,                              &
-          & lobattoPoints    = me%lobattoPoints,                            &
-          & blocksize        = proj_init%header%fpt_header%blocksize,       &
-          & approx_terms     = proj_init%header%fpt_header%approx_terms,    &
-          & striplen         = proj_init%header%fpt_header%striplen,        &
-          & subblockingWidth = proj_init%header%fpt_header%subblockingWidth )
-        call init_cheb_nodes(                                             &
-          & me                = proj_init%header%fpt_header%nodes_header, &
-          & nodes             = me%body_3d%nodes,                         &
-          & faces             = me%body_3d%faces,                         &
-          & nQuadPointsPerDir = me%nQuadPointsPerDir                      )
+        call ply_init_legfpt(                                                  &
+          &    maxPolyDegree    = me%oversamp_degree,                          &
+          &    nIndeps          = (me%oversamp_degree+1)**2,                   &
+          &    fpt              = me%body_3D%fpt,                              &
+          &    lobattoPoints    = me%lobattoPoints,                            &
+          &    blocksize        = proj_init%header%fpt_header%blocksize,       &
+          &    approx_terms     = proj_init%header%fpt_header%approx_terms,    &
+          &    striplen         = proj_init%header%fpt_header%striplen,        &
+          &    subblockingWidth = proj_init%header%fpt_header%subblockingWidth )
+        call init_cheb_nodes(                                                &
+          &    me                = proj_init%header%fpt_header%nodes_header, &
+          &    nodes             = me%body_3d%nodes,                         &
+          &    faces             = me%body_3d%faces,                         &
+          &    nQuadPointsPerDir = me%nQuadPointsPerDir                      )
       end if
 
     case('l2p')
       !> Fill the L2 projection datatype
       !! no lobatto points for gauss nodes implemented
       if (scheme_dim >= 3) then
-        call ply_init_l2p(l2p    = me%body_3d%l2p,              &
-          &               degree = me%oversamp_degree,          &
-          &               nDims  = 3,                           &
-          &               nodes  = me%body_3d%nodes,            &
-          &               faces  = me%body_3d%faces             )
+        call ply_init_l2p( l2p    = me%body_3d%l2p,     &
+          &                degree = me%oversamp_degree, &
+          &                nDims  = 3,                  &
+          &                nodes  = me%body_3d%nodes,   &
+          &                faces  = me%body_3d%faces    )
       end if
 
       if (scheme_dim >= 2) then
-        call ply_init_l2p(l2p    = me%body_2d%l2p,              &
-          &               degree = me%oversamp_degree,          &
-          &               nDims  = 2,                           &
-          &               nodes  = me%body_2d%nodes,            &
-          &               faces  = me%body_2d%faces             )
+        call ply_init_l2p( l2p    = me%body_2d%l2p,     &
+          &                degree = me%oversamp_degree, &
+          &                nDims  = 2,                  &
+          &                nodes  = me%body_2d%nodes,   &
+          &                faces  = me%body_2d%faces    )
       end if
 
-        call ply_init_l2p(l2p    = me%body_1d%l2p,              &
-          &               degree = me%oversamp_degree,          &
-          &               nDims  = 1,                           &
-          &               nodes  = me%body_1d%nodes,            &
-          &               faces  = me%body_1d%faces             )
+        call ply_init_l2p( l2p    = me%body_1d%l2p,     &
+          &                degree = me%oversamp_degree, &
+          &                nDims  = 1,                  &
+          &                nodes  = me%body_1d%nodes,   &
+          &                faces  = me%body_1d%faces    )
 
     case ('fxt')
       !> Fill the fxt Legendre Polynomial datatype
@@ -622,10 +621,10 @@ contains
           &                   nVars     = nVars           )
       case (1)
         do iVar = 1,nVars
-          call ply_LegToPnt( fpt       = me%body_1d%fpt,     &
-            &                pntVal    = nodal_data(:,iVar), &
-            &                legCoeffs = modal_data(:,iVar), &
-            &                nIndeps   = 1                   )
+          call me%body_1d%fpt%LegToPnt(          &
+            &    pntVal    = nodal_data(:,iVar), &
+            &    legCoeffs = modal_data(:,iVar), &
+            &    nIndeps   = 1                   )
         end do
       end select
 
@@ -633,17 +632,17 @@ contains
       select case (dim)
       case (3)
         do iVar = 1,nVars
-          call ply_fxt_m2n_3D( fxt = me%body_3d%fxt,             &
-            &               modal_data = modal_data(:,iVar),     &
-            &               nodal_data = nodal_data(:,iVar),     &
-            &              oversamp_degree = me%oversamp_degree  )
+          call ply_fxt_m2n_3D( fxt = me%body_3d%fxt,            &
+            &               modal_data = modal_data(:,iVar),    &
+            &               nodal_data = nodal_data(:,iVar),    &
+            &              oversamp_degree = me%oversamp_degree )
         end do
       case (2)
         do iVar = 1,nVars
-          call ply_fxt_m2n_2D( fxt = me%body_2d%fxt,             &
-            &               modal_data = modal_data(:,iVar),     &
-            &               nodal_data = nodal_data(:,iVar),     &
-            &              oversamp_degree = me%oversamp_degree  )
+          call ply_fxt_m2n_2D( fxt = me%body_2d%fxt,            &
+            &               modal_data = modal_data(:,iVar),    &
+            &               nodal_data = nodal_data(:,iVar),    &
+            &              oversamp_degree = me%oversamp_degree )
         end do
 
       case (1)
@@ -713,10 +712,10 @@ contains
           &                   legCoeffs = modal_data      )
       case (1)
         do iVar = 1,nVars
-          call ply_pntToLeg( fpt       = me%body_1d%fpt,     &
-            &                nIndeps   = 1,                  &
-            &                pntVal    = nodal_data(:,iVar), &
-            &                legCoeffs = modal_data(:,iVar)  )
+          call me%body_1d%fpt%pntToLeg(          &
+            &    nIndeps   = 1,                  &
+            &    pntVal    = nodal_data(:,iVar), &
+            &    legCoeffs = modal_data(:,iVar)  )
         end do
       end select
 
@@ -724,28 +723,28 @@ contains
       select case (dim)
       case (3)
         do iVar = 1, nVars
-          call ply_fxt_n2m_3D(                                  &
-            &         fxt              = me%body_3d%fxt,        &
-            &         nodal_data       = nodal_data(:,iVar),    &
-            &         modal_data       = modal_data(:,iVar),    &
-            &         oversamp_degree  = me%oversamp_degree     )
+          call ply_fxt_n2m_3D(                          &
+            &    fxt              = me%body_3d%fxt,     &
+            &    nodal_data       = nodal_data(:,iVar), &
+            &    modal_data       = modal_data(:,iVar), &
+            &    oversamp_degree  = me%oversamp_degree  )
         end do
 
       case (2)
         do iVar = 1, nVars
-          call ply_fxt_n2m_2D(                                  &
-            &         fxt              = me%body_2d%fxt,        &
-            &         nodal_data       = nodal_data(:,iVar),    &
-            &         modal_data       = modal_data(:,iVar),    &
-            &         oversamp_degree  = me%oversamp_degree     )
+          call ply_fxt_n2m_2D(                          &
+            &    fxt              = me%body_2d%fxt,     &
+            &    nodal_data       = nodal_data(:,iVar), &
+            &    modal_data       = modal_data(:,iVar), &
+            &    oversamp_degree  = me%oversamp_degree  )
         end do
 
       case (1)
         do iVar = 1, nVars
-          call ply_fxt_n2m_1D(                               &
-            &         fxt              = me%body_1d%fxt,     &
-            &         nodal_data       = nodal_data(:,iVar), &
-            &         modal_data       = modal_data(:,iVar)  )
+          call ply_fxt_n2m_1D(                          &
+            &    fxt              = me%body_1d%fxt,     &
+            &    nodal_data       = nodal_data(:,iVar), &
+            &    modal_data       = modal_data(:,iVar)  )
         end do
       end select
 

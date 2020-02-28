@@ -1,5 +1,5 @@
 ! Copyright (c) 2012-2014 Jens Zudrop <j.zudrop@grs-sim.de>
-! Copyright (c) 2012-2014, 2016 Harald Klimach <harald.klimach@uni-siegen.de>
+! Copyright (c) 2012-2014,2016,2020 Harald Klimach <harald.klimach@uni-siegen.de>
 ! Copyright (c) 2013-2014, 2017 Peter Vitt <peter.vitt2@uni-siegen.de>
 ! Copyright (c) 2013-2014 Verena Krupp
 ! Copyright (c) 2016 Langhammer Kay <kay.langhammer@student.uni-siegen.de>
@@ -31,9 +31,7 @@ module ply_legFpt_3D_module
   use, intrinsic :: iso_c_binding
   use fftw_wrap
   use env_module,         only: rk
-  use ply_legFpt_module,  only: ply_legFpt_type, &
-    &                           ply_legToPnt, &
-    &                           ply_PntToLeg
+  use ply_legFpt_module,  only: ply_legFpt_type
 
   implicit none
 
@@ -55,7 +53,7 @@ module ply_legFpt_3D_module
 contains
 
 
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
   subroutine ply_legToPnt_3D_singvar( fpt, legCoeffs, pntVal )
    ! --------------------------------------------------------------------- !
    !> The FPT parameters.
@@ -137,8 +135,7 @@ contains
      ! At the end of the array the number of computed strips might be smaller
      nIndeps = min(striplen, n_squared-iStrip+1)
 
-     call ply_legToPnt( fpt       = fpt,     &
-       &                nIndeps   = nIndeps, &
+     call fpt%legToPnt( nIndeps   = nIndeps, &
        &                legCoeffs = alph,    &
        &                pntVal    = gam      )
 
@@ -156,8 +153,7 @@ contains
      ! At the end of the array the number of computed strips might be smaller
      nIndeps = min(striplen, n_squared-iStrip+1)
 
-     call ply_legToPnt( fpt       = fpt,     &
-       &                nIndeps   = nIndeps, &
+     call fpt%legToPnt( nIndeps   = nIndeps, &
        &                legCoeffs = alph,    &
        &                pntVal    = gam      )
 
@@ -174,8 +170,7 @@ contains
      ! At the end of the array the number of computed strips might be smaller
      nIndeps = min(striplen, n_squared-iStrip+1)
 
-     call ply_legToPnt( fpt       = fpt,     &
-       &                nIndeps   = nIndeps, &
+     call fpt%legToPnt( nIndeps   = nIndeps, &
        &                legCoeffs = alph,    &
        &                pntVal    = gam      )
 
@@ -184,67 +179,67 @@ contains
    end do xStripLoop
 
   end subroutine ply_legToPnt_3D_singVar
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
 
 
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
   !> Subroutine to transform Legendre expansion to point values
   !! at Chebyshev nodes.
   !!VK: no multivar fashion of this routine is used anymore
   subroutine ply_legToPnt_3D_multVar( fpt, legCoeffs, pntVal, nVars )
-   ! --------------------------------------------------------------------- !
-   !> The Legendre coefficients to convert to point values (Chebyshev nodes).
-   !! \attention Although this array serves as input only, it is modified
-   !! inside of this routine by the underlying FPT algorithm. So, when
-   !! this routine returns from its call the original values of pntVal will
-   !! be modified.
-   real(kind=rk), intent(inout) :: legCoeffs(:,:)
-   type(ply_legFpt_type), intent(inout) :: fpt
-   real(kind=rk), intent(inout) :: pntVal(:,:)
-   integer, intent(in) :: nVars
-   ! --------------------------------------------------------------------- !
-   integer :: iVar
-   ! --------------------------------------------------------------------- !
+    ! -------------------------------------------------------------------- !
+    !> The Legendre coefficients to convert to point values (Chebyshev nodes).
+    !! \attention Although this array serves as input only, it is modified
+    !! inside of this routine by the underlying FPT algorithm. So, when
+    !! this routine returns from its call the original values of pntVal will
+    !! be modified.
+    real(kind=rk), intent(inout) :: legCoeffs(:,:)
+    type(ply_legFpt_type), intent(inout) :: fpt
+    real(kind=rk), intent(inout) :: pntVal(:,:)
+    integer, intent(in) :: nVars
+    ! -------------------------------------------------------------------- !
+    integer :: iVar
+    ! -------------------------------------------------------------------- !
 
-   do iVar = 1, nVars
-    call ply_legToPnt_3D( fpt, legCoeffs(:,iVar), pntVal(:,iVar) )
-   end do
+    do iVar = 1, nVars
+     call ply_legToPnt_3D( fpt, legCoeffs(:,iVar), pntVal(:,iVar) )
+    end do
 
   end subroutine ply_legToPnt_3D_multVar
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
 
 
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
   !> Subroutine to transform Legendre expansion to point values
   !! at Chebyshev nodes.
   subroutine ply_pntToLeg_3D_multVar( fpt, pntVal, legCoeffs, nVars )
-   ! --------------------------------------------------------------------- !
-   type(ply_legFpt_type), intent(inout) :: fpt
-   !> The point values to transform to 3D modal Legendre expansion.
-   !! \attention Although this array serves as input only, it is modified
-   !! inside of this routine by the underlying DCT algorithm. So, when
-   !! this routine returns from its call the original values of pntVal will
-   !! be modified.
-   real(kind=rk), intent(inout) :: pntVal(:,:)
-   real(kind=rk), intent(inout) :: legCoeffs(:,:)
-   integer, intent(in) :: nVars
-   ! --------------------------------------------------------------------- !
-   integer :: iVar
-   ! --------------------------------------------------------------------- !
+    ! -------------------------------------------------------------------- !
+    type(ply_legFpt_type), intent(inout) :: fpt
+    !> The point values to transform to 3D modal Legendre expansion.
+    !! \attention Although this array serves as input only, it is modified
+    !! inside of this routine by the underlying DCT algorithm. So, when
+    !! this routine returns from its call the original values of pntVal will
+    !! be modified.
+    real(kind=rk), intent(inout) :: pntVal(:,:)
+    real(kind=rk), intent(inout) :: legCoeffs(:,:)
+    integer, intent(in) :: nVars
+    ! -------------------------------------------------------------------- !
+    integer :: iVar
+    ! -------------------------------------------------------------------- !
 
    do iVar = 1, nVars
      call ply_pntToLeg_3D( fpt, pntVal(:,iVar), legCoeffs(:,iVar) )
    end do
 
   end subroutine ply_pntToLeg_3D_multVar
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
 
 
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
   !> Subroutine to transform Legendre expansion to point values
   !! at Chebyshev nodes.
   subroutine ply_pntToLeg_3D_singVar( fpt, pntVal, legCoeffs )
-   ! --------------------------------------------------------------------- !
+    ! -------------------------------------------------------------------- !
     type(ply_legFpt_type), intent(inout) :: fpt
     !> The point values to transform to 3D modal Legendre expansion.
     !! \attention Although this array serves as input only, it is modified
@@ -253,7 +248,7 @@ contains
     !! be modified.
     real(kind=rk), intent(inout) :: pntVal(:)
     real(kind=rk), intent(inout) :: legCoeffs(:)
-   ! --------------------------------------------------------------------- !
+    ! -------------------------------------------------------------------- !
     integer :: striplen
     integer :: iStrip
     integer :: iAlph
@@ -263,7 +258,7 @@ contains
     integer :: nIndeps
     real(kind=rk), dimension(:), allocatable :: alph
     real(kind=rk), dimension(:), allocatable :: gam
-   ! --------------------------------------------------------------------- !
+    ! -------------------------------------------------------------------- !
 
     striplen = fpt%legToChebParams%striplen
     n = fpt%legToChebParams%n
@@ -280,8 +275,8 @@ contains
 
     ! zStripLoop: Loop over all strips in z-direction
     zStripLoop: do iStrip = 1, n_squared, striplen
-      ! iAlph is the index of the first element in a line for the transformation in
-      ! z-direction.
+      ! iAlph is the index of the first element in a line for the transformation
+      ! in z-direction.
       do iAlph = iStrip, min(iStrip+striplen-1, n_squared)
         alph((iAlph-iStrip)*n+1:(iAlph-iStrip+1)*n) = pntVal(iAlph::n_squared)
       end do
@@ -289,8 +284,7 @@ contains
       ! At the end of the array the number of computed strips might be smaller
       nIndeps = min(striplen, n_squared-iStrip+1)
 
-      call ply_pntToLeg( fpt       = fpt,     &
-        &                nIndeps   = nIndeps, &
+      call fpt%pntToLeg( nIndeps   = nIndeps, &
         &                legCoeffs = gam,     &
         &                pntVal    = alph     )
 
@@ -311,8 +305,7 @@ contains
       ! At the end of the array the number of computed strips might be smaller
       nIndeps = min(striplen, n_squared-iStrip+1)
 
-      call ply_pntToLeg( fpt       = fpt,     &
-        &                nIndeps   = nIndeps, &
+      call fpt%pntToLeg( nIndeps   = nIndeps, &
         &                legCoeffs = gam,     &
         &                pntVal    = alph     )
 
@@ -331,8 +324,7 @@ contains
       ! At the end of the array the number of computed strips might be smaller
       nIndeps = min(striplen, n_squared-iStrip+1)
 
-      call ply_pntToLeg( fpt       = fpt,     &
-        &                nIndeps   = nIndeps, &
+      call fpt%pntToLeg( nIndeps   = nIndeps, &
         &                legCoeffs = gam,     &
         &                pntVal    = alph     )
 
@@ -344,6 +336,6 @@ contains
     end do xStripLoop
 
   end subroutine ply_pntToLeg_3D_singVar
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
 
 end module ply_legFpt_3D_module

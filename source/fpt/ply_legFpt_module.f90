@@ -70,14 +70,36 @@ module ply_legFpt_module
 
     !> Flag whether to use Lobatto points (include boundary points)
     logical :: use_lobatto_points
+
+    procedure(ply_fptm2n), pointer :: legtopnt => NULL()
+    procedure(ply_fptn2m), pointer :: pnttoleg => NULL()
+
   end type ply_legFpt_type
 
   interface assignment(=)
     module procedure Copy_fpt
   end interface
 
-  public :: ply_legFpt_type, ply_init_legFpt, ply_legToPnt, ply_pntToLeg
+  public :: ply_legFpt_type, ply_init_legFpt
   public :: assignment(=)
+
+
+  interface
+    subroutine ply_fptm2n( fpt, legCoeffs, pntVal, nIndeps )
+      import :: ply_legFpt_type, rk
+      real(kind=rk), intent(inout) :: legCoeffs(:)
+      class(ply_legFpt_type), intent(inout) :: fpt
+      real(kind=rk), intent(inout) :: pntVal(:)
+      integer, intent(in) :: nIndeps
+    end subroutine
+    subroutine ply_fptn2m( fpt, pntVal, legCoeffs, nIndeps )
+      import :: ply_legFpt_type, rk
+      real(kind=rk), intent(inout) :: pntVal(:)
+      class(ply_legFpt_type), intent(inout) :: fpt
+      real(kind=rk), intent(inout) :: legCoeffs(:)
+      integer, intent(in) :: nIndeps
+    end subroutine
+  end interface
 
 
 contains
@@ -176,6 +198,9 @@ contains
 
     fpt%use_lobatto_points = lob
 
+    fpt%legtopnt => ply_legtopnt_single
+    fpt%pnttoleg => ply_pnttoleg_single
+
     ! Init the fast Legendre to Chebyshev transformation.
     call ply_fpt_init( n                = maxPolyDegree+1,     &
       &                params           = fpt%legToChebParams, &
@@ -264,10 +289,10 @@ contains
   ! ************************************************************************ !
   !> Subroutine to transform Legendre expansion to point values
   !! at Chebyshev nodes.
-  subroutine ply_legToPnt( fpt, legCoeffs, pntVal, nIndeps )
+  subroutine ply_legToPnt_single( fpt, legCoeffs, pntVal, nIndeps )
     ! -------------------------------------------------------------------- !
     real(kind=rk), intent(inout) :: legCoeffs(:)
-    type(ply_legFpt_type), intent(inout) :: fpt
+    class(ply_legFpt_type), intent(inout) :: fpt
     real(kind=rk), intent(inout) :: pntVal(:)
     integer, intent(in) :: nIndeps
     ! -------------------------------------------------------------------- !
@@ -313,16 +338,16 @@ contains
 
     end if ! lobattoPoints
 
-  end subroutine ply_legToPnt
+  end subroutine ply_legToPnt_single
   ! ************************************************************************ !
 
 
   ! ************************************************************************ !
   !> Subroutine to transform Legendre expansion to point values
   !! at Chebyshev nodes.
-  subroutine ply_pntToLeg( fpt, pntVal, legCoeffs, nIndeps )
+  subroutine ply_pntToLeg_single( fpt, pntVal, legCoeffs, nIndeps )
     ! -------------------------------------------------------------------- !
-    type(ply_legFpt_type), intent(inout) :: fpt
+    class(ply_legFpt_type), intent(inout) :: fpt
     real(kind=rk), intent(inout) :: pntVal(:)
     real(kind=rk), intent(inout) :: legCoeffs(:)
     integer, intent(in) :: nIndeps
@@ -373,7 +398,7 @@ contains
 
     end if ! lobattoPoints
 
-  end subroutine ply_pntToLeg
+  end subroutine ply_pntToLeg_single
   ! ************************************************************************ !
 
 end module ply_legFpt_module

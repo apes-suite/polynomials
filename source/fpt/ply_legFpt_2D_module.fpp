@@ -1,5 +1,5 @@
 ! Copyright (c) 2012-2014 Jens Zudrop <j.zudrop@grs-sim.de>
-! Copyright (c) 2012-2014, 2016, 2018 Harald Klimach <harald.klimach@uni-siegen.de>
+! Copyright (c) 2012-2014,2016,2018,2020 Harald Klimach <harald.klimach@uni-siegen.de>
 ! Copyright (c) 2013-2014, 2016-2017 Peter Vitt <peter.vitt2@uni-siegen.de>
 ! Copyright (c) 2013-2014 Verena Krupp
 ! Copyright (c) 2013 Simon Zimny <s.zimny@grs-sim.de>
@@ -36,8 +36,6 @@ module ply_legFpt_2D_module
 
   use env_module,         only: rk
   use ply_legFpt_module,  only: ply_legFpt_type, &
-    &                           ply_legToPnt, &
-    &                           ply_pntToLeg, &
     &                           assignment(=)
 
   implicit none
@@ -60,7 +58,7 @@ module ply_legFpt_2D_module
 contains
 
 
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
   !> Subroutine to transform Legendre expansion to point values
   !! at Chebyshev nodes.
   subroutine ply_legToPnt_2D_singVar( fpt, legCoeffs, pntVal )
@@ -105,8 +103,7 @@ contains
      ! At the end of the array the number of computed strips might be smaller
      nIndeps = min(striplen, n-iStrip+1)
 
-     call ply_legToPnt( fpt       = fpt,     &
-       &                nIndeps   = nIndeps, &
+     call fpt%legToPnt( nIndeps   = nIndeps, &
        &                legCoeffs = alph,    &
        &                pntVal    = gam      )
 
@@ -124,8 +121,7 @@ contains
      ! At the end of the array the number of computed strips might be smaller
      nIndeps = min(striplen, n-iStrip+1)
 
-     call ply_legToPnt( fpt       = fpt,     &
-       &                nIndeps   = nIndeps, &
+     call fpt%legToPnt( nIndeps   = nIndeps, &
        &                legCoeffs = alph,    &
        &                pntVal    = gam      )
 
@@ -134,10 +130,10 @@ contains
    end do xStripLoop
 
   end subroutine ply_legToPnt_2D_singVar
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
 
 
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
   !> Subroutine to transform Legendre expansion to point values
   !! at Chebyshev nodes.
   subroutine ply_legToPnt_2D_multVar( fpt, legCoeffs, pntVal, nVars )
@@ -163,14 +159,14 @@ contains
    end do
 
   end subroutine ply_legToPnt_2D_multVar
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
 
 
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
   !> Subroutine to transform Legendre expansion to point values
   !! at Chebyshev nodes.
   subroutine ply_pntToLeg_2D_singVar( fpt, pntVal, legCoeffs )
-   ! --------------------------------------------------------------------- !
+    ! -------------------------------------------------------------------- !
     !> Parameters of the Fast Polynomial transformation.
     type(ply_legFpt_type), intent(inout) :: fpt
     !> The point values to transform to 2D modal Legendre expansion.
@@ -181,11 +177,11 @@ contains
     real(kind=rk), intent(inout) :: pntVal(:)
     !> The Legendre coefficients.
     real(kind=rk), intent(inout) :: legCoeffs(:)
-   ! --------------------------------------------------------------------- !
+    ! -------------------------------------------------------------------- !
     integer :: iStrip, striplen, nIndeps, iAlph, n, n_squared
     real(kind=rk), dimension(:), allocatable :: alph
     real(kind=rk), dimension(:), allocatable :: gam
-   ! --------------------------------------------------------------------- !
+    ! -------------------------------------------------------------------- !
 
     striplen = fpt%chebToLegParams%striplen
     n = fpt%legToChebParams%n
@@ -202,8 +198,7 @@ contains
       ! At the end of the array the number of computed strips might be smaller
       nIndeps = min(striplen, n-iStrip+1)
 
-      call ply_pntToLeg( fpt       = fpt,     &
-        &                nIndeps   = nIndeps, &
+      call fpt%pntToLeg( nIndeps   = nIndeps, &
         &                legCoeffs = gam,     &
         &                pntVal    = alph     )
 
@@ -222,8 +217,7 @@ contains
       ! At the end of the array the number of computed strips might be smaller
       nIndeps = min(striplen, n-iStrip+1)
 
-      call ply_pntToLeg( fpt       = fpt,     &
-        &                nIndeps   = nIndeps, &
+      call fpt%pntToLeg( nIndeps   = nIndeps, &
         &                legCoeffs = gam,     &
         &                pntVal    = alph     )
 
@@ -232,10 +226,10 @@ contains
     end do xStripLoop
 
   end subroutine ply_pntToLeg_2D_singVar
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
 
 
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
   !> Subroutine to transform Legendre expansion to point values
   !! at Chebyshev nodes.
   subroutine ply_pntToLeg_2D_multVar( fpt, pntVal, legCoeffs, nVars )
@@ -261,6 +255,6 @@ contains
    end do
 
   end subroutine ply_pntToLeg_2D_multVar
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
 
 end module ply_legFpt_2D_module
