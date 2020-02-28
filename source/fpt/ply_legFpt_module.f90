@@ -1,5 +1,5 @@
 ! Copyright (c) 2012-2014, 2016, 2018 Jens Zudrop <j.zudrop@grs-sim.de>
-! Copyright (c) 2012-2014 Harald Klimach <harald@klimachs.de>
+! Copyright (c) 2012-2014,2020 Harald Klimach <harald@klimachs.de>
 ! Copyright (c) 2013-2014, 2017 Peter Vitt <peter.vitt2@uni-siegen.de>
 ! Copyright (c) 2013-2014 Verena Krupp
 ! Copyright (c) 2016 Langhammer Kay <kay.langhammer@student.uni-siegen.de>
@@ -105,7 +105,7 @@ module ply_legFpt_module
 contains
 
 
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
   subroutine Copy_fpt( left, right )
     ! -------------------------------------------------------------------- !
     !> fpt to copy to
@@ -121,10 +121,10 @@ contains
     left%planPntToCheb = right%planPntToCheb
 
   end subroutine Copy_fpt
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
 
 
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
   !> Subroutine to initialize the fast polynomial transformation
   !! for Legendre expansion.
   subroutine ply_init_legFpt( maxPolyDegree, nIndeps, fpt, blocksize, &
@@ -198,9 +198,6 @@ contains
 
     fpt%use_lobatto_points = lob
 
-    fpt%legtopnt => ply_legtopnt_single
-    fpt%pnttoleg => ply_pnttoleg_single
-
     ! Init the fast Legendre to Chebyshev transformation.
     call ply_fpt_init( n                = maxPolyDegree+1,     &
       &                params           = fpt%legToChebParams, &
@@ -226,7 +223,11 @@ contains
     allocate( tmpIn(n) )
     allocate( tmpOut(n) )
 
-    if (.not.lob) then
+    if (.not. lob) then
+
+      fpt%legtopnt => ply_legtopnt_single
+      fpt%pnttoleg => ply_pnttoleg_single
+
       ! Init the DCT III ( Leg -> Point values )
       !NEC: The NEC FFTW interface use n0 as parameter name instead of n
       !NEC: (nlc 2.0.0).
@@ -259,6 +260,9 @@ contains
 
     else
 
+      fpt%legtopnt => ply_legtopnt_lobatto_single
+      fpt%pnttoleg => ply_pnttoleg_lobatto_single
+
       ! Init the DCT I  (Leg -> nodal):
       !   To be used with a normalization factor for trafo ...
       !NEC: The NEC FFTW interface use n0 as parameter name instead of n
@@ -280,13 +284,14 @@ contains
       fpt%planPntToCheb = fpt%planChebToPnt
 
     end if
+
     deallocate( tmpIn, tmpOut )
 
   end subroutine ply_init_legFpt
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
 
 
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
   !> Subroutine to transform Legendre expansion to point values
   !! at Chebyshev nodes.
   subroutine ply_legToPnt_single( fpt, legCoeffs, pntVal, nIndeps )
@@ -303,48 +308,63 @@ contains
 
     n = fpt%legToChebParams%n
 
-    if (.not. fpt%use_lobatto_points) then
+    do iDof = 1, nIndeps*n, n
+      call ply_fpt_single( alph   = legCoeffs(iDof:iDof+n-1), &
+        &                  gam    = cheb,                     &
+        &                  params = fpt%legToChebParams       )
 
-      do iDof = 1, nIndeps*n, n
-        call ply_fpt_single( alph   = legCoeffs(iDof:iDof+n-1), &
-          &                  gam    = cheb,                     &
-          &                  params = fpt%legToChebParams       )
+      ! Normalize the coefficients of the Chebyshev polynomials due
+      ! to the unnormalized version of DCT in the FFTW.
+      cheb(2:n:2) = -0.5_rk * cheb(2:n:2)
+      cheb(3:n:2) =  0.5_rk * cheb(3:n:2)
 
-        ! Normalize the coefficients of the Chebyshev polynomials due
-        ! to the unnormalized version of DCT in the FFTW.
-        cheb(2:n:2) = -0.5_rk * cheb(2:n:2)
-        cheb(3:n:2) =  0.5_rk * cheb(3:n:2)
-
-        call fftw_execute_r2r( fpt%planChebToPnt,    &
-          &                    cheb,                 &
-          &                    pntVal(iDof:iDof+n-1) )
-      end do
-
-    else
-
-      do iDof = 1, nIndeps*n, n
-        call ply_fpt_single( alph   = legCoeffs(iDof:iDof+n-1), &
-          &                  gam    = cheb,                     &
-          &                  params = fpt%legToChebParams       )
-
-        ! Normalize the coefficients of the Chebyshev polynomials due
-        ! to the unnormalized version of DCT in the FFTW.
-        cheb(2:n-1) = 0.5_rk * cheb(2:n-1)
-
-        call fftw_execute_r2r( fpt%planChebToPnt,    &
-          &                    cheb,                 &
-          &                    pntVal(iDof:iDof+n-1) )
-      end do
-
-    end if ! lobattoPoints
+      call fftw_execute_r2r( fpt%planChebToPnt,    &
+        &                    cheb,                 &
+        &                    pntVal(iDof:iDof+n-1) )
+    end do
 
   end subroutine ply_legToPnt_single
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
 
 
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
   !> Subroutine to transform Legendre expansion to point values
-  !! at Chebyshev nodes.
+  !! at Chebyshev-Lobatto nodes.
+  subroutine ply_legToPnt_lobatto_single( fpt, legCoeffs, pntVal, nIndeps )
+    ! -------------------------------------------------------------------- !
+    real(kind=rk), intent(inout) :: legCoeffs(:)
+    class(ply_legFpt_type), intent(inout) :: fpt
+    real(kind=rk), intent(inout) :: pntVal(:)
+    integer, intent(in) :: nIndeps
+    ! -------------------------------------------------------------------- !
+    real(kind=rk) :: cheb(fpt%legToChebParams%n)
+    integer :: iDof
+    integer :: n
+    ! -------------------------------------------------------------------- !
+
+    n = fpt%legToChebParams%n
+
+    do iDof = 1, nIndeps*n, n
+      call ply_fpt_single( alph   = legCoeffs(iDof:iDof+n-1), &
+        &                  gam    = cheb,                     &
+        &                  params = fpt%legToChebParams       )
+
+      ! Normalize the coefficients of the Chebyshev polynomials due
+      ! to the unnormalized version of DCT in the FFTW.
+      cheb(2:n-1) = 0.5_rk * cheb(2:n-1)
+
+      call fftw_execute_r2r( fpt%planChebToPnt,    &
+        &                    cheb,                 &
+        &                    pntVal(iDof:iDof+n-1) )
+    end do
+
+  end subroutine ply_legToPnt_lobatto_single
+  ! ------------------------------------------------------------------------ !
+
+
+  ! ------------------------------------------------------------------------ !
+  !> Subroutine to transform point values at Chebyshev nodes to a Legendre
+  !! expansion.
   subroutine ply_pntToLeg_single( fpt, pntVal, legCoeffs, nIndeps )
     ! -------------------------------------------------------------------- !
     class(ply_legFpt_type), intent(inout) :: fpt
@@ -360,45 +380,61 @@ contains
 
     n = fpt%legToChebParams%n
 
-    if (.not. fpt%use_lobatto_Points) then
+    normFactor = 1.0_rk / real(n,kind=rk)
+    do iDof = 1, nIndeps*n, n
+      call fftw_execute_r2r( fpt%planPntToCheb,     &
+        &                    pntVal(iDof:iDof+n-1), &
+        &                    cheb                   )
+      ! Normalize the coefficients of the Chebyshev polynomials due
+      ! to the unnormalized version of DCT in the FFTW.
+      cheb(1) = cheb(1) * 0.5_rk * normfactor
+      cheb(2:n:2) = -normFactor * cheb(2:n:2)
+      cheb(3:n:2) =  normFactor * cheb(3:n:2)
 
-      normFactor = 1.0_rk / real(n,kind=rk)
-      do iDof = 1, nIndeps*n, n
-        call fftw_execute_r2r( fpt%planPntToCheb,     &
-          &                    pntVal(iDof:iDof+n-1), &
-          &                    cheb                   )
-        ! Normalize the coefficients of the Chebyshev polynomials due
-        ! to the unnormalized version of DCT in the FFTW.
-        cheb(1) = cheb(1) * 0.5_rk * normfactor
-        cheb(2:n:2) = -normFactor * cheb(2:n:2)
-        cheb(3:n:2) =  normFactor * cheb(3:n:2)
-
-        call ply_fpt_single( gam    = legCoeffs(iDof:iDof+n-1), &
-          &                  alph   = cheb,                     &
-          &                  params = fpt%ChebToLegParams       )
-      end do
-
-    else
-
-      normFactor = 0.5_rk / real(n-1,kind=rk)
-      do iDof = 1, nIndeps*n, n
-        call fftw_execute_r2r( fpt%planPntToCheb,     &
-          &                    pntVal(iDof:iDof+n-1), &
-          &                    cheb                   )
-        ! Normalize the coefficients of the Chebyshev polynomials due
-        ! to the unnormalized version of DCT in the FFTW.
-        cheb(1) = cheb(1) * normFactor
-        cheb(2:n-1) = 2.0_rk * normFactor * cheb(2:n-1)
-        cheb(n) = cheb(n) * normFactor
-
-        call ply_fpt_single( gam    = legCoeffs(iDof:iDof+n-1), &
-          &                  alph   = cheb,                     &
-          &                  params = fpt%ChebToLegParams       )
-      end do
-
-    end if ! lobattoPoints
+      call ply_fpt_single( gam    = legCoeffs(iDof:iDof+n-1), &
+        &                  alph   = cheb,                     &
+        &                  params = fpt%ChebToLegParams       )
+    end do
 
   end subroutine ply_pntToLeg_single
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
+
+
+  ! ------------------------------------------------------------------------ !
+  !> Subroutine to transform point values at Chebyshev-Lobatto nodes to a
+  !! Legendre expansion.
+  subroutine ply_pntToLeg_lobatto_single( fpt, pntVal, legCoeffs, nIndeps )
+    ! -------------------------------------------------------------------- !
+    class(ply_legFpt_type), intent(inout) :: fpt
+    real(kind=rk), intent(inout) :: pntVal(:)
+    real(kind=rk), intent(inout) :: legCoeffs(:)
+    integer, intent(in) :: nIndeps
+    ! -------------------------------------------------------------------- !
+    real(kind=rk) :: cheb(fpt%legToChebParams%n)
+    real(kind=rk) :: normFactor
+    integer :: iDof
+    integer :: n
+    ! -------------------------------------------------------------------- !
+
+    n = fpt%legToChebParams%n
+
+    normFactor = 0.5_rk / real(n-1,kind=rk)
+    do iDof = 1, nIndeps*n, n
+      call fftw_execute_r2r( fpt%planPntToCheb,     &
+        &                    pntVal(iDof:iDof+n-1), &
+        &                    cheb                   )
+      ! Normalize the coefficients of the Chebyshev polynomials due
+      ! to the unnormalized version of DCT in the FFTW.
+      cheb(1) = cheb(1) * normFactor
+      cheb(2:n-1) = 2.0_rk * normFactor * cheb(2:n-1)
+      cheb(n) = cheb(n) * normFactor
+
+      call ply_fpt_single( gam    = legCoeffs(iDof:iDof+n-1), &
+        &                  alph   = cheb,                     &
+        &                  params = fpt%ChebToLegParams       )
+    end do
+
+  end subroutine ply_pntToLeg_lobatto_single
+  ! ------------------------------------------------------------------------ !
 
 end module ply_legFpt_module
