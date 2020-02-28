@@ -1,6 +1,6 @@
 ! Copyright (c) 2012, 2014 Jens Zudrop <j.zudrop@grs-sim.de>
 ! Copyright (c) 2013-2014 Peter Vitt <peter.vitt2@uni-siegen.de>
-! Copyright (c) 2013-2016,2019 Harald Klimach <harald.klimach@uni-siegen.de>
+! Copyright (c) 2013-2016,2019-2020 Harald Klimach <harald.klimach@uni-siegen.de>
 ! Copyright (c) 2013-2014 Verena Krupp
 ! Copyright (c) 2014 Nikhil Anand <nikhil.anand@uni-siegen.de>
 !
@@ -31,8 +31,7 @@ program ply_ifpt_test
   use tem_logging_module,       only: logUnit
   use tem_general_module,       only: tem_general_type, tem_start
   use ply_legFpt_module,        only: ply_init_legFpt, &
-    &                                 ply_legFpt_type, &
-    &                                 ply_pntToLeg
+    &                                 ply_legFpt_type
   use ply_modg_basis_module,    only: legendre_1D
 
   !mpi!nprocs = 1
@@ -108,7 +107,7 @@ contains
     ! now transform to the Legendre coefficients
     allocate(legVal(1:maxPolyDegree+1))
     write(logUnit(10),*) 'Calculating inverse FPT ...'
-    call ply_pntToLeg( fpt = fpt, pntVal = pntVal, legCoeffs = legVal, nIndeps=1 )
+    call fpt%pntToLeg( pntVal = pntVal, legCoeffs = legVal, nIndeps = 1 )
     write(logUnit(10),*) 'Finished'
 
     !!do iPoly = 1, maxPolyDegree+1
