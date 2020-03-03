@@ -67,6 +67,14 @@
 !!   In each block only `approx_terms` will be used to represent rows in the
 !!   block. Smaller values make the transformation faster, but less accurate
 !!   (if blocks are actually approximated).
+!! * `implementation` selects the implementation for the transformation. There
+!!   are two variants of the implementation: `'scalar'` this is the default
+!!   and treats the transformations with an outer loop over the independent
+!!   operations. The `'vector'` implementation on the other hand gathers
+!!   multiple independent operations together and performs them all at once
+!!   with an inner loop over blocks length `striplen`. While the `'vector'`
+!!   variant may exploit vector instructions, it utilizes a larger amount of
+!!   temporary memory. The default setting for this option is `'scalar'`.
 !! * `striplen` determines the length for vectorized loops to be used in the
 !!   matrix operation. It defaults to the `vlen` setting defined in
 !!   [[tem_compileconf_module]] during compilation.
@@ -85,17 +93,19 @@
 !!    lobattoPoints     = false,
 !!    blocksize         = 16,
 !!    approx_terms      = 12,
+!!    implementation    = 'scalar',
 !!    striplen          = 256,
 !!    subblockingWidth  = 8
 !!  }
 !!```
 module ply_fpt_header_module
 
-  use env_module,              only: rk
+  use env_module,              only: rk, labelLen
   use aotus_module,            only: flu_State, aot_get_val
   use aot_out_module,          only: aot_out_type, aot_out_val
 
   use tem_aux_module,          only: tem_abort
+  use tem_tools_module,        only: upper_to_lower
   use tem_logging_module,      only: logUnit
   use tem_compileconf_module,  only: vlen
   use tem_float_module
@@ -115,6 +125,12 @@ module ply_fpt_header_module
   !> Default number of terms to use in FPT blocks. 18 is recommended for
   !! double precision.
   integer, public, parameter :: ply_fpt_default_approx_terms = 18
+
+  !> Value to signify the use of the scalar FPT implementation.
+  integer, public, parameter :: ply_fpt_scalar = 1
+
+  !> Value to signify the use of the vector FPT implementation.
+  integer, public, parameter :: ply_fpt_vector = 2
 
   !> Type for the fpt header, stores all information needed to initialize the
   !! fpt method later on
@@ -140,6 +156,14 @@ module ply_fpt_header_module
     !!
     !! This defaults to 18, which is recommended for double precision.
     integer :: approx_terms = ply_fpt_default_approx_terms
+
+    !> The implementation variant to use for the transformation computation.
+    !!
+    !! The computation can be done either by a `'vector'` implementation or
+    !! by a `'scalar'` implementation.
+    !! We indicate the respective implementations by the integers
+    !! [[ply_fpt_scalar]] or [[ply_fpt_vector]].
+    integer :: implementation
 
     !> The striplen, that should be used for vectorized simultaneous
     !! computations of the matrix operation.
@@ -197,6 +221,7 @@ module ply_fpt_header_module
   public :: operator(>), operator(>=)
 
   public :: ply_fpt_header_load, ply_fpt_header_display
+  public :: ply_fpt_header_define
   public :: ply_fpt_header_type
   public :: ply_fpt_header_out
 
@@ -221,6 +246,7 @@ contains
     left%blocksize = right%blocksize
     left%adapt_factor_pow2 = right%adapt_factor_pow2
     left%approx_terms = right%approx_terms
+    left%implementation = right%implementation
     left%striplen = right%striplen
     left%subblockingWidth = right%subblockingWidth
 
@@ -238,6 +264,7 @@ contains
     integer, intent(in) :: thandle
     ! -------------------------------------------------------------------- !
     integer :: iError
+    character(len=labelLen) :: impl_variant
     ! -------------------------------------------------------------------- !
     ! check for fpt lib
 
@@ -273,12 +300,32 @@ contains
       call tem_abort()
     end if
 
-    call aot_get_val( L       = conf,            &
-      &               thandle = thandle,         &
-      &               key     = 'approx_terms',  &
-      &               val     = me%approx_terms, &
-      &               ErrCode = iError,          &
-      &               default = 18               )
+    call aot_get_val( L       = conf,                        &
+      &               thandle = thandle,                     &
+      &               key     = 'approx_terms',              &
+      &               val     = me%approx_terms,             &
+      &               ErrCode = iError,                      &
+      &               default = ply_fpt_default_approx_terms )
+
+    call aot_get_val( L       = conf,             &
+      &               thandle = thandle,          &
+      &               key     = 'implementation', &
+      &               val     = impl_variant,     &
+      &               ErrCode = iError,           &
+      &               default = 'scalar'          )
+    impl_variant = upper_to_lower(impl_variant)
+    impl_variant = adjustl(impl_variant)
+    select case(trim(impl_variant))
+    case('scalar')
+      me%implementation = ply_fpt_scalar
+    case('vector')
+      me%implementation = ply_fpt_vector
+    case default
+      write(logUnit(1),*) 'ERROR in loading projection: implementation' &
+        & // ' has to be either "scalar" or "vector"!'
+      write(logUnit(1),*) 'But it is set to ', trim(impl_variant)
+      call tem_abort()
+    end select
 
     call aot_get_val( L       = conf,        &
       &               thandle = thandle,     &
@@ -312,6 +359,102 @@ contains
       &               default = .false.                        )
 
   end subroutine ply_fpt_header_load
+  ! ------------------------------------------------------------------------ !
+
+
+  ! ------------------------------------------------------------------------ !
+  !> Define settings for the Fast Polynomial Transformation.
+  subroutine ply_fpt_header_define(                                           &
+    &          me, blocksize, factor, approx_terms, implementation, striplen, &
+    &          subBlockingWidth, adapt_factor_pow2, lobattoPoints             )
+    ! -------------------------------------------------------------------- !
+    !> FPT header to hold the defined settings.
+    type(ply_fpt_header_type), intent(out) :: me
+    
+    !> Blocksize to use in approximation algorithm. Defaults to
+    !! [[ply_fpt_default_blocksize]].
+    integer, optional, intent(in) :: blocksize
+
+    !> Oversampling factor to use.
+    !!
+    !! This can be used to reduce aliasing when projecting functions that
+    !! will be truncated in the polynomial series expansion.
+    !! Default is a factor of 1, so no oversampling.
+    real(kind=rk), optional, intent(in) :: factor
+
+    !> Number of approximation terms to use for the representation of the
+    !! blocks in the Legendre to Chebyshev transformation algorithm.
+    !! Defaults to [[ply_fpt_default_approx_terms]].
+    integer, optional, intent(in) :: approx_terms
+
+    !> Implementation to use in the computation.
+    !!
+    !! Select the implementation variant to use. Either scalar
+    !! ([[ply_fpt_scalar]]) or vectorized ([[ply_fpt_vector]]).
+    !! Default is [[ply_fpt_scalar]].
+    integer, optional, intent(in) :: implementation
+
+    !> Length of strips to use in the transformation implementation.
+    !! Defaults to [[vlen]].
+    integer, optional, intent(in) :: striplen
+
+    !> Width for subblocks in unrolling the approximate Legendre to
+    !! Chebyshev transformation. Defaults to
+    !! [[ply_fpt_default_subblockingWidth]].
+    integer, optional, intent(in) :: subBlockingWidth
+
+    !> Adapt the oversampling factor such, that oversampled space has a
+    !! number of degrees of freedoms in one direction that is a power of 2.
+    !! Default is .false..
+    logical, optional, intent(in) :: adapt_factor_pow2
+
+    !> Wether to use Chebyshev-Lobatto points (include boundary points) or
+    !! not. Defaults to .false..
+    logical, optional, intent(in) :: lobattoPoints
+    ! -------------------------------------------------------------------- !
+    ! -------------------------------------------------------------------- !
+
+    ! for fpt chebyshev nodes are used
+    me%nodes_header%nodes_kind = 'chebyshev'
+
+    ! Defaults
+    me%blocksize         = ply_fpt_default_blocksize
+    me%factor            = 1.0_rk
+    me%approx_terms      = ply_fpt_default_approx_terms
+    me%implementation    = ply_fpt_scalar
+    me%striplen          = vlen
+    me%subBlockingWidth  = ply_fpt_default_subblockingWidth
+    me%adapt_factor_pow2 = .false.
+
+    me%nodes_header%lobattoPoints = .false.
+
+    ! Overwrite defaults if set by caller.
+    if (present(blocksize)) me%blocksize = blocksize
+    if (present(factor)) me%factor = factor
+    if (present(approx_terms)) me%approx_terms = approx_terms
+    if (present(implementation)) me%implementation = implementation
+    if (present(striplen)) me%striplen = striplen
+    if (present(subBlockingWidth)) me%subBlockingWidth = subBlockingWidth
+    if (present(adapt_factor_pow2)) me%adapt_factor_pow2 = adapt_factor_pow2
+
+    if (present(lobattoPoints)) me%nodes_header%lobattoPoints = lobattoPoints
+
+    if (me%factor <= 0) then
+      write(logUnit(1),*) 'ERROR in defining projection: factor for projection' &
+        & // ' has to be larger than 0!'
+      write(logUnit(1),*) 'But it is set to ', me%factor
+      call tem_abort()
+    end if
+
+    if ( me%implementation /=  ply_fpt_scalar &
+      &  .and. me%implementation /= ply_fpt_vector ) then
+      write(logUnit(1),*) 'ERROR in defining projection: implementation' &
+        & // ' has to be either "scalar" or "vector"!'
+      write(logUnit(1),*) 'But it is set to unknown value ', me%implementation
+      call tem_abort()
+    end if
+
+  end subroutine ply_fpt_header_define
   ! ------------------------------------------------------------------------ !
 
 

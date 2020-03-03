@@ -445,15 +445,11 @@ contains
       me%lobattopoints = proj_init%header%fpt_header%nodes_header%lobattopoints
 
       !> Initialize the fpt data type
-      call ply_init_legfpt(                                                  &
-        &    maxPolyDegree    = me%oversamp_degree,                          &
-        &    nIndeps          = 1,                                           &
-        &    fpt              = me%body_1d%fpt,                              &
-        &    lobattoPoints    = me%lobattoPoints,                            &
-        &    blocksize        = proj_init%header%fpt_header%blocksize,       &
-        &    approx_terms     = proj_init%header%fpt_header%approx_terms,    &
-        &    striplen         = proj_init%header%fpt_header%striplen,        &
-        &    subblockingWidth = proj_init%header%fpt_header%subblockingWidth )
+      call ply_init_legfpt(                                 &
+        &    maxPolyDegree    = me%oversamp_degree,         &
+        &    nIndeps          = 1,                          &
+        &    fpt              = me%body_1d%fpt,             &
+        &    header           = proj_init%header%fpt_header )
       !> Initialization/Create  of the volume quadrature  nodes and the
       !! quadrature points on the face
       call init_cheb_nodes_1d(                                             &
@@ -463,15 +459,11 @@ contains
         &    nQuadPointsPerDir = me%nQuadPointsPerDir                      )
 
       if (scheme_dim >= 2) then
-        call ply_init_legfpt(                                                  &
-          &    maxPolyDegree    = me%oversamp_degree,                          &
-          &    nIndeps          = me%oversamp_degree+1,                        &
-          &    fpt              = me%body_2d%fpt,                              &
-          &    lobattoPoints    = me%lobattoPoints,                            &
-          &    blocksize        = proj_init%header%fpt_header%blocksize,       &
-          &    approx_terms     = proj_init%header%fpt_header%approx_terms,    &
-          &    striplen         = proj_init%header%fpt_header%striplen,        &
-          &    subblockingWidth = proj_init%header%fpt_header%subblockingWidth )
+        call ply_init_legfpt(                                 &
+          &    maxPolyDegree    = me%oversamp_degree,         &
+          &    nIndeps          = me%oversamp_degree+1,       &
+          &    fpt              = me%body_2d%fpt,             &
+          &    header           = proj_init%header%fpt_header )
         call init_cheb_nodes_2d(                                             &
           &    me                = proj_init%header%fpt_header%nodes_header, &
           &    nodes             = me%body_2d%nodes,                         &
@@ -480,15 +472,11 @@ contains
       end if
 
       if (scheme_dim >= 3) then
-        call ply_init_legfpt(                                                  &
-          &    maxPolyDegree    = me%oversamp_degree,                          &
-          &    nIndeps          = (me%oversamp_degree+1)**2,                   &
-          &    fpt              = me%body_3D%fpt,                              &
-          &    lobattoPoints    = me%lobattoPoints,                            &
-          &    blocksize        = proj_init%header%fpt_header%blocksize,       &
-          &    approx_terms     = proj_init%header%fpt_header%approx_terms,    &
-          &    striplen         = proj_init%header%fpt_header%striplen,        &
-          &    subblockingWidth = proj_init%header%fpt_header%subblockingWidth )
+        call ply_init_legfpt(                                 &
+          &    maxPolyDegree    = me%oversamp_degree,         &
+          &    nIndeps          = (me%oversamp_degree+1)**2,  &
+          &    fpt              = me%body_3D%fpt,             &
+          &    header           = proj_init%header%fpt_header )
         call init_cheb_nodes(                                                &
           &    me                = proj_init%header%fpt_header%nodes_header, &
           &    nodes             = me%body_3d%nodes,                         &

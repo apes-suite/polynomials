@@ -1,6 +1,6 @@
 ! Copyright (c) 2012, 2014 Jens Zudrop <j.zudrop@grs-sim.de>
 ! Copyright (c) 2013-2014, 2016 Peter Vitt <peter.vitt2@uni-siegen.de>
-! Copyright (c) 2012-2016, 2018-2019 Harald Klimach <harald@klimachs.de>
+! Copyright (c) 2012-2016, 2018-2020 Harald Klimach <harald@klimachs.de>
 ! Copyright (c) 2013-2014 Verena Krupp <v.krupp@grs-sim.de>
 ! Copyright (c) 2014 Nikhil Anand <nikhil.anand@uni-siegen.de>
 ! Copyright (c) 2016 Kay Langhammer <kay.langhammer@student.uni-siegen.de>
@@ -28,14 +28,17 @@
 !> Unit test to check functionallity of fast polynomial transformations.
 !! \author{Jens Zudrop}
 program ply_fpt_3D_test
-  use env_module,               only: rk, fin_env
-  use tem_param_module,         only: PI
-  use tem_logging_module,       only: logUnit
-  use tem_general_module,       only: tem_general_type, tem_start
-  use ply_legFpt_module,        only: ply_legFpt_type, ply_init_legFPT
-  use ply_legFpt_3D_module,     only: ply_legToPnt_3D
-  use ply_modg_basis_module,    only: evalLegendreTensPoly
-  use ply_dof_module,           only: Q_space
+  use env_module,            only: rk, fin_env
+  use tem_param_module,      only: PI
+  use tem_logging_module,    only: logUnit
+  use tem_general_module,    only: tem_general_type, tem_start
+  use ply_fpt_header_module, only: ply_fpt_header_type,   &
+    &                              ply_fpt_header_define, &
+    &                              ply_fpt_vector
+  use ply_legFpt_module,     only: ply_legFpt_type, ply_init_legFPT
+  use ply_legFpt_3D_module,  only: ply_legToPnt_3D
+  use ply_modg_basis_module, only: evalLegendreTensPoly
+  use ply_dof_module,        only: Q_space
 
   !mpi!nprocs = 1
 
@@ -51,24 +54,43 @@ program ply_fpt_3D_test
     &            general  = general             )
 
   res = 0.0_rk
-!do iPower = 0, 4
-  do iPower = 2,2
+
+  write(logunit(1),*) 'Scalar variant'
+  do iPower = 1,3
     call ply_check_legToPnt_3D(iPower, newRes)
-    if(newRes.gt.res) then
+    if (newRes > res) then
       res = newRes
     end if
   end do
 
-  if(res.lt.1e-08) then
+  write(logunit(1),*) ''
+  write(logunit(1),*) '=================================================='
+  write(logunit(1),*) 'Vector variant'
+  write(logunit(1),*) '=================================================='
+  do iPower = 1,3
+    call ply_check_legToPnt_3D( power          = iPower,        &
+      &                         res            = newRes,        &
+      &                         implementation = ply_fpt_vector )
+    if (newRes > res) then
+      res = newRes
+    end if
+  end do
+
+  if (res < 1e-08) then
     write(logUnit(1),*) 'PASSED'
   end if
 
   call fin_env()
+
+
 contains
 
-  subroutine ply_check_legToPnt_3D(power, res)
+
+  subroutine ply_check_legToPnt_3D(power, res, implementation)
     integer, intent(in) :: power
-    real(kind=rk) :: res
+    real(kind=rk), intent(out) :: res
+    integer, optional, intent(in) :: implementation
+
     integer :: maxPolyDegree, iPoint, iPointX, iPointY, iPointZ, iDof
     integer :: pointIndex, funcIndex, iPolyX, iPolyY, iPolyZ, iVar, nVars
     real(kind=rk), allocatable :: legCoeffs(:,:)
@@ -76,6 +98,7 @@ contains
     real(kind=rk), allocatable :: chebPnt(:,:), chebPnt1D(:)
     real(kind=rk), allocatable :: legValChebPnt(:,:)
     real(kind=rk) :: rfac
+    type(ply_fpt_header_type) :: header
     type(ply_legFpt_type) :: fpt
     integer, allocatable :: rand_seed(:)
     integer :: nSeeds
@@ -129,10 +152,12 @@ contains
     ! define the reference results for the point values (Chebyshev nodes)
     !allocate( legValChebPnt((maxPolyDegree+1)**3,(maxPolyDegree+1)**3) )
     !legValChebPnt(:,:) = legendre_1D(chebPnt, maxPolyDegree)
-    call evalLegendreTensPoly( coords = chebPnt , nCoords = (maxPolyDegree+1)**3, &
-                             & maxPolyDegree = maxPolyDegree, &
-                             & basisType = Q_space, &
-                             & polyVal = legValChebPnt )
+    call evalLegendreTensPoly(                   &
+      &    coords        = chebPnt,              &
+      &    nCoords       = (maxPolyDegree+1)**3, &
+      &    maxPolyDegree = maxPolyDegree,        &
+      &    basisType     = Q_space,              &
+      &    polyVal       = legValChebPnt         )
     allocate( refVal((maxPolyDegree+1)**3, nVars) )
     refVal(:,:) = 0.0_rk
     write(logUnit(10),*) 'Calculating reference results ...'
@@ -150,9 +175,12 @@ contains
     write(logUnit(10),*) 'Finished'
 
     ! Init the FPT
+    call ply_fpt_header_define( me             = header,        &
+      &                         implementation = implementation )
     call ply_init_legFpt( maxPolyDegree = maxPolyDegree,        &
       &                   nIndeps       = (maxpolydegree+1)**2, &
-      &                   fpt           = fpt                   )
+      &                   fpt           = fpt,                  &
+      &                   header        = header                )
 
     ! now transform to the Chebyshev nodes
     allocate(pntVal( (maxPolyDegree+1)**3, nVars ))

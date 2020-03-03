@@ -31,8 +31,7 @@ program ply_project_fpt_test
     &                                    ply_poly_project_n2m,      &
     &                                    ply_poly_project_type
   use ply_prj_header_module,       only: ply_prj_header_type
-  use ply_fpt_header_module,       only: ply_fpt_default_blocksize, &
-    &                                    ply_fpt_default_subblockingWidth
+  use ply_fpt_header_module,       only: ply_fpt_header_define
   use tem_general_module,          only: tem_general_type, tem_start
 
   !mpi!nprocs = 1
@@ -80,10 +79,10 @@ program ply_project_fpt_test
 contains
 
   subroutine check_fpt(power, res)
-  !---------------------------------------
+    !---------------------------------------
     integer, intent(in) :: power
     real(kind=rk), intent(out) :: res
-  !---------------------------------------
+    !---------------------------------------
     type(ply_poly_project_type) :: me
     type(ply_prj_init_type) :: prj_init
     type(ply_prj_header_type) :: header
@@ -99,18 +98,16 @@ contains
     basisType = Q_space
     maxdegree = power
     header%kind = 'fpt'
-    header%fpt_header%factor = 1.0_rk
-    header%fpt_header%blocksize = ply_fpt_default_blocksize
-    header%fpt_header%subblockingWidth = ply_fpt_default_subblockingWidth
-    header%fpt_header%approx_terms = 18
-    header%fpt_header%striplen = 256
-    header%fpt_header%nodes_header%lobattopoints = .false.
+    call ply_fpt_header_define( me = header%fpt_header, &
+      &                         approx_terms = 18,      &
+      &                         striplen     = 256,     &
+      &                         lobattoPoints = .false. )
 
     ! define poly projection init type
-    call ply_prj_init_define(me=  prj_init,            &
-      &                      header = header ,         &
-      &                      maxPolyDegree= maxdegree, &
-      &                      basisType = basistype )
+    call ply_prj_init_define( me            = prj_init,  &
+      &                       header        = header,    &
+      &                       maxPolyDegree = maxdegree, &
+      &                       basisType     = basistype  )
 
     ! fill the projection body according to the header
     call ply_poly_project_fillbody(me = me, proj_init=prj_init, scheme_dim=3)

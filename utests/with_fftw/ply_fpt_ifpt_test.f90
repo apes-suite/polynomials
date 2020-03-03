@@ -26,12 +26,13 @@
 !> Unit test to check functionallity of fast polynomial transformations.
 !! \author{Jens Zudrop}
 program ply_fpt_ifpt_test
-  use env_module,               only: rk, fin_env
-  use tem_logging_module,       only: logUnit
-  use tem_aux_module,           only: tem_abort
-  use ply_legFpt_module,        only: ply_init_legFpt, ply_legFpt_type
-  use ply_modg_basis_module,    only: legendre_1D
-  use tem_general_module,       only: tem_general_type, tem_start
+  use env_module,            only: rk, fin_env
+  use tem_logging_module,    only: logUnit
+  use tem_aux_module,        only: tem_abort
+  use ply_fpt_header_module, only: ply_fpt_header_type, ply_fpt_header_define
+  use ply_legFpt_module,     only: ply_init_legFpt, ply_legFpt_type
+  use ply_modg_basis_module, only: legendre_1D
+  use tem_general_module,    only: tem_general_type, tem_start
 
   !mpi!nprocs = 1
 
@@ -67,6 +68,7 @@ contains
     real(kind=rk), intent(out) :: res
     integer :: maxPolyDegree
     real(kind=rk), allocatable :: legCoeffs(:), pntVal(:), legVal(:)
+    type(ply_fpt_header_type) :: header
     type(ply_legFpt_type) :: fpt
 
 
@@ -82,9 +84,11 @@ contains
     legVal = legCoeffs
 
     ! Init the FPT
+    call ply_fpt_header_define( me = header )
     call ply_init_legFpt( maxPolyDegree = maxPolyDegree, &
       &                   nIndeps       = 1,             &
-      &                   fpt           = fpt            )
+      &                   fpt           = fpt,           &
+      &                   header        = header         )
 
     ! now transform to the Chebyshev nodes
     allocate(pntVal(1:maxPolyDegree+1))
