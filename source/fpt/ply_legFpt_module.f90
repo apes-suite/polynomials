@@ -123,6 +123,9 @@ contains
     left%planChebToPnt = right%planChebToPnt
     left%planPntToCheb = right%planPntToCheb
 
+    left%legtopnt => right%legtopnt
+    left%pnttoleg => right%pnttoleg
+
   end subroutine Copy_fpt
   ! ------------------------------------------------------------------------ !
 
@@ -194,8 +197,14 @@ contains
     n = fpt%legToChebParams%n
 
     ! Temporary arrays to initialize FFTW real->real transformations
-    allocate( tmpIn(n) )
-    allocate( tmpOut(n) )
+    select case(header%implementation)
+    case(ply_fpt_scalar)
+      allocate( tmpIn(n) )
+      allocate( tmpOut(n) )
+    case(ply_fpt_vector)
+      allocate( tmpIn(n*nIndeps) )
+      allocate( tmpOut(n*nIndeps) )
+    end select
 
     if (.not. lob) then
 
@@ -203,40 +212,68 @@ contains
       case(ply_fpt_scalar)
         fpt%legtopnt => ply_legtopnt_single
         fpt%pnttoleg => ply_pnttoleg_single
+        ! Init the DCT III ( Leg -> Point values )
+        !NEC: The NEC FFTW interface use n0 as parameter name instead of n
+        !NEC: (nlc 2.0.0).
+        !NEC: Omitting keywords to be compatible.
+        !!fpt%planPntToCheb = fftw_plan_r2r_1d( n     = n,             &
+        !!  &                                   in    = tmpIn,         &
+        !!  &                                   out   = tmpOut,        &
+        !!  &                                   kind  = FFTW_REDFT10,  &
+        !!  &                                   flags = planning_flags )
+        fpt%planChebToPnt = fftw_plan_r2r_1d( n,             &
+          &                                   tmpIn,         &
+          &                                   tmpOut,        &
+          &                                   FFTW_REDFT01,  &
+          &                                   planning_flags )
+        ! Init the DCT II ( Point values -> Leg )
+        !NEC: The NEC FFTW interface use n0 as parameter name instead of n
+        !NEC: (nlc 2.0.0).
+        !NEC: Omitting keywords to be compatible.
+        !!fpt%planPntToCheb = fftw_plan_r2r_1d( n     = n,             &
+        !!  &                                   in    = tmpIn,         &
+        !!  &                                   out   = tmpOut,        &
+        !!  &                                   kind  = FFTW_REDFT10,  &
+        !!  &                                   flags = planning_flags )
+        fpt%planPntToCheb = fftw_plan_r2r_1d( n,             &
+          &                                   tmpIn,         &
+          &                                   tmpOut,        &
+          &                                   FFTW_REDFT10,  &
+          &                                   planning_flags )
+
       case(ply_fpt_vector)
         fpt%legtopnt => ply_legtopnt_vec
         fpt%pnttoleg => ply_pnttoleg_vec
+        fpt%planChebToPnt = fftw_plan_many_r2r(         &
+          &                   rank    = 1,              &
+          &                   n       = [n],            &
+          &                   howmany = nIndeps,        &
+          &                   in      = tmpIn,          &
+          &                   inembed = [n],            &
+          &                   istride = 1,              &
+          &                   idist   = n,              &
+          &                   out     = tmpOut,         &
+          &                   onembed = [n],            &
+          &                   ostride = 1,              &
+          &                   odist   = n,              &
+          &                   kind    = [FFTW_REDFT01], &
+          &                   flags   = planning_flags  )
+        fpt%planPntToCheb = fftw_plan_many_r2r(         &
+          &                   rank    = 1,              &
+          &                   n       = [n],            &
+          &                   howmany = nIndeps,        &
+          &                   in      = tmpIn,          &
+          &                   inembed = [n],            &
+          &                   istride = 1,              &
+          &                   idist   = n,              &
+          &                   out     = tmpOut,         &
+          &                   onembed = [n],            &
+          &                   ostride = 1,              &
+          &                   odist   = n,              &
+          &                   kind    = [FFTW_REDFT10], &
+          &                   flags   = planning_flags  )
+
       end select
-
-      ! Init the DCT III ( Leg -> Point values )
-      !NEC: The NEC FFTW interface use n0 as parameter name instead of n
-      !NEC: (nlc 2.0.0).
-      !NEC: Omitting keywords to be compatible.
-      !!fpt%planChebToPnt = fftw_plan_r2r_1d( n     = n,             &
-      !!  &                                   in    = tmpIn,         &
-      !!  &                                   out   = tmpOut,        &
-      !!  &                                   kind  = FFTW_REDFT01,  &
-      !!  &                                   flags = planning_flags )
-      fpt%planChebToPnt = fftw_plan_r2r_1d( n,             &
-        &                                   tmpIn,         &
-        &                                   tmpOut,        &
-        &                                   FFTW_REDFT01,  &
-        &                                   planning_flags )
-
-      ! Init the DCT II ( Point values -> Leg )
-      !NEC: The NEC FFTW interface use n0 as parameter name instead of n
-      !NEC: (nlc 2.0.0).
-      !NEC: Omitting keywords to be compatible.
-      !!fpt%planPntToCheb = fftw_plan_r2r_1d( n     = n,             &
-      !!  &                                   in    = tmpIn,         &
-      !!  &                                   out   = tmpOut,        &
-      !!  &                                   kind  = FFTW_REDFT10,  &
-      !!  &                                   flags = planning_flags )
-      fpt%planPntToCheb = fftw_plan_r2r_1d( n,             &
-        &                                   tmpIn,         &
-        &                                   tmpOut,        &
-        &                                   FFTW_REDFT10,  &
-        &                                   planning_flags )
 
     else
 
@@ -244,26 +281,41 @@ contains
       case(ply_fpt_scalar)
         fpt%legtopnt => ply_legtopnt_lobatto_single
         fpt%pnttoleg => ply_pnttoleg_lobatto_single
+        ! Init the DCT I  (Leg -> nodal):
+        !   To be used with a normalization factor for trafo ...
+        !NEC: The NEC FFTW interface use n0 as parameter name instead of n
+        !NEC: (nlc 2.0.0).
+        !NEC: Omitting keywords to be compatible.
+        !!fpt%planChebToPnt = fftw_plan_r2r_1d( n     = n,             &
+        !!  &                                   in    = tmpIn,         &
+        !!  &                                   out   = tmpOut,        &
+        !!  &                                   kind  = FFTW_REDFT00,  &
+        !!  &                                   flags = planning_flags )
+        fpt%planChebToPnt = fftw_plan_r2r_1d( n,             &
+          &                                   tmpIn,         &
+          &                                   tmpOut,        &
+          &                                   FFTW_REDFT00,  &
+          &                                   planning_flags )
+
       case(ply_fpt_vector)
         fpt%legtopnt => ply_legtopnt_lobatto_vec
         fpt%pnttoleg => ply_pnttoleg_lobatto_vec
-      end select
+        fpt%planChebToPnt = fftw_plan_many_r2r(         &
+          &                   rank    = 1,              &
+          &                   n       = [n],            &
+          &                   howmany = nIndeps,        &
+          &                   in      = tmpIn,          &
+          &                   inembed = [n],            &
+          &                   istride = 1,              &
+          &                   idist   = n,              &
+          &                   out     = tmpOut,         &
+          &                   onembed = [n],            &
+          &                   ostride = 1,              &
+          &                   odist   = n,              &
+          &                   kind    = [FFTW_REDFT00], &
+          &                   flags   = planning_flags  )
 
-      ! Init the DCT I  (Leg -> nodal):
-      !   To be used with a normalization factor for trafo ...
-      !NEC: The NEC FFTW interface use n0 as parameter name instead of n
-      !NEC: (nlc 2.0.0).
-      !NEC: Omitting keywords to be compatible.
-      !!fpt%planChebToPnt = fftw_plan_r2r_1d( n     = n,             &
-      !!  &                                   in    = tmpIn,         &
-      !!  &                                   out   = tmpOut,        &
-      !!  &                                   kind  = FFTW_REDFT00,  &
-      !!  &                                   flags = planning_flags )
-      fpt%planChebToPnt = fftw_plan_r2r_1d( n,             &
-        &                                   tmpIn,         &
-        &                                   tmpOut,        &
-        &                                   FFTW_REDFT00,  &
-        &                                   planning_flags )
+      end select
 
       ! Init the DCT I  (nodal -> Leg):
       !   To be used with a normalization factor for trafo ...
@@ -340,11 +392,11 @@ contains
       ! to the unnormalized version of DCT in the FFTW.
       cheb(iDof+1:n+iDof-1:2) = -0.5_rk * cheb(iDof+1:n+iDof-1:2)
       cheb(iDof+2:n+iDof-1:2) =  0.5_rk * cheb(iDof+2:n+iDof-1:2)
-
-      call fftw_execute_r2r( fpt%planChebToPnt,    &
-        &                    cheb(iDof:iDof+n-1),  &
-        &                    pntVal(iDof:iDof+n-1) )
     end do
+
+    call fftw_execute_r2r( fpt%planChebToPnt, &
+      &                    cheb,              &
+      &                    pntVal             )
 
   end subroutine ply_legToPnt_vec
   ! ------------------------------------------------------------------------ !
@@ -411,11 +463,11 @@ contains
       ! Normalize the coefficients of the Chebyshev polynomials due
       ! to the unnormalized version of DCT in the FFTW.
       cheb(iDof+1:n+iDof-2) = 0.5_rk * cheb(iDof+1:n+iDof-2)
-
-      call fftw_execute_r2r( fpt%planChebToPnt,    &
-        &                    cheb(iDof:iDof+n-1),  &
-        &                    pntVal(iDof:iDof+n-1) )
     end do
+
+    call fftw_execute_r2r( fpt%planChebToPnt, &
+      &                    cheb,              &
+      &                    pntVal             )
 
   end subroutine ply_legToPnt_lobatto_vec
   ! ------------------------------------------------------------------------ !
@@ -477,11 +529,12 @@ contains
 
     n = fpt%legToChebParams%n
 
+    call fftw_execute_r2r( fpt%planPntToCheb, &
+      &                    pntVal,            &
+      &                    cheb               )
+
     normFactor = 1.0_rk / real(n,kind=rk)
     do iDof = 1, nIndeps*n, n
-      call fftw_execute_r2r( fpt%planPntToCheb,     &
-        &                    pntVal(iDof:iDof+n-1), &
-        &                    cheb(iDof:iDof+n-1)    )
       ! Normalize the coefficients of the Chebyshev polynomials due
       ! to the unnormalized version of DCT in the FFTW.
       cheb(iDof) = cheb(iDof) * 0.5_rk * normfactor
@@ -554,11 +607,12 @@ contains
 
     n = fpt%legToChebParams%n
 
+    call fftw_execute_r2r( fpt%planPntToCheb, &
+      &                    pntVal,            &
+      &                    cheb               )
+
     normFactor = 0.5_rk / real(n-1,kind=rk)
     do iDof = 1, nIndeps*n, n
-      call fftw_execute_r2r( fpt%planPntToCheb,     &
-        &                    pntVal(iDof:iDof+n-1), &
-        &                    cheb(iDof:iDof+n-1)    )
       ! Normalize the coefficients of the Chebyshev polynomials due
       ! to the unnormalized version of DCT in the FFTW.
       cheb(iDof) = cheb(iDof) * normFactor

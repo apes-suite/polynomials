@@ -519,6 +519,11 @@ contains
       &                 //' polynomial degrees < 2*blocksize.'
     write(logUnit(1),*) ' * using LobattoPoints =', &
       &                 me%nodes_header%lobattoPoints
+    if (me%implementation == ply_fpt_scalar) then
+      write(logUnit(1),*) ' * Using scalar implementation'
+    else
+      write(logUnit(1),*) ' * Using VECTOR implementation'
+    end if
     write(logUnit(1),*) ' * Block approximation:'
     write(logUnit(1),*) '   * Blocksize for FPT =', me%blocksize
     write(logUnit(1),*) '   * Number of approximation terms = ', me%approx_terms

@@ -62,72 +62,57 @@ contains
   !> Subroutine to transform Legendre expansion to point values
   !! at Chebyshev nodes.
   subroutine ply_legToPnt_2D_singVar( fpt, legCoeffs, pntVal )
-   ! --------------------------------------------------------------------- !
-   !> The FPT parameters.
-   type(ply_legFpt_type), intent(inout) :: fpt
-   !> The Legendre coefficients to convert to point values (Chebyshev nodes).
-   !! \attention Although this array serves as input only, it is modified
-   !! inside of this routine by the underlying FPT algorithm. So, when
-   !! this routine returns from its call the original values of pntVal will
-   !! be modified.
-   real(kind=rk), intent(inout) :: legCoeffs(:)
-   !> The resulting point values (Chebyshev nodes).
-   real(kind=rk), intent(inout) :: pntVal(:)
-   ! --------------------------------------------------------------------- !
-   integer :: striplen, iStrip, n, iAlph, nIndeps
-   real(kind=rk), dimension(:), allocatable :: alph
-   real(kind=rk), dimension(:), allocatable :: gam
-   ! --------------------------------------------------------------------- !
+    ! -------------------------------------------------------------------- !
+    !> The FPT parameters.
+    type(ply_legFpt_type), intent(inout) :: fpt
+    !> The Legendre coefficients to convert to point values (Chebyshev nodes).
+    !! \attention Although this array serves as input only, it is modified
+    !! inside of this routine by the underlying FPT algorithm. So, when
+    !! this routine returns from its call the original values of pntVal will
+    !! be modified.
+    real(kind=rk), intent(inout) :: legCoeffs(:)
+    !> The resulting point values (Chebyshev nodes).
+    real(kind=rk), intent(inout) :: pntVal(:)
+    ! -------------------------------------------------------------------- !
+    integer :: n, iAlph, nIndeps
+    real(kind=rk), dimension(:), allocatable :: alph
+    ! -------------------------------------------------------------------- !
 
-   striplen = fpt%legToChebParams%striplen
-   n = fpt%legToChebParams%n
+    n = fpt%legToChebParams%n
+    nIndeps = n
 
-   allocate(alph(min(striplen, n)*n))
-   allocate(gam(min(striplen, n)*n))
-   ! original layout (n = 3):
-   !  1  2  3
-   !  4  5  6
-   !  7  8  9
+    allocate(alph(n**2))
 
-   ! layout after y-trafo:
-   !  1  4  7
-   !  2  5  8
-   !  3  6  9
-   yStripLoop: do iStrip = 1, n, striplen
-     ! iAlph is the index of the first element in a line for the transformation
-     ! in y-direction.
-     do iAlph = iStrip, min(iStrip+striplen-1, n) !y-Trafo
-       alph((iAlph-iStrip)*n+1:(iAlph-iStrip+1)*n) = legCoeffs(iAlph::n) !ytrafo
-     end do
+    ! original layout (n = 3):
+    !  1  2  3
+    !  4  5  6
+    !  7  8  9
 
-     ! At the end of the array the number of computed strips might be smaller
-     nIndeps = min(striplen, n-iStrip+1)
+    ! layout after y-trafo:
+    !  1  4  7
+    !  2  5  8
+    !  3  6  9
+    ! >>>>> Y-Direction >>>>> !
+    ! iAlph is the index of the first element in a line for the transformation
+    ! in y-direction.
+    do iAlph = 1, n
+      alph((iAlph-1)*n+1:iAlph*n) = legCoeffs(iAlph::n)
+    end do
 
-     call fpt%legToPnt( nIndeps   = nIndeps, &
-       &                legCoeffs = alph,    &
-       &                pntVal    = gam      )
+    call fpt%legToPnt( nIndeps   = nIndeps,  &
+      &                legCoeffs = alph,     &
+      &                pntVal    = legCoeffs )
+    ! <<<<< Y-Direction <<<<< !
 
-     ! Write gam to pntVal array
-     pntVal((iStrip-1)*n+1 : (iStrip+nIndeps-1)*n) = gam(1:nIndeps*n)
+    ! >>>>> X-Direction >>>>> !
+    do iAlph = 1, n
+      alph((iAlph-1)*n+1:iAlph*n) = legCoeffs(iAlph::n)
+    end do
 
-   end do yStripLoop
-
-  ! x-direction
-   xStripLoop: do iStrip = 1, n, striplen
-     do iAlph = iStrip, min(iStrip+striplen-1, n)
-       alph((iAlph-iStrip)*n+1:(iAlph-iStrip+1)*n) = pntVal(iAlph::n) !ztrafo
-     end do
-
-     ! At the end of the array the number of computed strips might be smaller
-     nIndeps = min(striplen, n-iStrip+1)
-
-     call fpt%legToPnt( nIndeps   = nIndeps, &
-       &                legCoeffs = alph,    &
-       &                pntVal    = gam      )
-
-     pntVal((iStrip-1)*n+1 : (iStrip+nIndeps-1)*n) = gam(1:nIndeps*n)
-
-   end do xStripLoop
+    call fpt%legToPnt( nIndeps   = nIndeps, &
+      &                legCoeffs = alph,    &
+      &                pntVal    = pntVal   )
+    ! <<<<< X-Direction <<<<< !
 
   end subroutine ply_legToPnt_2D_singVar
   ! ------------------------------------------------------------------------ !
@@ -137,26 +122,26 @@ contains
   !> Subroutine to transform Legendre expansion to point values
   !! at Chebyshev nodes.
   subroutine ply_legToPnt_2D_multVar( fpt, legCoeffs, pntVal, nVars )
-   ! --------------------------------------------------------------------- !
-   !> The FPT parameters.
-   type(ply_legFpt_type), intent(inout) :: fpt
-   !> The Legendre coefficients to convert to point values (Chebyshev nodes).
-   !! \attention Although this array serves as input only, it is modified
-   !! inside of this routine by the underlying FPT algorithm. So, when
-   !! this routine returns from its call the original values of pntVal will
-   !! be modified.
-   real(kind=rk), intent(inout) :: legCoeffs(:,:)
-   !> The resulting point values (Chebyshev nodes).
-   real(kind=rk), intent(inout) :: pntVal(:,:)
-   !> The number of scalar variables to transform.
-   integer, intent(in) :: nVars
-   ! --------------------------------------------------------------------- !
-   integer :: iVar
-   ! --------------------------------------------------------------------- !
+    ! -------------------------------------------------------------------- !
+    !> The FPT parameters.
+    type(ply_legFpt_type), intent(inout) :: fpt
+    !> The Legendre coefficients to convert to point values (Chebyshev nodes).
+    !! \attention Although this array serves as input only, it is modified
+    !! inside of this routine by the underlying FPT algorithm. So, when
+    !! this routine returns from its call the original values of pntVal will
+    !! be modified.
+    real(kind=rk), intent(inout) :: legCoeffs(:,:)
+    !> The resulting point values (Chebyshev nodes).
+    real(kind=rk), intent(inout) :: pntVal(:,:)
+    !> The number of scalar variables to transform.
+    integer, intent(in) :: nVars
+    ! -------------------------------------------------------------------- !
+    integer :: iVar
+    ! -------------------------------------------------------------------- !
 
-   do iVar = 1, nVars
-     call ply_legToPnt_2D(fpt, legCoeffs(:,iVar), pntVal(:,iVar))
-   end do
+    do iVar = 1, nVars
+      call ply_legToPnt_2D(fpt, legCoeffs(:,iVar), pntVal(:,iVar))
+    end do
 
   end subroutine ply_legToPnt_2D_multVar
   ! ------------------------------------------------------------------------ !
@@ -178,52 +163,38 @@ contains
     !> The Legendre coefficients.
     real(kind=rk), intent(inout) :: legCoeffs(:)
     ! -------------------------------------------------------------------- !
-    integer :: iStrip, striplen, nIndeps, iAlph, n, n_squared
+    integer :: nIndeps, iAlph, n, n_squared
     real(kind=rk), dimension(:), allocatable :: alph
     real(kind=rk), dimension(:), allocatable :: gam
     ! -------------------------------------------------------------------- !
 
-    striplen = fpt%chebToLegParams%striplen
     n = fpt%legToChebParams%n
+    nIndeps = n
     n_squared = n**2
 
-    allocate(alph(min(striplen, n)*n))
-    allocate(gam(min(striplen, n)*n))
+    allocate(alph(n_squared))
 
-    yStripLoop: do iStrip = 1, n, striplen
-      do iAlph = iStrip, min(iStrip+striplen-1, n) !y_Trafo
-        alph((iAlph-iStrip)*n+1:(iAlph-iStrip+1)*n) = pntVal(iAlph::n)
-      end do
+    ! >>>>> Y-Direction >>>>> !
+    do iAlph = 1, n
+      alph((iAlph-1)*n+1:iAlph*n) = pntVal(iAlph::n)
+    end do
 
-      ! At the end of the array the number of computed strips might be smaller
-      nIndeps = min(striplen, n-iStrip+1)
-
-      call fpt%pntToLeg( nIndeps   = nIndeps, &
-        &                legCoeffs = gam,     &
-        &                pntVal    = alph     )
-
-      ! temp -> pntVal (stride-1 writing)
-      legCoeffs((iStrip-1)*n+1 : (iStrip+nIndeps-1)*n)  = gam(1:nIndeps*n)
-
-    end do yStripLoop ! iStrip
+    call fpt%pntToLeg( nIndeps   = nIndeps, &
+      &                legCoeffs = pntVal,  &
+      &                pntVal    = alph     )
+    ! <<<<< Y-Direction <<<<< !
 
     ! x-direction
-    xStripLoop: do iStrip = 1,n,striplen
-      do iAlph = iStrip, min(iStrip+striplen-1, n)
-        !ztrafo
-        alph((iAlph-iStrip)*n+1:(iAlph-iStrip+1)*n) = legCoeffs(iAlph::n)
-      end do
+    ! >>>>> X-Direction >>>>> !
+    do iAlph = 1, n
+      !ztrafo
+      alph((iAlph-1)*n+1:iAlph*n) = pntVal(iAlph::n)
+    end do
 
-      ! At the end of the array the number of computed strips might be smaller
-      nIndeps = min(striplen, n-iStrip+1)
-
-      call fpt%pntToLeg( nIndeps   = nIndeps, &
-        &                legCoeffs = gam,     &
-        &                pntVal    = alph     )
-
-      legCoeffs((iStrip-1)*n+1 : (iStrip+nIndeps-1)*n)  = gam(1:nIndeps*n)
-
-    end do xStripLoop
+    call fpt%pntToLeg( nIndeps   = nIndeps,   &
+      &                legCoeffs = legCoeffs, &
+      &                pntVal    = alph       )
+    ! <<<<< X-Direction <<<<< !
 
   end subroutine ply_pntToLeg_2D_singVar
   ! ------------------------------------------------------------------------ !
@@ -233,26 +204,26 @@ contains
   !> Subroutine to transform Legendre expansion to point values
   !! at Chebyshev nodes.
   subroutine ply_pntToLeg_2D_multVar( fpt, pntVal, legCoeffs, nVars )
-   ! --------------------------------------------------------------------- !
-   !> Parameters of the Fast Polynomial transformation.
-   type(ply_legFpt_type), intent(inout) :: fpt
-   !> The point values to transform to 2D modal Legendre expansion.
-   !! \attention Although this array serves as input only, it is modified
-   !! inside of this routine by the underlying DCT algorithm. So, when
-   !! this routine returns from its call the original values of pntVal will
-   !! be modified.
-   real(kind=rk), intent(inout) :: pntVal(:,:)
-   !> The Legendre coefficients.
-   real(kind=rk), intent(inout) :: legCoeffs(:,:)
-   !> The number of scalar variables to transform.
-   integer, intent(in) :: nVars
-   ! --------------------------------------------------------------------- !
-   integer :: iVar
-   ! --------------------------------------------------------------------- !
+    ! -------------------------------------------------------------------- !
+    !> Parameters of the Fast Polynomial transformation.
+    type(ply_legFpt_type), intent(inout) :: fpt
+    !> The point values to transform to 2D modal Legendre expansion.
+    !! \attention Although this array serves as input only, it is modified
+    !! inside of this routine by the underlying DCT algorithm. So, when
+    !! this routine returns from its call the original values of pntVal will
+    !! be modified.
+    real(kind=rk), intent(inout) :: pntVal(:,:)
+    !> The Legendre coefficients.
+    real(kind=rk), intent(inout) :: legCoeffs(:,:)
+    !> The number of scalar variables to transform.
+    integer, intent(in) :: nVars
+    ! -------------------------------------------------------------------- !
+    integer :: iVar
+    ! -------------------------------------------------------------------- !
 
-   do iVar = 1, nVars
-     call ply_pntToLeg_2D(fpt, pntVal(:,iVar), legCoeffs(:,iVar))
-   end do
+    do iVar = 1, nVars
+      call ply_pntToLeg_2D(fpt, pntVal(:,iVar), legCoeffs(:,iVar))
+    end do
 
   end subroutine ply_pntToLeg_2D_multVar
   ! ------------------------------------------------------------------------ !
