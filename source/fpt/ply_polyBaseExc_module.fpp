@@ -1,4 +1,4 @@
-! Copyright (c) 2012-2014, 2016-2018 Harald Klimach <harald.klimach@uni-siegen.de>
+! Copyright (c) 2012-2014,2016-2018,2020 Harald Klimach <harald.klimach@uni-siegen.de>
 ! Copyright (c) 2012, 2014 Jens Zudrop <j.zudrop@grs-sim.de>
 ! Copyright (c) 2013-2014, 2017 Peter Vitt <peter.vitt2@uni-siegen.de>
 ! Copyright (c) 2013-2014 Verena Krupp
@@ -1275,7 +1275,6 @@ contains
     ! -------------------------------------------------------------------- !
     integer :: j, r, i, l, k, h, n, s, m
     integer :: iStrip, iFun, indep
-    integer :: iVal
     integer :: odd
     integer :: strip_ub
     integer :: striplen
@@ -1347,7 +1346,6 @@ contains
             do m = 0, rowsize - 1
               odd = mod(m+block_off,2)
               stripoff = (m+block_off)*nIndeps + iStrip
-              iVal = indep + (m+block_off)*nIndeps
               !NEC$ novector
               do r = 0, k-1
                 do indep = 1, stripend
