@@ -1,5 +1,5 @@
 ! Copyright (c) 2011-2012 Jens Zudrop <j.zudrop@grs-sim.de>
-! Copyright (c) 2012-2014 Harald Klimach <harald.klimach@uni-siegen.de>
+! Copyright (c) 2012-2014,2020 Harald Klimach <harald.klimach@uni-siegen.de>
 ! Copyright (c) 2012-2013 Melven Zoellner <yameta@freenet.de>
 ! Copyright (c) 2012 Vyacheslav Korchagin <v.korchagin@grs-sim.de>
 ! Copyright (c) 2013-2014, 2017 Peter Vitt <peter.vitt2@uni-siegen.de>
@@ -27,13 +27,13 @@
 ! OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 ! **************************************************************************** !
 
-!> module collecting all datatypes and subroutines related to the space
-!! integration in pnpm scheme.
+!> Spatial integration with the Gauss-Legendre numerical integration.
 module ply_space_integration_module
   use env_module,         only: rk
   use tem_param_module,   only: PI
   use tem_aux_module,     only: tem_abort
   use tem_logging_module, only: logUnit
+
   implicit none
 
   private
@@ -82,8 +82,6 @@ module ply_space_integration_module
     !! (i.e. 0.0 and 1.0) are appended.
     real(kind=rk), allocatable :: integration_points_line(:)
 
-    !> \todo add additional stuff related to the space integration here!
-
   end type ply_space_quadrature_type
 
   !> interface to create gauss points for pure gauss quadrature on the
@@ -101,49 +99,41 @@ module ply_space_integration_module
     &       ply_create_surface_gauss_points_cube,    &
     &       ply_create_surface_gauss_points_cube_2d, &
     &       ply_create_surface_gauss_points_cube_1d, &
-    &       ply_gaussLegPoints,                      &
-    &       ply_create_gauss_points_1d
+    &       ply_gaussLegPoints
+
 
 contains
 
 
-  ! *********************************************************************** !
-  !> subroutine to create the quadrature points for a pure gauss quadrature
+  ! ------------------------------------------------------------------------ !
+  !> Create the quadrature points for a Gauss-Legendre quadrature
   !! on the cubic reference volume. The reference cubic element has the space
   !! directions (xi,eta,zeta) (correspond to (x,y,z) in physical space).
-  !! \param num_intp_per_direction the number of gauss points per space
-  !!        direction
-  !! \param points one dimension array which is the ouput of this routine. The
-  !!        gauss points are written to this array, so its dimension is:
-  !!        num_intp_per_direction * num_intp_per_direction * num_zeta.
-  !!        The gauss points are ordered in the following way:
-  !!        \f$ points(1,1:3) = (\xi_1 , \eta_1, \zeta_1 ),
-  !!            points(2,1:3) = (\xi_2 , \eta_1, \zeta_1 ), \cdots
-  !!            (\xi_{numintpperdirection}, \eta_1, \zeta_1 ),
-  !!            (\xi_1 , \eta_2, \zeta_1 ), \cdots
-  !!            (\xi_{numintpperdirection}, \eta_{numintpperdirection},
-  !!             \zeta_1 ), \cdots
-  !!            points(numintpperdirection^3,1:3) = (\xi_{numintpperdirection},
-  !!                                           \eta_{numintpperdirection},
-  !!                                           \zeta_{numintpperdirection} ) \f$
-  subroutine ply_create_volume_gauss_points_cube( num_intp_per_direction,  &
-    &                                         points, weights, refElemMin, &
-    &                                         refElemMax                   )
-    ! ---------------------------------------------------------------------- !
+  subroutine ply_create_volume_gauss_points_cube(                              &
+    &          num_intp_per_direction, points, weights, refElemMin, refElemMax )
+    ! -------------------------------------------------------------------- !
+    !> Number auf integration points in each direction.
     integer, intent(in) :: num_intp_per_direction
+
+    !> Resulting list of points. First index runs over all points, second
+    !! indicates the coordinate dimension (x=1,y=2,z=3).
     real(kind=rk), allocatable, intent(out) :: points(:,:)
+
+    !> Integration weight for each point.
     real(kind=rk), allocatable, intent(out) :: weights(:)
+
     !> Left bound of the one-dimensional reference element.
     real(kind=rk), intent(in) :: refElemMin
+
     !> Right bound of the one-dimensional reference element.
     real(kind=rk), intent(in) :: refElemMax
-    ! ---------------------------------------------------------------------- !
+    ! -------------------------------------------------------------------- !
     integer :: i, j, k ! loop indices
     integer :: pointNumber
     real(kind=rk), allocatable :: gaussp1D(:)
     real(kind=rk), allocatable :: weights1D(:)
     integer :: numQuadPoints
-    ! ---------------------------------------------------------------------- !
+    ! -------------------------------------------------------------------- !
 
     numQuadPoints = num_intp_per_direction**3
     allocate(points(numQuadPoints,3))
@@ -173,14 +163,19 @@ contains
         end do
       end do
     end do
+
   end subroutine ply_create_volume_gauss_points_cube
-  ! *********************************************************************** !
+  ! ------------------------------------------------------------------------ !
 
 
-  ! *********************************************************************** !
-  subroutine ply_create_volume_gauss_points_cube_2d( num_intp_per_direction, &
-    & points, weights, refElemMin, refElemMax                                )
-    ! ---------------------------------------------------------------------- !
+  ! ------------------------------------------------------------------------ !
+  !> Create the quadrature points for a 2D Gauss-Legendre quadrature
+  !! on the cubic reference volume. The reference cubic element has the space
+  !! directions (xi,eta,zeta) (correspond to (x,y,z) in physical space).
+  !! The z-coordinates will be set to 0.
+  subroutine ply_create_volume_gauss_points_cube_2d(                           &
+    &          num_intp_per_direction, points, weights, refElemMin, refElemMax )
+    ! -------------------------------------------------------------------- !
     integer, intent(in) :: num_intp_per_direction
     real(kind=rk),allocatable, intent(out) :: points(:,:)
     real(kind=rk),allocatable, intent(out) :: weights(:)
@@ -188,13 +183,13 @@ contains
     real(kind=rk), intent(in) :: refElemMin
     !> Right bound of the one-dimensional reference element.
     real(kind=rk), intent(in) :: refElemMax
-    ! ---------------------------------------------------------------------- !
+    ! -------------------------------------------------------------------- !
     integer :: i, j ! loop indices
     integer :: pointNumber
     real(kind=rk), allocatable :: gaussp1D(:)
     real(kind=rk), allocatable :: weights1D(:)
     integer :: numQuadPoints
-    ! ---------------------------------------------------------------------- !
+    ! -------------------------------------------------------------------- !
 
     numQuadPoints = num_intp_per_direction**2
     allocate(points(numQuadPoints,3))
@@ -221,14 +216,19 @@ contains
         pointNumber = pointNumber + 1
       end do
     end do
+
   end subroutine ply_create_volume_gauss_points_cube_2d
-  ! *********************************************************************** !
+  ! ------------------------------------------------------------------------ !
 
 
-  ! *********************************************************************** !
-  subroutine ply_create_volume_gauss_points_cube_1d( num_intp_per_direction, &
-    & points, weights, refElemMin, refElemMax                                )
-    ! ---------------------------------------------------------------------- !
+  ! ------------------------------------------------------------------------ !
+  !> Create the quadrature points for a 1D Gauss-Legendre quadrature
+  !! on the cubic reference volume. The reference cubic element has the space
+  !! directions (xi,eta,zeta) (correspond to (x,y,z) in physical space).
+  !! The z and y-coordinates will be set to 0.
+  subroutine ply_create_volume_gauss_points_cube_1d( &
+    &          num_intp_per_direction, points, weights, refElemMin, refElemMax )
+    ! -------------------------------------------------------------------- !
     integer, intent(in) :: num_intp_per_direction
     real(kind=rk),allocatable, intent(out) :: points(:,:)
     real(kind=rk),allocatable, intent(out) :: weights(:)
@@ -236,12 +236,12 @@ contains
     real(kind=rk), intent(in) :: refElemMin
     !> Right bound of the one-dimensional reference element.
     real(kind=rk), intent(in) :: refElemMax
-    ! ---------------------------------------------------------------------- !
+    ! -------------------------------------------------------------------- !
     integer :: i ! loop indices
     integer :: pointNumber
     real(kind=rk), allocatable :: gaussp1D(:)
     real(kind=rk), allocatable :: weights1D(:)
-    ! ---------------------------------------------------------------------- !
+    ! -------------------------------------------------------------------- !
 
     allocate(points(num_intp_per_direction,3))
     allocate(weights(num_intp_per_direction))
@@ -266,13 +266,16 @@ contains
       pointNumber = pointNumber + 1
     end do
   end subroutine ply_create_volume_gauss_points_cube_1d
-  ! *********************************************************************** !
+  ! ------------------------------------------------------------------------ !
 
 
-  ! *********************************************************************** !
-  subroutine ply_create_surface_gauss_points_cube( num_intp_per_direction, &
-    & points, weights, refElemMin, refElemMax, dir, align                  )
-    ! ---------------------------------------------------------------------- !
+  ! ------------------------------------------------------------------------ !
+  !> Create the integration points on the surface of (cubical) elements.
+  subroutine ply_create_surface_gauss_points_cube(      &
+    &          num_intp_per_direction, points, weights, &
+    &          refElemMin, refElemMax,                  &
+    &          dir, align                               )
+    ! -------------------------------------------------------------------- !
     integer, intent(in) :: num_intp_per_direction
     real(kind=rk),allocatable, intent(out) :: points(:,:)
     real(kind=rk),allocatable,  intent(out) :: weights(:)
@@ -287,13 +290,13 @@ contains
     integer :: dir
     !> Left or right face of the reference element
     integer :: align
-    ! ---------------------------------------------------------------------- !
+    ! -------------------------------------------------------------------- !
     integer :: i, j ! loop indices
     integer :: pointNumber
     real(kind=rk), allocatable :: gaussp1D(:)
     real(kind=rk), allocatable :: weights1D(:)
     integer :: nquadPoints
-    ! ---------------------------------------------------------------------- !
+    ! -------------------------------------------------------------------- !
     nQuadPoints = num_intp_per_direction**2
 
     allocate(points(nQuadPoints,3))
@@ -356,13 +359,16 @@ contains
     end select
 
   end subroutine ply_create_surface_gauss_points_cube
-  ! *********************************************************************** !
+  ! ------------------------------------------------------------------------ !
 
 
-  ! *********************************************************************** !
-  subroutine ply_create_surface_gauss_points_cube_2d(num_intp_per_direction, &
-    & points, weights, refElemMin, refElemMax, dir, align                    )
-    ! ---------------------------------------------------------------------- !
+  ! ------------------------------------------------------------------------ !
+  !> Create the integration points on the surface of (cubical) elements.
+  subroutine ply_create_surface_gauss_points_cube_2d(   &
+    &          num_intp_per_direction, points, weights, &
+    &          refElemMin, refElemMax,                  &
+    &          dir, align                               )
+    ! -------------------------------------------------------------------- !
     integer, intent(in) :: num_intp_per_direction
     real(kind=rk), allocatable, intent(out) :: points(:,:)
     real(kind=rk), allocatable, intent(out) :: weights(:)
@@ -377,13 +383,13 @@ contains
     integer :: dir
     !> Left or right face of the reference element
     integer :: align
-    ! ---------------------------------------------------------------------- !
+    ! -------------------------------------------------------------------- !
     integer :: i ! loop indices
     integer :: pointNumber
     real(kind=rk), allocatable :: gaussp1D(:)
     real(kind=rk), allocatable :: weights1D(:)
     integer :: nQuadPoints
-    ! ---------------------------------------------------------------------- !
+    ! -------------------------------------------------------------------- !
     ! The number of quadrature points on the boundary of a 2d volume is the
     ! number of quad points in one direction
     nQuadPoints = num_intp_per_direction
@@ -431,13 +437,14 @@ contains
     end select
 
   end subroutine ply_create_surface_gauss_points_cube_2d
-  ! *********************************************************************** !
+  ! ------------------------------------------------------------------------ !
 
 
-  ! *********************************************************************** !
+  ! ------------------------------------------------------------------------ !
+  !> Create the integration points on the surface of (cubical) elements.
   subroutine ply_create_surface_gauss_points_cube_1d( points, weights, dir, &
     &                                                 align                 )
-    ! ---------------------------------------------------------------------- !
+    ! -------------------------------------------------------------------- !
     real(kind=rk), allocatable, intent(out) :: points(:,:)
     real(kind=rk), allocatable, intent(out) :: weights(:)
     !> The spatial direction of the face. \n
@@ -447,10 +454,10 @@ contains
     integer :: dir
     !> Left or right face of the reference element
     integer :: align
-    ! ---------------------------------------------------------------------- !
+    ! -------------------------------------------------------------------- !
     integer :: pointNumber
     integer :: nQuadPoints
-    ! ---------------------------------------------------------------------- !
+    ! -------------------------------------------------------------------- !
     ! for 1d case, the number of points on the  boundary is 1
     nQuadPoints = 1
     allocate(points(nQuadPoints,3))
@@ -475,77 +482,34 @@ contains
     end select
 
   end subroutine ply_create_surface_gauss_points_cube_1d
-  ! *********************************************************************** !
+  ! ------------------------------------------------------------------------ !
 
 
-  ! *********************************************************************** !
-  subroutine ply_create_gauss_points_1d( num_intp_per_direction, &
-    & numQuadPoints, points, weights, refElemMin, refElemMax     )
-    ! ---------------------------------------------------------------------- !
-    integer, intent(in) :: num_intp_per_direction
-    integer, intent(out) :: numQuadPoints
-    real(kind=rk), allocatable, intent(out) :: points(:,:)
-    real(kind=rk), allocatable, intent(out) :: weights(:)
-    !> Left bound of the one-dimensional reference element.
-    real(kind=rk), intent(in) :: refElemMin
-    !> Right bound of the one-dimensional reference element.
-    real(kind=rk), intent(in) :: refElemMax
-    ! ---------------------------------------------------------------------- !
-    integer :: j ! loop indices
-    integer :: pointNumber
-    real(kind=rk), allocatable :: gaussp1D(:)
-    real(kind=rk), allocatable :: weights1D(:)
-    ! ---------------------------------------------------------------------- !
-    numQuadPoints = num_intp_per_direction
-
-    allocate(points(numQuadPoints,1))
-    allocate(weights(numQuadPoints))
-    allocate(gaussp1D(num_intp_per_direction))
-    allocate(weights1D(num_intp_per_direction))
-
-    call ply_gaussLegPoints( x1    = refElemMin,            &
-      &                      x2    = refElemMax,            &
-      &                      x     = gaussp1D,              &
-      &                      w     = weights1D,             &
-      &                      nIntP = num_intp_per_direction )
-
-    pointNumber = 1
-    do j = 1, num_intp_per_direction
-      !> here we build all possible combinations of the one-dimensional
-      !! quadrature points to get the three dimensional values.
-      points(PointNumber, 1) = gaussp1D(j)
-      weights(PointNumber) = weights1D(j)
-      pointNumber = pointNumber + 1
-    end do
-  end subroutine ply_create_gauss_points_1d
-  ! *********************************************************************** !
-
-
-  ! *********************************************************************** !
-  !> subroutine to create gauss points and weights for one-dimensional
+  ! ------------------------------------------------------------------------ !
+  !> Create Gauss-Legendre integration points and weights for one-dimensional
   !! integration on the interval [x1,x2].
   subroutine ply_gaussLegPoints( x1, x2, x, w, nIntP )
-    ! ---------------------------------------------------------------------- !
-    !> The coordinates of the gauss points on the interval [-1,1].
+    ! -------------------------------------------------------------------- !
+    !> lower limit of integration interval
+    real(kind=rk), intent(in) :: x1
+    !> upper limit of integration interval
+    real(kind=rk), intent(in) :: x2
+    !> The coordinates of the gauss points on the interval [x1,x2].
     !! The array has the length nIntP.
     real(kind=rk), intent(out) :: x(:)
     !> The quadrature weights. The array has the length nIntP.
     real(kind=rk), intent(out) :: w(:)
     !> The number of integration points.
     integer, intent(in) :: nIntP
-    !> lower limit of integration interval
-    real(kind=rk), intent(in) :: x1
-    !> upper limit of integration interval
-    real(kind=rk), intent(in) :: x2
-    ! ---------------------------------------------------------------------- !
+    ! -------------------------------------------------------------------- !
     !> some working variables
     real(kind=rk) :: z1,z,xm,xl,pp,p3,p2,p1;
     !> the relative precision of the points
     real(kind=rk) :: EPS
     integer :: m, i, j
-    ! ---------------------------------------------------------------------- !
+    ! -------------------------------------------------------------------- !
 
-    EPS= 1.0 / (10.0**(PRECISION(1.0_rk)-2) )
+    EPS = 1.0 / (10.0**(PRECISION(1.0_rk)-2) )
     m = (nIntP+1)/2
     xm = 0.5*(x2+x1)
     xl = 0.5*(x2-x1)
@@ -576,6 +540,6 @@ contains
     end do
 
   end subroutine ply_gaussLegPoints
-  ! *********************************************************************** !
+  ! ------------------------------------------------------------------------ !
 
 end module ply_space_integration_module

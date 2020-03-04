@@ -1,7 +1,7 @@
 ! Copyright (c) 2012-2014 Jens Zudrop <j.zudrop@grs-sim.de>
 ! Copyright (c) 2013-2014, 2017 Peter Vitt <peter.vitt2@uni-siegen.de>
 ! Copyright (c) 2013-2014 Verena Krupp
-! Copyright (c) 2014 Harald Klimach <harald.klimach@uni-siegen.de>
+! Copyright (c) 2014,2020 Harald Klimach <harald.klimach@uni-siegen.de>
 ! Copyright (c) 2016 Daniel Petró <daniel.petro@student.uni-siegen.de>
 !
 ! Parts of this file were written by Jens Zudrop for German Research School for
@@ -22,9 +22,10 @@
 ! ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 ! OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 ! **************************************************************************** !
-!> Routines and datatypes related to Chebyshev points
-!! are located in this module.
-!! \author{Jens Zudrop}
+!> Description of Chebyshev integration points.
+!!
+!! This module allows the computation of the Chebyshev and Chebyshev-Lobatto
+!! integration points for one to three-dimensional elements.
 module ply_chebPoint_module
   use env_module,         only: rk
   use tem_param_module,   only: PI
@@ -39,10 +40,11 @@ module ply_chebPoint_module
   public :: create_surface_cheb_points_cube
   public :: create_volume_cheb_points_cube_1d
   public :: create_surface_cheb_points_cube_1d
-  public :: create_volume_lobattocheb_points_cube_1d
-  public :: create_surface_lobattocheb_points_cube_1d
   public :: create_volume_cheb_points_cube_2d
   public :: create_surface_cheb_points_cube_2d
+
+  public :: create_volume_lobattocheb_points_cube_1d
+  public :: create_surface_lobattocheb_points_cube_1d
   public :: create_volume_lobattocheb_points_cube_2d
   public :: create_surface_lobattocheb_points_cube_2d
   public :: create_volume_lobattocheb_points_cube
@@ -52,7 +54,7 @@ module ply_chebPoint_module
 contains
 
 
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
   !> Generates a given number of Chebyshev points on the unit interval [-1;+1].
   subroutine ply_chebPoint_1D( nPoints, chebPnt1D )
     ! -------------------------------------------------------------------- !
@@ -67,19 +69,18 @@ contains
     allocate(chebPnt1D(nPoints))
     do iPoint = 1, nPoints
       chebPnt1D(iPoint) = -1.0_rk &
-        & * cos( PI / nPoints * ( (iPoint - 1.0_rk) + 1.0_rk / 2.0_rk ) )
+        &               * cos( PI / nPoints * ( (iPoint - 1) + 0.5_rk ) )
     end do
 
   end subroutine ply_chebPoint_1D
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
 
 
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
   !> Generates a given number of Lobatto-Chebyshev points on the unit interval
   !! [-1;+1].
   !!
-  !! The Lobatto-Chebyshev points are ordered from +1 to -1. The fpt
-  !! have to be adapted accordingly.
+  !! The Lobatto-Chebyshev points are ordered from +1 to -1.
   subroutine ply_lobattoChebPoint_1D( nPoints, chebPnt1D )
     ! -------------------------------------------------------------------- !
     !> The number of points to generate
@@ -92,14 +93,15 @@ contains
 
     allocate(chebPnt1D(nPoints))
     do iPoint = 1, nPoints
-      chebPnt1D(iPoint) = cos( ( iPoint - 1.0_rk ) * PI / ( nPoints - 1.0_rk ) )
+      chebPnt1D(iPoint) = cos( (iPoint - 1) * PI / real(nPoints - 1, kind=rk) )
     end do
 
   end subroutine ply_lobattoChebPoint_1D
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
 
 
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
+  !> Creates all Chebyshev integration points in a cubical element.
   subroutine create_volume_cheb_points_cube(num_intp_per_direction, points)
     ! -------------------------------------------------------------------- !
     integer, intent(in) :: num_intp_per_direction
@@ -130,10 +132,11 @@ contains
     end do
 
   end subroutine create_volume_cheb_points_cube
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
 
 
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
+  !> Creates all Chebyshev-Lobatto integration points in a cubical element.
   subroutine create_volume_lobattocheb_points_cube( num_intp_per_direction, &
     &                                               points                  )
     ! -------------------------------------------------------------------- !
@@ -165,10 +168,10 @@ contains
     end do
 
   end subroutine create_volume_lobattocheb_points_cube
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
 
 
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
   subroutine create_volume_cheb_points_cube_2d( num_intp_per_direction, points )
     ! -------------------------------------------------------------------- !
     integer, intent(in) :: num_intp_per_direction
@@ -198,13 +201,14 @@ contains
     end do
 
   end subroutine create_volume_cheb_points_cube_2d
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
 
 
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
   !> Creates Lobatto-Chebyshev points (with 3 coordinates) but
   !! for 2D kernels.
-  subroutine create_volume_lobattocheb_points_cube_2d(num_intp_per_direction, points)
+  subroutine create_volume_lobattocheb_points_cube_2d( num_intp_per_direction, &
+    &                                                  points                  )
     ! -------------------------------------------------------------------- !
     integer, intent(in) :: num_intp_per_direction
     real(kind=rk),allocatable, intent(inout) :: points(:,:)
@@ -233,10 +237,10 @@ contains
     end do
 
   end subroutine create_volume_lobattocheb_points_cube_2d
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
 
 
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
   subroutine create_volume_cheb_points_cube_1d( num_intp_per_direction, points )
     ! -------------------------------------------------------------------- !
     integer, intent(in) :: num_intp_per_direction
@@ -261,10 +265,10 @@ contains
     end do
 
   end subroutine create_volume_cheb_points_cube_1d
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
 
 
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
   !> Creates Lobatto-Chebyshev points (with 3 coordinates) but
   !! for 1D kernels.
   subroutine create_volume_lobattocheb_points_cube_1d( num_intp_per_direction, &
@@ -292,10 +296,10 @@ contains
     end do
 
   end subroutine create_volume_lobattocheb_points_cube_1d
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
 
 
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
   !> Create Chebyshev nodes on a specific face of the reference element.
   subroutine create_surface_cheb_points_cube( num_intp_per_direction, points, &
     &                                         dir, align                      )
@@ -357,10 +361,10 @@ contains
     end select
 
   end subroutine create_surface_cheb_points_cube
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
 
 
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
   !> Create Lobatto-Chebyshev nodes on a specific face of the reference element.
   subroutine create_surface_lobattocheb_points_cube( num_intp_per_direction, &
     &                                                points, dir, align      )
@@ -422,10 +426,10 @@ contains
     end select
 
   end subroutine create_surface_lobattocheb_points_cube
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
 
 
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
   !> Create Chebyshev nodes on a specific face of the reference element.
   subroutine create_surface_cheb_points_cube_2d( num_intp_per_direction, &
     &                                            points, dir, align      )
@@ -473,10 +477,10 @@ contains
     end select
 
   end subroutine create_surface_cheb_points_cube_2d
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
 
 
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
   !> Create Lobatto-Chebyshev nodes on a specific face of the reference element.
   subroutine create_surface_lobattocheb_points_cube_2d( &
     & num_intp_per_direction, points, dir, align        )
@@ -524,10 +528,10 @@ contains
     end select
 
   end subroutine create_surface_lobattocheb_points_cube_2d
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
 
 
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
   !> Create Chebyshev nodes on a specific face of the reference element.
   subroutine create_surface_cheb_points_cube_1d( points, dir, align )
     ! -------------------------------------------------------------------- !
@@ -559,10 +563,10 @@ contains
     end select
 
   end subroutine create_surface_cheb_points_cube_1d
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
 
 
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
   !> Create Lobatto-Chebyshev nodes on a specific face of the reference element.
   subroutine create_surface_lobattocheb_points_cube_1d( points, dir, align )
     ! -------------------------------------------------------------------- !
@@ -594,8 +598,7 @@ contains
     end select
 
   end subroutine create_surface_lobattocheb_points_cube_1d
-  ! ************************************************************************ !
-
+  ! ------------------------------------------------------------------------ !
 
 end module ply_chebPoint_module
 
