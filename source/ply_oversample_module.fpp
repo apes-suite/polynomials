@@ -4,6 +4,7 @@
 ! Copyright (c) 2014, 2017-2019 Harald Klimach <harald.klimach@uni-siegen.de>
 ! Copyright (c) 2014 Verena Krupp
 ! Copyright (c) 2016 Tobias Girresser <tobias.girresser@student.uni-siegen.de>
+! Copyright (c) 2020 Daniel Fleischer <daniel.fleischer@student.uni-siegen.de>
 !
 ! Parts of this file were written by Jens Zudrop, Nikhil Anand, Harald Klimach,
 ! Verena Krupp, Peter Vitt, and Tobias Girresser for University of Siegen.

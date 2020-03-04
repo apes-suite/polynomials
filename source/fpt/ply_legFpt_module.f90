@@ -3,6 +3,7 @@
 ! Copyright (c) 2013-2014, 2017 Peter Vitt <peter.vitt2@uni-siegen.de>
 ! Copyright (c) 2013-2014 Verena Krupp
 ! Copyright (c) 2016 Langhammer Kay <kay.langhammer@student.uni-siegen.de>
+! Copyright (c) 2020 Daniel Fleischer <daniel.fleischer@student.uni-siegen.de>
 !
 ! Parts of this file were written by Jens Zudrop and Harald Klimach
 ! for German Research School for Simulation Sciences GmbH.
