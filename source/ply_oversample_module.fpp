@@ -169,6 +169,7 @@ contains
     integer :: maxorders
     integer :: ord_lim
     ! -------------------------------------------------------------------- !
+
     ! Information for the oversampling loop
     oversamp_degree = poly_proj%oversamp_degree
     mpd1 = poly_proj%min_degree + 1
@@ -184,6 +185,7 @@ contains
         varQ: do iVar=1,nScalars
           if (ensure_positivity(iVar)) then
             ordersum = 0.0_rk
+            !$OMP PARALLEL DO PRIVATE(dof, iDegZ, iDegY, iDegX, iOrd)
             do dof = 1, mpd1_cube
               iDegZ = (dof-1)/mpd1_square + 1
               iDegY = (dof-1-(iDegZ-1)*mpd1_square)/mpd1+1
@@ -191,6 +193,7 @@ contains
               iOrd = iDegX+iDegY+iDegZ-2
               ordersum(iOrd) = ordersum(iOrd) + abs(state(dof,iVar))
             end do
+            !$OMP END PARALLEL DO
             varsum = 0.0_rk
             do iOrd=2,ord_lim
               varsum = varsum + ordersum(iOrd)
@@ -202,6 +205,7 @@ contains
           end if
         end do varQ
         do iVar=1,nScalars
+          !$OMP PARALLEL DO PRIVATE(dof, iDegZ, iDegY, iDegX, iOrd, dofOverSamp)
           do dof = 1, mpd1_cube
             iDegZ = (dof-1)/mpd1_square + 1
             iDegY = (dof-1-(iDegZ-1)*mpd1_square)/mpd1+1
@@ -214,22 +218,25 @@ contains
               modalCoeffs(dofOverSamp,iVar) = state(dof,iVar)
             end if
           end do
+          !$OMP END PARALLEL DO
         end do
       else posQ
         if (oversamp_degree == poly_proj%min_degree) then
           modalCoeffs = state
         else
           modalCoeffs = 0.0_rk
-          do dof = 1, mpd1_cube
-            iDegZ = (dof-1)/mpd1_square + 1
-            iDegY = (dof-1-(iDegZ-1)*mpd1_square)/mpd1+1
-            iDegX = mod(dof-1,mpd1)+1
-            dofOverSamp = iDegX + ( iDegY-1  &
-              &                     + (iDegZ-1)*(oversamp_degree+1) &
-              &                   ) * (oversamp_degree+1)
-            do iVar=1,nScalars
+          do iVar=1,nScalars
+            !$OMP PARALLEL DO PRIVATE(dof, iDegZ, iDegY, iDegX, dofOverSamp)
+            do dof = 1, mpd1_cube
+              iDegZ = (dof-1)/mpd1_square + 1
+              iDegY = (dof-1-(iDegZ-1)*mpd1_square)/mpd1+1
+              iDegX = mod(dof-1,mpd1)+1
+              dofOverSamp = iDegX + ( iDegY-1  &
+                &                     + (iDegZ-1)*(oversamp_degree+1) &
+                &                   ) * (oversamp_degree+1)
               modalCoeffs(dofOverSamp,iVar) = state(dof,iVar)
             end do
+          !$OMP END PARALLEL DO
           end do
         end if
       end if posQ
@@ -327,10 +334,13 @@ contains
     mpd1_cube = mpd1**3
     nScalars = size(modalCoeffs,2)
 
+    !$OMP PARALLEL DEFAULT(SHARED), &
+    !$OMP PRIVATE(iVar,dof,iDegZ,iDegY,iDegX,dofOverSamp)
     if (poly_proj%basisType == Q_Space) then
       if (oversamp_degree == poly_proj%min_degree) then
         state = modalCoeffs
       else
+        !$OMP DO
         do iVar=1,nScalars
           do dof = 1, mpd1_cube
             iDegZ = (dof-1)/mpd1_square + 1
@@ -342,6 +352,7 @@ contains
             state(dof,iVar) = modalCoeffs(dofOverSamp,iVar)
           end do
         end do
+        !$OMP END DO
       end if
 
     else !P_Space
@@ -358,6 +369,7 @@ contains
 ?? copy :: nextModgCoeffPTens(iDegX, iDegY, iDegZ)
       end do
     end if
+    !$OMP END PARALLEL
 
   end subroutine ply_convertFromoversample_3d
   ! ************************************************************************ !

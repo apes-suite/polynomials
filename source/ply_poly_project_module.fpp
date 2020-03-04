@@ -554,7 +554,6 @@ contains
       end select
 
     case ('fpt')
-
       select case (dim)
       case (3)
         call ply_LegToPnt_3D( fpt       = me%body_3d%fpt, &
@@ -582,14 +581,14 @@ contains
           call ply_fxt_m2n_3D( fxt = me%body_3d%fxt,             &
             &               modal_data = modal_data(:,iVar),     &
             &               nodal_data = nodal_data(:,iVar),     &
-            &              oversamp_degree = me%oversamp_degree  )
+            &               oversamp_degree = me%oversamp_degree )
         end do
       case (2)
         do iVar = 1,nVars
           call ply_fxt_m2n_2D( fxt = me%body_2d%fxt,             &
             &               modal_data = modal_data(:,iVar),     &
             &               nodal_data = nodal_data(:,iVar),     &
-            &              oversamp_degree = me%oversamp_degree  )
+            &               oversamp_degree = me%oversamp_degree )
         end do
 
       case (1)
