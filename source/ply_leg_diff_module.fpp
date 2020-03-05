@@ -1,7 +1,7 @@
 ! Copyright (c) 2014-2015 Nikhil Anand <nikhil.anand@uni-siegen.de>
 ! Copyright (c) 2014 Timo Stentenbach
 ! Copyright (c) 2014, 2018 Harald Klimach <harald.klimach@uni-siegen.de>
-! Copyright (c) 2016-2017 Peter Vitt <peter.vitt2@uni-siegen.de>
+! Copyright (c) 2016-2017, 2020 Peter Vitt <peter.vitt2@uni-siegen.de>
 !
 ! Parts of this file were written by Nikhil Anand, Timo Stentenbach,
 ! Harald Klimach and Peter Vitt for University of Siegen.
@@ -194,7 +194,7 @@ contains
     integer, optional :: dirVec(3)
     ! -------------------------------------------------------------------- !
     integer :: iVar
-    integer :: dofPos, dofPosPrev, dofPos2Prev, dofposprev_vec((mpd+1)**2), dofpos_vec((mpd+1)**2)
+    integer :: dofPos, dofPosPrev, dofPos2Prev
     integer :: leg(3), iDeg,iDeg1, iDeg2, iDeg3, DV(3)
     integer :: legprev(3)
     ! -------------------------------------------------------------------- !

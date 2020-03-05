@@ -1,6 +1,6 @@
 ! Copyright (c) 2013-2014 Jens Zudrop <j.zudrop@grs-sim.de>
 ! Copyright (c) 2013-2014, 2016 Peter Vitt <peter.vitt2@uni-siegen.de>
-! Copyright (c) 2013-2016, 2018-2019 Harald Klimach <harald.klimach@uni-siegen.de>
+! Copyright (c) 2013-2016, 2018-2020 Harald Klimach <harald.klimach@uni-siegen.de>
 ! Copyright (c) 2013-2014 Verena Krupp
 ! Copyright (c) 2014 Nikhil Anand <nikhil.anand@uni-siegen.de>
 !
@@ -27,15 +27,16 @@
 !> Unit test to check functionallity of fast polynomial transformations.
 !! \author{Jens Zudrop}
 program ply_ifpt_3D_singVar_lobattoNodes_test
-  use env_module,               only: rk, fin_env
-  use tem_param_module,         only: PI
-  use tem_logging_module,       only: logUnit
-  use tem_aux_module,           only: tem_abort
-  use ply_legFpt_module,        only: ply_legFpt_type, ply_init_legFPT
-  use ply_legFpt_3D_module,     only: ply_pntToLeg_3D
-  use ply_modg_basis_module,    only: evalLegendreTensPoly
-  use ply_dof_module,           only: Q_space
-  use tem_general_module,       only: tem_general_type, tem_start
+  use env_module,            only: rk, fin_env
+  use tem_param_module,      only: PI
+  use tem_logging_module,    only: logUnit
+  use tem_aux_module,        only: tem_abort
+  use ply_fpt_header_module, only: ply_fpt_header_type, ply_fpt_header_define
+  use ply_legFpt_module,     only: ply_legFpt_type, ply_init_legFPT
+  use ply_legFpt_3D_module,  only: ply_pntToLeg_3D
+  use ply_modg_basis_module, only: evalLegendreTensPoly
+  use ply_dof_module,        only: Q_space
+  use tem_general_module,    only: tem_general_type, tem_start
 
   !mpi!nprocs = 1
 
@@ -74,6 +75,7 @@ contains
     real(kind=rk), allocatable :: chebPnt(:,:), chebPnt1D(:)
     real(kind=rk), allocatable :: legValChebPnt(:,:)
     real(kind=rk) :: rfac
+    type(ply_fpt_header_type) :: header
     type(ply_legFpt_type) :: fpt
     integer, allocatable :: rand_seed(:)
     integer :: nSeeds
@@ -143,10 +145,12 @@ contains
     write(logUnit(10),*) 'Finished'
 
     ! Init the FPT
+    call ply_fpt_header_define( me = header,           &
+      &                         lobattoPoints = .true. )
     call ply_init_legFpt( maxPolyDegree = maxPolyDegree,        &
       &                   nIndeps       = (maxPolyDegree+1)**2, &
       &                   fpt           = fpt,                  &
-      &                   lobattoPoints = .true.                )
+      &                   header        = header                )
 
     ! now transform to the Chebyshev nodes
     write(logUnit(10),*) 'Calculating FPT ...'

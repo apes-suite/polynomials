@@ -252,12 +252,14 @@ contains
             iDegY = 1
             iDegZ = 1
             ordersum = 0.0_rk
+            !$OMP PARALLEL DO PRIVATE(idof, iDegZ, iDegY, iDegX, iOrd)
             do idof = 1, poly_proj%body_3d%min_dofs
 ?? copy :: posOfModgCoeffPTens(iDegX, iDegY, iDegZ, dof)
               iOrd = iDegX+iDegY+iDegZ-2
               ordersum(iOrd) = ordersum(iOrd) + abs(state(dof,iVar))
 ?? copy :: nextModgCoeffPTens(iDegX, iDegY, iDegZ)
             end do
+            !$OMP END PARALLEL DO
             varsum = 0.0_rk
             do iOrd=2,ord_lim
               varsum = varsum + ordersum(iOrd)
@@ -287,6 +289,7 @@ contains
         iDegX = 1
         iDegY = 1
         iDegZ = 1
+        !$OMP PARALLEL DO PRIVATE(idof, iDegZ, iDegY, iDegX, iOrd)
         do idof = 1, poly_proj%body_3d%min_dofs
 ?? copy :: posOfModgCoeffPTens(iDegX, iDegY, iDegZ, dof)
           dofOverSamp = iDegX + ( iDegY-1  &
@@ -295,6 +298,7 @@ contains
           modalCoeffs(dofOverSamp,:) = state(dof,:)
 ?? copy :: nextModgCoeffPTens(iDegX, iDegY, iDegZ)
         end do
+        !$OMP END PARALLEL DO
       end if posP
 
     end if

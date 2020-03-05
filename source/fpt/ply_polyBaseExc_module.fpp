@@ -1,4 +1,4 @@
-! Copyright (c) 2012-2014, 2016-2018 Harald Klimach <harald.klimach@uni-siegen.de>
+! Copyright (c) 2012-2014,2016-2018,2020 Harald Klimach <harald.klimach@uni-siegen.de>
 ! Copyright (c) 2012, 2014 Jens Zudrop <j.zudrop@grs-sim.de>
 ! Copyright (c) 2013-2014, 2017 Peter Vitt <peter.vitt2@uni-siegen.de>
 ! Copyright (c) 2013-2014 Verena Krupp
@@ -366,6 +366,7 @@ contains
     ! Comment 1
     ! Evaluate the denominators in the expressions for the Chebyshev
     ! interpolation coefficients u_0, u_1, ... , u_{k-1}
+    !NEC$ novector
     do r =0,k-1
       den(r) = 1.0_rk
       do l = 0,k-1
@@ -378,13 +379,17 @@ contains
     ! Evaluate the Chebyshev interpolation coefficients uO, u1, ..., Uk-1
     ! at the uniformly spaced nodes 0,1/s,2/s,...,(s-1)/s
     allocate(u(0:h,0:k-1))
+    !NEC$ novector
     do l = 0,h
       rowsize = s * 2**l
+      !NEC$ novector
       do r = 0,k-1
         allocate(u(l,r)%dat(0:rowsize-1))
       end do
+      !NEC$ novector
       do j = 0, rowsize-1
         x = 1.0_rk
+        !NEC$ novector
         do m=0,k-1
           x = x * ( ( real(j,rk)/real(rowsize,rk)) - t(m) )
         end do
@@ -397,6 +402,7 @@ contains
     ! Step 3
     allocate(sub(0:h))
     if (trafo.eq.ply_legToCheb_param) then
+      !NEC$ novector
       do l= 0,h
         rowsize = s * 2**l
         ! The Alpert & Rohklin paper has the wrong formula for the number of
@@ -409,10 +415,13 @@ contains
         ub_row = 3 - mod(nRows,2)
         row_rem = mod(n-remainder, rowsize) + remainder
         allocate(sub(l)%subRow(0:nRows-1))
+        !NEC$ novector
         do i = 0, nRows - 1
           allocate(sub(l)%subRow(i)%subCol(i+2:i+ub_row-mod(i,2)))
+          !NEC$ novector
           do j = i+2, i+ub_row-mod(i,2)
             allocate(sub(l)%subRow(i)%subCol(j)%rowDat(0:rowsize-1))
+            !NEC$ novector
             do m = 0, rowsize-1
               allocate(sub(l)%subRow(i)%subCol(j)%rowDat(m)%coeff(0:k-1))
               do r = 0, k-1
@@ -425,6 +434,7 @@ contains
         end do ! i
       end do ! l
     else
+      !NEC$ novector
       do l= 0,h
         rowsize = s * 2**l
         ! The Alpert & Rokhlin paper has the wrong formula for the number of
@@ -437,10 +447,13 @@ contains
         ub_row = 3 - mod(nRows,2)
         row_rem = mod(n-remainder, rowsize) + remainder
         allocate(sub(l)%subRow(0:nRows-1))
+        !NEC$ novector
         do i = 0, nRows - 1
           allocate(sub(l)%subRow(i)%subCol(i+2:i+ub_row-mod(i,2)))
+          !NEC$ novector
           do j = i+2, i+ub_row-mod(i,2)
             allocate(sub(l)%subRow(i)%subCol(j)%rowDat(0:rowsize-1))
+            !NEC$ novector
             do m = 0, rowsize-1
               allocate(sub(l)%subRow(i)%subCol(j)%rowDat(m)%coeff(0:k-1))
               do r = 0, k-1
@@ -453,6 +466,7 @@ contains
         end do ! i
       end do ! l
     end if
+
 
     ! Step 4
     ! Allocate the array to store the virtual matrix diagonals without sparse
@@ -539,6 +553,7 @@ contains
     if (trafo == ply_legToCheb_param) then
 
       ! Diagonals close to the main diagonal (complete length of the matrix)
+      !NEC$ novector
       do i=1,diagonals
         diag_off = (i-1)*2
         ! Loop over all lines. The line end is shorter by 1 with every diagonal.
@@ -551,8 +566,10 @@ contains
 
       ! All adapter blocks between complete diagonals and staircase of
       ! approximated blocks
+      !NEC$ novector
       do j=1,params%nBlocks-1
         block_off = (j-1)*s
+        !NEC$ novector
         do i=1,blockdiagonals
           diag_off = (i-1)*2 + mod(remainder,2)
           ! Loop over all lines. The line end is shorter by 1 with every
@@ -570,6 +587,7 @@ contains
     else
 
       ! Diagonals close to the main diagonal (complete length of the matrix)
+      !NEC$ novector
       do i=1,diagonals
         diag_off = (i-1)*2
         ! Loop over all lines. The line end is shorter by 1 with every diagonal.
@@ -582,8 +600,10 @@ contains
 
       ! All adapter blocks between complete diagonals and staircase of
       ! approximated blocks
+      !NEC$ novector
       do j=1,params%nBlocks-1
         block_off = (j-1)*s
+        !NEC$ novector
         do i=1,blockdiagonals
           diag_off = (i-1)*2 + mod(remainder,2)
           ! Loop over all lines. The line end is shorter by 1 with every
@@ -611,9 +631,11 @@ contains
 
     ! Allocate the coefficients array for conversion
     allocate(params%b(0:params%h))
+    !NEC$ novector
     do l=0, h
       nRows = (params%nBlocks - 1) / (2**l) - 1
       allocate(params%b(l)%col(2:nRows+1))
+      !NEC$ novector
       do j=2,nRows+1
         allocate(params%b(l)%col(j)%coeff(0:k-1,0:1))
       end do
@@ -825,12 +847,13 @@ contains
 ?? IF (unroll >= 8) THEN
     ! Loop over all diagonals with a stride for unrolling. Stop when no more
     ! full stride can be calculated.
+    !NEC$ novector
     do iDiag=1, nDiagonals-7, 8
       diag_off = (iDiag-1)*2 + mod(remainder,2)
 
-      ! We are calculating two diagonals at once, thus we also have to stop two
+      ! We are calculating two diagonals at once. Thus, we also have to stop two
       ! rows before the end. Every diagonal is one row shorter than the
-      ! previous diagonal, an din matrix only every second diagonal is
+      ! previous diagonal, and in matrix only every second diagonal is
       ! contained.
       ! We start with the first line and get back (in m_next) the first line
       ! that wasn't calculatable with the current loop unrolling length.
@@ -855,6 +878,7 @@ contains
 ?? ENDIF
 
 ?? IF (unroll >= 7) THEN
+    !NEC$ novector
     do iDiag=iDiag_next, nDiagonals-6, 7
       diag_off = (iDiag-1)*2 + mod(remainder,2)
 ?? copy :: SevenTimesUnrolledLoop(1, s - diag_off - 12, m_next)
@@ -870,6 +894,7 @@ contains
 ?? ENDIF
 
 ?? IF (unroll >= 6) THEN
+    !NEC$ novector
     do iDiag=iDiag_next, nDiagonals-5, 6
       diag_off = (iDiag-1)*2 + mod(remainder,2)
 ?? copy :: SixTimesUnrolledLoop(1, s - diag_off - 10, m_next)
@@ -884,6 +909,7 @@ contains
 ?? ENDIF
 
 ?? IF (unroll >= 5) THEN
+    !NEC$ novector
     do iDiag=iDiag_next, nDiagonals-4, 5
       diag_off = (iDiag-1)*2 + mod(remainder,2)
 ?? copy :: FiveTimesUnrolledLoop(1, s - diag_off - 8, m_next)
@@ -897,6 +923,7 @@ contains
 ?? ENDIF
 
 ?? IF (unroll >= 4) THEN
+    !NEC$ novector
     do iDiag=iDiag_next, nDiagonals-3, 4
       diag_off = (iDiag-1)*2 + mod(remainder,2)
 ?? copy :: FourTimesUnrolledLoop(1, s - diag_off - 6, m_next)
@@ -909,6 +936,7 @@ contains
 ?? ENDIF
 
 ?? IF (unroll >= 3) THEN
+    !NEC$ novector
     do iDiag=iDiag_next, nDiagonals-2, 3
       diag_off = (iDiag-1)*2 + mod(remainder,2)
 ?? copy :: ThreeTimesUnrolledLoop(1, s - diag_off - 4, m_next)
@@ -920,6 +948,7 @@ contains
 ?? ENDIF
 ?? IF (unroll >= 2) THEN
     do iDiag=iDiag_next, nDiagonals-1, 2
+      !NEC$ novector
       diag_off = (iDiag-1)*2 + mod(remainder,2)
 ?? copy :: TwoTimesUnrolledLoop(1, s - diag_off - 2, m_next)
 ?? copy :: BaseLoop(m_next, s - diag_off)
@@ -928,6 +957,7 @@ contains
     iDiag_next = iDiag
 ?? ENDIF
 
+    !NEC$ novector
     do iDiag=iDiag_next, nDiagonals
       diag_off = (iDiag-1)*2 + mod(remainder,2)
 ?? copy :: BaseLoop(1, s - diag_off, m_next)
@@ -979,6 +1009,7 @@ contains
 
     remainder = params%remainder
 
+    !NEC$ novector
     indeploop: do indep = 1, nIndeps
 
       iFun = (indep-1)*n
@@ -987,15 +1018,19 @@ contains
       gam(iFun+1:iFun+n) = 0.0_rk
 
       ! Calculate bs for all columns
+      !NEC$ novector
       blockSizeLoop: do l = 0,h
         rowsize = s * 2**l
         nRows = (params%nBlocks - 1) / (2**l) - 1
         ub_row = 3 - mod(nRows,2)
         row_rem = mod(n-remainder, rowsize) + remainder + iFun
+        !NEC$ novector
         blockColLoop: do j = 2, nRows+1, 1+mod(nRows,2)
+          !NEC$ novector
           do r = 0, k-1
             params%b(l)%col(j)%coeff(r,0) = 0.0_rk
             params%b(l)%col(j)%coeff(r,1) = 0.0_rk
+            !NEC$ novector
             do m = 0, rowsize-1
               odd = mod(row_rem + m + (j-1)*rowsize,2)
               params%b(l)%col(j)%coeff(r,odd) &
@@ -1007,12 +1042,16 @@ contains
         end do blockColLoop
 
         ! Multiply with the blocks that are separated from the diagonal
+        !NEC$ novector
         do i = 0, nRows - 1
           block_off = i*rowsize
+          !NEC$ novector
           do j = i+2, i+ub_row - mod(i,2)
+            !NEC$ novector
             do m = 0, rowsize - 1
               odd = mod(m+block_off,2)
               iVal = iFun + m + block_off+1
+              !NEC$ novector
               do r = 0, k-1
                 gam(iVal) = gam(iVal)      &
                   &       + params%sub(l)%subRow(i)%subCol(j)%rowDat(m)&
@@ -1049,6 +1088,7 @@ contains
       & subblockingWidth = params%subblockingWidth )
 
     ! Multiply with entries in the adapters
+    !NEC$ novector
     do iBlock=1,params%nBlocks-1
 
       block_off = (iBlock-1)*params%s
@@ -1115,17 +1155,22 @@ contains
     gam = 0.0_rk
 
     ! Calculate bs for all columns
+    !NEC$ novector
     blockSizeLoop: do l = 0,h
       rowsize = s * 2**l
       nRows = (params%nBlocks - 1) / (2**l) - 1
       ub_row = 3 - mod(nRows,2)
       row_rem = mod(n-remainder, rowsize) + remainder
+      !NEC$ novector
       blockColLoop: do j = 2, nRows+1, 1+mod(nRows,2)
         do r = 0, k-1
           params%b(l)%col(j)%coeff(r,0) = 0.0_rk
           params%b(l)%col(j)%coeff(r,1) = 0.0_rk
-          do m = 0, rowsize-1
-            odd = mod(row_rem + m + (j-1)*rowsize,2)
+        end do
+        !NEC$ novector
+        do m = 0, rowsize-1
+          odd = mod(row_rem + m + (j-1)*rowsize,2)
+          do r = 0, k-1
             params%b(l)%col(j)%coeff(r,odd) &
               &  = params%b(l)%col(j)%coeff(r,odd) &
               &    + params%u(l,r)%dat(m) &
@@ -1135,9 +1180,12 @@ contains
       end do blockColLoop
 
       ! Multiply with the blocks that are separated from the diagonal
+      !NEC$ novector
       do i = 0, nRows - 1
         block_off = i*rowsize
+        !NEC$ novector
         do j = i+2, i+ub_row - mod(i,2)
+          !NEC$ novector
           do m = 0, rowsize - 1
             odd = mod(m+block_off,2)
             iVal = m + block_off+1
@@ -1175,6 +1223,7 @@ contains
       & subblockingWidth = params%subblockingWidth )
 
     ! Multiply with entries in the adapters
+    !NEC$ novector
     do iBlock=1,params%nBlocks-1
 
       block_off = (iBlock-1)*params%s
@@ -1226,15 +1275,16 @@ contains
     ! -------------------------------------------------------------------- !
     integer :: j, r, i, l, k, h, n, s, m
     integer :: iStrip, iFun, indep
-    integer :: iVal
     integer :: odd
     integer :: strip_ub
     integer :: striplen
     integer :: remainder
     integer :: nRows
-    integer :: ub_row, row_rem
+    integer :: ub_row, row_rem(params%striplen)
+    integer :: stripend
     integer :: rowsize
     integer :: block_off
+    integer :: stripoff
     integer :: iBlock
     ! -------------------------------------------------------------------- !
 
@@ -1250,58 +1300,74 @@ contains
     gam = 0.0_rk
 
     ! Loop over all strips
+    !NEC$ novector
     do iStrip = 0,nIndeps-1,striplen
       ! Calculate the upper bound of the current strip
       strip_ub = min(iStrip + striplen, nIndeps)
+      stripend = strip_ub - iStrip
 
-      do indep = iStrip+1, strip_ub
-        iFun = (indep-1)*params%n
-        ! Calculate bs for all columns
-        blockSizeLoop: do l =0,h
-          rowsize = s * 2**l
-          nRows = (params%nBlocks - 1) / (2**l) - 1
-          ub_row = 3 - mod(nRows,2)
-          row_rem = mod(n-remainder, rowsize) + remainder + iFun
+      ! Calculate bs for all columns
+      !NEC$ novector
+      blockSizeLoop: do l =0,h
+        rowsize = s * 2**l
+        nRows = (params%nBlocks - 1) / (2**l) - 1
+        ub_row = 3 - mod(nRows,2)
+        do indep = 1, stripend
+          iFun = (indep+iStrip-1)*params%n
+          row_rem(indep) = mod(n-remainder, rowsize) + remainder + iFun
+        end do
 
-          blockColLoop: do j = 2, nRows+1, 1+mod(nRows,2)
-            do r = 0, k-1
-              params%b(l)%col(j)%coeff(r,0) = 0.0_rk
-              params%b(l)%col(j)%coeff(r,1) = 0.0_rk
-              do m = 0, rowsize-1
-                odd = mod(row_rem + m + (j-1)*rowsize,2)
+        !NEC$ novector
+        blockColLoop: do j = 2, nRows+1, 1+mod(nRows,2)
+          !NEC$ novector
+          do r = 0, k-1
+            params%b(l)%col(j)%coeff(r,0) = 0.0_rk
+            params%b(l)%col(j)%coeff(r,1) = 0.0_rk
+            !NEC$ novector
+            do m = 0, rowsize-1
+              do indep = 1, stripend
+                odd = mod(row_rem(indep) + m + (j-1)*rowsize,2)
                 params%b(l)%col(j)%coeff(r,odd) &
                   &  = params%b(l)%col(j)%coeff(r,odd) &
                   &    + params%u(l,r)%dat(m) &
-                  &      * alph(row_rem + m + (j-1)*rowsize + 1)
+                  &      * alph(row_rem(indep) + m + (j-1)*rowsize + 1)
               end do
             end do
-          end do blockColLoop
+          end do
+        end do blockColLoop
 
-          ! Multiply with the blocks that are separated from the diagonal
-          do i = 0, nRows - 1
-            block_off = i*rowsize
-            do j = i+2, i+ub_row - mod(i,2)
-              do m = 0, rowsize - 1
-                odd = mod(m+block_off,2)
-                iVal = indep + (m+block_off)*nIndeps
-                do r = 0, k-1
-                  gam(iVal) = gam(iVal)      &
-                    &       + params%sub(l)%subRow(i)%subCol(j)%rowDat(m)&
-                    &               %coeff(r) &
-                    &         * params%b(l)%col(j)%coeff(r,odd)
-                end do ! r
-              end do ! m
-            end do ! j
-          end do ! i
+        ! Multiply with the blocks that are separated from the diagonal
+        !NEC$ novector
+        do i = 0, nRows - 1
+          block_off = i*rowsize
+          !NEC$ novector
+          do j = i+2, i+ub_row - mod(i,2)
+            !NEC$ novector
+            do m = 0, rowsize - 1
+              odd = mod(m+block_off,2)
+              stripoff = (m+block_off)*nIndeps + iStrip
+              !NEC$ novector
+              do r = 0, k-1
+                do indep = 1, stripend
+                  gam(indep+stripoff) = gam(indep+stripoff)                           &
+                    &                   + params%sub(l)%subRow(i)%subCol(j)%rowDat(m) &
+                    &                           %coeff(r)                             &
+                    &                     * params%b(l)%col(j)%coeff(r,odd)
+                end do
+              end do ! r
+            end do ! m
+          end do ! j
+        end do ! i
 
-        end do blockSizeLoop
+      end do blockSizeLoop
 
-        if (params%trafo == ply_legToCheb_param) then
-          ! Divide the first row in gam by 2, if we transform from legendre
-          ! to chebyshev
+      if (params%trafo == ply_legToCheb_param) then
+        ! Divide the first row in gam by 2, if we transform from legendre
+        ! to chebyshev
+        do indep = iStrip+1, strip_ub
           gam(indep) = 0.5_rk*gam(indep)
-        end if
-      end do ! indep
+        end do
+      end if
 
       ! Multiply with the entries near the diagonal
       call ply_calculate_coeff_strip(                &

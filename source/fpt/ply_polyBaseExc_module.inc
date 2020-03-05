@@ -19,7 +19,9 @@
 ! **************************************************************************** !
 
 ?? text :: EightTimesUnrolledLoop(m_lowerbound, m_upperbound, m_next)
+      !NEC$ novector
       do m_blocking = ?m_lowerbound?, ?m_upperbound?, subblockingWidth
+        !NEC$ novector
         do m = m_blocking,                                       &
           & min(m_blocking + subblockingWidth - 1, ?m_upperbound?)
           row_off = m + block_offset
@@ -45,7 +47,9 @@
 ?? end text
 
 ?? text :: SevenTimesUnrolledLoop(m_lowerbound, m_upperbound, m_next)
+      !NEC$ novector
       do m_blocking = ?m_lowerbound?, ?m_upperbound?, subblockingWidth
+        !NEC$ novector
         do m = m_blocking,                                       &
           & min(m_blocking + subblockingWidth - 1, ?m_upperbound?)
           row_off = m + block_offset
@@ -70,7 +74,9 @@
 ?? end text
 
 ?? text :: SixTimesUnrolledLoop(m_lowerbound, m_upperbound, m_next)
+      !NEC$ novector
       do m_blocking = ?m_lowerbound?, ?m_upperbound?, subblockingWidth
+        !NEC$ novector
         do m = m_blocking,                                       &
           & min(m_blocking + subblockingWidth - 1, ?m_upperbound?)
           row_off = m + block_offset
@@ -94,7 +100,9 @@
 ?? end text
 
 ?? text :: FiveTimesUnrolledLoop(m_lowerbound, m_upperbound, m_next)
+      !NEC$ novector
       do m_blocking = ?m_lowerbound?, ?m_upperbound?, subblockingWidth
+        !NEC$ novector
         do m = m_blocking,                                       &
           & min(m_blocking + subblockingWidth - 1, ?m_upperbound?)
           row_off = m + block_offset
@@ -117,7 +125,9 @@
 ?? end text
 
 ?? text :: FourTimesUnrolledLoop(m_lowerbound, m_upperbound, m_next)
+      !NEC$ novector
       do m_blocking = ?m_lowerbound?, ?m_upperbound?, subblockingWidth
+        !NEC$ novector
         do m = m_blocking,                                       &
           & min(m_blocking + subblockingWidth - 1, ?m_upperbound?)
           row_off = m + block_offset
@@ -139,7 +149,9 @@
 ?? end text
 
 ?? text :: ThreeTimesUnrolledLoop(m_lowerbound, m_upperbound, m_next)
+      !NEC$ novector
       do m_blocking = ?m_lowerbound?, ?m_upperbound?, subblockingWidth
+        !NEC$ novector
         do m = m_blocking,                                       &
           & min(m_blocking + subblockingWidth - 1, ?m_upperbound?)
           row_off = m + block_offset
@@ -160,7 +172,9 @@
 ?? end text
 
 ?? text :: TwoTimesUnrolledLoop(m_lowerbound, m_upperbound, m_next)
+      !NEC$ novector
       do m_blocking = ?m_lowerbound?, ?m_upperbound?, subblockingWidth
+        !NEC$ novector
         do m = m_blocking,                                       &
           & min(m_blocking + subblockingWidth - 1, ?m_upperbound?)
           row_off = m + block_offset
@@ -180,7 +194,9 @@
 ?? end text
 
 ?? text :: BaseLoop(m_lowerbound, m_upperbound)
+      !NEC$ novector
       do m_blocking = ?m_lowerbound?, ?m_upperbound?, subblockingWidth
+        !NEC$ novector
         do m = m_blocking,                                       &
           & min(m_blocking + subblockingWidth - 1, ?m_upperbound?)
           row_off = m + block_offset

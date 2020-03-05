@@ -1,5 +1,5 @@
 ! Copyright (c) 2012-2013 Jens Zudrop <j.zudrop@grs-sim.de>
-! Copyright (c) 2012-2015,2018 Harald Klimach <harald.klimach@uni-siegen.de.de>
+! Copyright (c) 2012-2015,2018,2020 Harald Klimach <harald.klimach@uni-siegen.de.de>
 ! Copyright (c) 2012 Jan Hueckelheim <j.hueckelheim@grs-sim.de>
 ! Copyright (c) 2012 Melven Zoellner <yameta@freenet.de>
 ! Copyright (c) 2013-2014,2016 Verena Krupp
@@ -29,18 +29,13 @@
 ! **************************************************************************** !
 
 module ply_l2p_module
-  use env_module,                only: rk
+  use env_module, only: rk
 
-  use tem_compileconf_module,    only: vlen
+  use tem_compileconf_module, only: vlen
 
-  use ply_modg_basis_module,     only: scalProdLeg
-  use ply_space_integration_module,                  &
-    & only: ply_create_surface_gauss_points_cube,    &
-    &       ply_create_surface_gauss_points_cube_2d, &
-    &       ply_create_surface_gauss_points_cube_1d, &
-    &       ply_gaussLegPoints
-  use ply_modg_basis_module,     only: legendre_1D
-  use ply_nodes_module,          only: ply_faceNodes_type
+  use ply_modg_basis_module, only: scalProdLeg
+  use ply_space_integration_module, only: ply_gaussLegPoints
+  use ply_modg_basis_module, only: legendre_1D
 
   implicit none
 
@@ -62,7 +57,9 @@ module ply_l2p_module
   public :: assignment(=)
   public :: ply_l2p_trafo_1D, ply_l2p_trafo_2D, ply_l2p_trafo_3D
 
+
 contains
+
 
   ! ************************************************************************ !
   subroutine Copy_ply_l2p( left, right )
@@ -84,23 +81,17 @@ contains
 
   ! ************************************************************************ !
   !> Initialize the transformations via L2 projections.
-  subroutine ply_init_l2p( l2p, degree, nDims, nodes, faces )
+  subroutine ply_init_l2p( l2p, degree )
     ! -------------------------------------------------------------------- !
     type(ply_l2p_type), intent(out) :: l2p
     integer, intent(in) :: degree
-    integer, intent(in) :: nDims
-    real(kind=rk), intent(out), allocatable :: nodes(:,:)
-    type(ply_faceNodes_type), intent(out), allocatable :: faces(:,:)
     ! -------------------------------------------------------------------- !
     integer :: iPoint, iDof
-    integer :: iDir, iAlign
     integer :: nDofs
     integer :: nPoints
-    integer :: lb,ub
     real(kind=rk), allocatable :: gaussp1D(:)
     real(kind=rk), allocatable :: leg1D_at_gauss(:,:)
     real(kind=rk), allocatable :: weights1D(:)
-    real(kind=rk), allocatable :: tmp_weights(:)
     real(kind=rk) :: scalprod_q
     ! -------------------------------------------------------------------- !
 
@@ -136,88 +127,6 @@ contains
           &                            * scalProd_q
       end do
     end do
-
-    ! Build the Gauss-Legendre nodes on the reference faces
-    ! HK: This should probably moved to a separate routine.
-    select case(nDims)
-    case (1)
-      allocate( nodes(nPoints, 3) )
-      nodes(:,1) = gaussP1D
-      nodes(:,2:) = 0.0_rk
-
-      allocate( faces(1,2) )
-      iDir = 1
-      do iAlign = 1,2
-        faces(iDir,iAlign)%nquadpoints = 1
-        call ply_create_surface_gauss_points_cube_1d( &
-          & points  = faces(iDir,iAlign)%points,      &
-          & weights = tmp_weights,                    &
-          & dir     = idir,                           &
-          & align   = iAlign                          )
-        deallocate(tmp_weights)
-      end do
-
-    case (2)
-      allocate( nodes(nPoints**2, 3) )
-      do iPoint=1,nPoints
-        lb = (iPoint-1) * nPoints + 1
-        ub = iPoint * nPoints
-        nodes(lb:ub,1) = gaussP1D
-        nodes(lb:ub,2) = gaussP1D(iPoint)
-      end do
-      nodes(:,3) = 0.0_rk
-
-      allocate( faces(2,2) )
-      do iDir = 1,2
-        do iAlign = 1,2
-          faces(iDir,iAlign)%nquadpoints = nPoints
-          call ply_create_surface_gauss_points_cube_2d(           &
-            & num_intp_per_direction = nPoints,                   &
-            & points                 = faces(iDir,iAlign)%points, &
-            & weights                = tmp_weights,               &
-            & refElemMin             = -1.0_rk,                   &
-            & refElemMax             =  1.0_rk,                   &
-            & dir                    = idir,                      &
-            & align                  = iAlign                     )
-          deallocate(tmp_weights)
-        end do
-      end do
-
-    case (3)
-      allocate( nodes(nPoints**3, 3) )
-      do iPoint=1,nPoints
-        lb = (iPoint-1) * nPoints + 1
-        ub = iPoint*nPoints
-        nodes(lb:ub,1) = gaussP1D
-        nodes(lb:ub,2) = gaussP1D(iPoint)
-      end do
-      nodes(:nPoints**2,3) = gaussP1D(1)
-
-      do iPoint=2,nPoints
-        lb = (iPoint-1) * nPoints**2 + 1
-        ub = iPoint*nPoints**2
-        nodes(lb:ub,1) = nodes(:nPoints**2,1)
-        nodes(lb:ub,2) = nodes(:nPoints**2,2)
-        nodes(lb:ub,3) = gaussP1D(iPoint)
-      end do
-
-      allocate( faces(3,2) )
-      do iDir = 1,3
-        do iAlign = 1,2
-          faces(iDir,iAlign)%nquadpoints = nPoints**2
-          call ply_create_surface_gauss_points_cube(              &
-            & num_intp_per_direction = nPoints,                   &
-            & points                 = faces(iDir,iAlign)%points, &
-            & weights                = tmp_weights,               &
-            & refElemMin             = -1.0_rk,                   &
-            & refElemMax             =  1.0_rk,                   &
-            & dir                    = idir,                      &
-            & align                  = iAlign                     )
-          deallocate(tmp_weights)
-        end do
-      end do
-
-    end select
 
   end subroutine ply_init_l2p
   ! ************************************************************************ !

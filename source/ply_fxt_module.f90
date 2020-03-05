@@ -1,5 +1,5 @@
 ! Copyright (c) 2015 Kay Langhammer <kay.langhammer@student.uni-siegen.de>
-! Copyright (c) 2015 Harald Klimach <harald.klimach@uni-siegen.de>
+! Copyright (c) 2015,2020 Harald Klimach <harald.klimach@uni-siegen.de>
 ! Copyright (c) 2015 Nikhil Anand <nikhil.anand@uni-siegen.de>
 ! Copyright (c) 2016 Tobias Girresser <tobias.girresser@student.uni-siegen.de>
 ! Copyright (c) 2016-2017 Peter Vitt <peter.vitt2@uni-siegen.de>
@@ -22,19 +22,12 @@
 !> Fast polynomial transformation using the FXTPACK implementation of a
 !! fast multipole method.
 module ply_fxt_module
-  use env_module,                 only: rk
-  use fxt_fwrap,                  only: fxtf_flptld_type, &
-    &                                   fxtf_flptld_n2m,  &
-    &                                   fxtf_flptld_m2n,  &
-    &                                   fxtf_flptld_init
-  use ply_fxt_header_module,      only: ply_fxt_header_type
-  use ply_nodes_module,           only: ply_faceNodes_type
-  use ply_space_integration_module,                  &
-    & only: ply_create_surface_gauss_points_cube,    &
-    &       ply_create_surface_gauss_points_cube_2d, &
-    &       ply_create_surface_gauss_points_cube_1d, &
-    &       ply_gaussLegPoints
-  use ply_modg_basis_module,      only: legendre_1D
+  use env_module, only: rk
+  use fxt_fwrap, only: fxtf_flptld_type, &
+    &                  fxtf_flptld_n2m,  &
+    &                  fxtf_flptld_m2n,  &
+    &                  fxtf_flptld_init
+  use ply_fxt_header_module, only: ply_fxt_header_type
 
   implicit none
 
@@ -52,141 +45,30 @@ module ply_fxt_module
   public :: ply_fxt_m2n_1D, ply_fxt_m2n_2D,ply_fxt_m2n_3D
   public :: ply_fxt_n2m_1D, ply_fxt_n2m_2D,ply_fxt_n2m_3D
 
+
 contains
+
 
   ! ************************************************************************ !
   !> Initialize the flpt data structure for fast legendre polynomial
   !! transformation via the fxtpack.
-  !!
-  !!\todo Actually implement filling of ply_fxt_type here.
-  !!      Basically needs to set precision and dimension, and call
-  !!      fxtf_flptld_init
-  subroutine ply_init_fxt( fxt, header, degree, nDims, nodes, faces )
+  subroutine ply_init_fxt( fxt, header, degree )
     ! -------------------------------------------------------------------- !
     !> Handle to the resulting fast polynomial table.
     type(ply_fxt_type), intent(out) :: fxt
     type(ply_fxt_header_type), intent(in) :: header
      !> Polynomial degree.
     integer, intent(in) :: degree
-     !> Number of dimensions to use for this transformation.
-    integer, intent(in) :: nDims
-    real(kind=rk), intent(out), allocatable :: nodes(:,:)
-    type(ply_faceNodes_type), intent(out), allocatable :: faces(:,:)
     ! -------------------------------------------------------------------- !
-    real(kind=rk), allocatable :: tmp_weights(:)
-    real(kind=rk), allocatable :: gaussp1D(:)
-    real(kind=rk), allocatable :: weights1D(:)
-    real(kind=rk), allocatable :: leg1D_at_gauss(:,:)
-    integer :: iDir, iAlign, nPoints, nDofs, iPoint, lb, ub
+    integer :: nPoints
     ! -------------------------------------------------------------------- !
+
     nPoints = degree + 1
-    nDofs = nPoints
-    allocate(gaussp1D(npoints))
-    allocate(weights1D(nPoints))
-    allocate(leg1D_at_gauss(max(2, nDofs), nPoints))
 
-    ! create the quadrature points for volume and on the face
-    ! for the oversampled projection
-    call ply_gaussLegPoints( x1    = -1.0_rk,   &
-      &                      x2    = 1.0_rk,    &
-      &                      nIntP = nPoints,   &
-      &                      w     = weights1D, &
-      &                      x     = gaussp1D   )
-
-    leg1D_at_gauss = legendre_1D(gaussp1D, degree)
-
-    select case(nDims)
-    case(3)
-      call fxtf_flptld_init( flpt    = fxt%flpt,   &
-         &                   degree  = degree,     &
-         &                   nPoints = degree+1,   &
-         &                   prec    = header%prec )
-
-      allocate( nodes(nPoints**3, 3) )
-      do iPoint=1,nPoints
-        lb = (iPoint-1)*nPoints + 1
-        ub = iPoint*nPoints
-        nodes(lb:ub,1) = gaussP1D
-        nodes(lb:ub,2) = gaussP1D(iPoint)
-      end do
-      nodes(:nPoints**2,3) = gaussP1D(1)
-
-      do iPoint=2,nPoints
-        lb = (iPoint-1)*nPoints**2 + 1
-        ub = iPoint*nPoints**2
-        nodes(lb:ub,1) = nodes(:nPoints**2,1)
-        nodes(lb:ub,2) = nodes(:nPoints**2,2)
-        nodes(lb:ub,3) = gaussP1D(iPoint)
-      end do
-
-      allocate( faces(3,2) )
-      do iDir = 1,3
-        do iAlign = 1,2
-          faces(iDir,iAlign)%nquadpoints = nPoints**2
-          call ply_create_surface_gauss_points_cube(              &
-            & num_intp_per_direction = nPoints,                   &
-            & points                 = faces(iDir,iAlign)%points, &
-            & weights                = tmp_weights,               &
-            & refElemMin             = -1.0_rk,                   &
-            & refElemMax             =  1.0_rk,                   &
-            & dir                    = idir,                      &
-            & align                  = iAlign                     )
-          deallocate(tmp_weights)
-        end do
-      end do
-
-    case(2)
-      call fxtf_flptld_init( flpt    = fxt%flpt,   &
-        &                    degree  = degree,     &
-        &                    nPoints = degree+1,   &
-        &                    prec    = header%prec )
-
-      ! Fill up the nodes and the face with gauss legendre points
-      allocate( nodes(nPoints**2, 3) )
-      do iPoint=1,nPoints
-        lb = (iPoint-1)*nPoints + 1
-        ub = iPoint*nPoints
-        nodes(lb:ub,1) = gaussP1D
-        nodes(lb:ub,2) = gaussP1D(iPoint)
-      end do
-
-      allocate( faces(2,2) )
-      do iDir = 1,2
-        do iAlign = 1,2
-          faces(iDir,iAlign)%nquadpoints = nPoints
-          call ply_create_surface_gauss_points_cube_2d(           &
-            & num_intp_per_direction = nPoints,                   &
-            & points                 = faces(iDir,iAlign)%points, &
-            & weights                = tmp_weights,               &
-            & refElemMin             = -1.0_rk,                   &
-            & refElemMax             =  1.0_rk,                   &
-            & dir                    = idir,                      &
-            & align                  = iAlign                     )
-          deallocate(tmp_weights)
-        end do
-      end do
-
-    case(1)
-      call fxtf_flptld_init( flpt    = fxt%flpt,   &
-        &                    degree  = degree,     &
-        &                    nPoints = degree+1,   &
-        &                    prec    = header%prec )
-     allocate( nodes(degree + 1, 3) )
-     nodes(:,1) = gaussP1D
-     nodes(:,2:) = 0.0_rk
-
-     allocate( faces(1,2) )
-     iDir = 1
-     do iAlign = 1,2
-       faces(iDir,iAlign)%nquadpoints = 1
-       call ply_create_surface_gauss_points_cube_1d( &
-         & points  = faces(iDir,iAlign)%points,      &
-         & weights = tmp_weights,                    &
-         & dir     = idir,                           &
-         & align   = iAlign                          )
-       deallocate(tmp_weights)
-     end do
-    end select
+    call fxtf_flptld_init( flpt    = fxt%flpt,   &
+      &                    degree  = degree,     &
+      &                    nPoints = nPoints,    &
+      &                    prec    = header%prec )
 
   end subroutine ply_init_fxt
   ! ************************************************************************ !
