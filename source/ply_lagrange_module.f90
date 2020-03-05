@@ -43,6 +43,7 @@ module ply_lagrange_module
   public :: ply_lagrange_define
   public :: ply_lagrange_eval
   public :: ply_lagrange_mode_at
+  public :: ply_lagrange_1D
 
 
 contains
@@ -140,6 +141,40 @@ contains
     end do
 
   end function ply_lagrange_mode_at
+  ! ------------------------------------------------------------------------ !
+
+
+  ! ------------------------------------------------------------------------ !
+  ! Compute each Lagrange mode for every given point.
+  function ply_lagrange_1D(me, points) result(pointval)
+    ! -------------------------------------------------------------------- !
+    !> Definition of the Lagrange polynomial basis to evaluate at points.
+    type(ply_lagrange_type), intent(in) :: me
+
+    !> List of points at which the polynomials are to be evaluated.
+    real(kind=rk), intent(in) :: points(:)
+
+    !> Resulting Lagrange values at all points.
+    !!
+    !! First dimension holds the Lagrange modes, second dimension the
+    !! points.
+    real(kind=rk) :: pointval(me%nPoints, size(points))
+    ! -------------------------------------------------------------------- !
+    integer :: nPoints
+    integer :: iPoint
+    integer :: iMode
+    ! -------------------------------------------------------------------- !
+    nPoints = size(points)
+    do iPoint=1,nPoints
+      do iMode=1,me%nPoints
+        pointval(iMode, iPoint) = ply_lagrange_mode_at(   &
+          &                         me   = me,            &
+          &                         mode = iMode,         &
+          &                         x    = points(iPoint) )
+      end do
+    end do
+
+  end function ply_lagrange_1D
   ! ------------------------------------------------------------------------ !
 
 end module ply_lagrange_module

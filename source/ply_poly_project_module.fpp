@@ -50,9 +50,14 @@
 !! transformation to be used:
 !!
 !! * FPT uses Chebyshev integration nodes
-!! * L2P and FXT uses Gauss-Legendre integration nodes
+!! * L2P may make use of either Chebyshev or Gauss-Legendre nodes
+!! * FXT Gauss-Legendre integration nodes
 !!
-!! It is recommended to use the FPT if available.
+!! If the Chebyshev nodes are used for the nodal representation, the interval
+!! boundaries can be included by setting `lobattoPoints=true`. In this case
+!! there will also be at least one point more be used in the nodal
+!! representation than there are modes in the Legendre series.
+!!
 !! If FPT is configured but the executable is not linked against the FFTW, there
 !! will be a warning, and the simulation uses the L2P method instead.
 !! The L2P method is also the default when no kind is provided at all.
@@ -60,7 +65,7 @@
 !! For further options of the individual projection kinds, see their respective
 !! descriptions:
 !!
-!! * L2P: no further options
+!! * L2P: [[ply_l2p_header_module]]
 !! * FPT: [[ply_fpt_header_module]]
 !! * FXT: [[ply_fxt_header_module]]
 !!
@@ -117,7 +122,6 @@ module ply_poly_project_module
     &                                    ply_fxt_n2m_2D
   use tem_precice_module,          only: precice_available, &
    &                                     precice
-
 
   implicit none
 
@@ -357,10 +361,16 @@ contains
     select case(trim(proj_init%header%kind))
     case('fpt')
       over_factor = proj_init%header%fpt_header%factor
+      nodes_header = proj_init%header%fpt_header%nodes_header
+      me%lobattopoints = nodes_header%lobattopoints
     case('l2p')
       over_factor = proj_init%header%l2p_header%factor
+      nodes_header = proj_init%header%l2p_header%nodes_header
+      me%lobattopoints = nodes_header%lobattopoints
     case('fxt')
       over_factor = proj_init%header%fxt_header%factor
+      nodes_header = proj_init%header%fxt_header%nodes_header
+      me%lobattopoints = .false.
     end select
 
     ! Find the oversampling order
@@ -388,6 +398,12 @@ contains
         end if
 
       end if
+    end if
+
+    if (me%lobattoPoints) then
+      ! If lobatto Points are to be used, use at least one point more
+      ! in the nodal representation.
+      oversampling_order = max(oversampling_order, me%maxPolyDegree+2)
     end if
 
     if (trim(proj_init%header%kind) == 'fxt') then
@@ -440,12 +456,6 @@ contains
     select case (trim(proj_init%header%kind))
     case('fpt')
       ! Fill fpt datatype
-
-      ! fpt has option for lobattopoints
-      nodes_header = proj_init%header%fpt_header%nodes_header
-      me%lobattopoints = nodes_header%lobattopoints
-
-      !> Initialize the fpt data type
       call ply_init_legfpt(                                 &
         &    maxPolyDegree    = me%oversamp_degree,         &
         &    nIndeps          = 1,                          &
@@ -469,27 +479,25 @@ contains
       end if
 
     case('l2p')
-      !> Fill the L2 projection datatype
-      !! no lobatto points for gauss nodes implemented
-      nodes_header = proj_init%header%l2p_header%nodes_header
-
+      ! Fill the L2 projection datatype
       if (scheme_dim >= 3) then
-        call ply_init_l2p( l2p    = me%body_3d%l2p,    &
-          &                degree = me%oversamp_degree )
+        call ply_init_l2p( l2p    = me%body_3d%l2p,              &
+          &                header = proj_init%header%l2p_header, &
+          &                degree = me%oversamp_degree           )
       end if
 
       if (scheme_dim >= 2) then
-        call ply_init_l2p( l2p    = me%body_2d%l2p,    &
-          &                degree = me%oversamp_degree )
+        call ply_init_l2p( l2p    = me%body_2d%l2p,              &
+          &                header = proj_init%header%l2p_header, &
+          &                degree = me%oversamp_degree           )
       end if
 
-      call ply_init_l2p( l2p    = me%body_1d%l2p,    &
-        &                degree = me%oversamp_degree )
+      call ply_init_l2p( l2p    = me%body_1d%l2p,              &
+        &                header = proj_init%header%l2p_header, &
+        &                degree = me%oversamp_degree           )
 
     case ('fxt')
-      !> Fill the fxt Legendre Polynomial datatype
-      nodes_header = proj_init%header%fxt_header%nodes_header
-
+      ! Fill the fxt Legendre Polynomial datatype
       if (scheme_dim >= 3) then
         call ply_init_fxt( fxt    = me%body_3d%fxt,              &
           &                header = proj_init%header%fxt_header, &
