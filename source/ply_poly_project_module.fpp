@@ -488,7 +488,7 @@ contains
 
     case ('fxt')
       !> Fill the fxt Legendre Polynomial datatype
-      nodes_header = proj_init%header%l2p_header%nodes_header
+      nodes_header = proj_init%header%fxt_header%nodes_header
 
       if (scheme_dim >= 3) then
         call ply_init_fxt( fxt    = me%body_3d%fxt,              &
