@@ -1,5 +1,5 @@
 ! Copyright (c) 2012-2013 Jens Zudrop <j.zudrop@grs-sim.de>
-! Copyright (c) 2012-2015,2018 Harald Klimach <harald.klimach@uni-siegen.de.de>
+! Copyright (c) 2012-2015,2018,2020 Harald Klimach <harald.klimach@uni-siegen.de.de>
 ! Copyright (c) 2012 Jan Hueckelheim <j.hueckelheim@grs-sim.de>
 ! Copyright (c) 2012 Melven Zoellner <yameta@freenet.de>
 ! Copyright (c) 2013-2014,2016 Verena Krupp
@@ -34,16 +34,8 @@ module ply_l2p_module
   use tem_compileconf_module, only: vlen
 
   use ply_modg_basis_module, only: scalProdLeg
-  use ply_space_integration_module, only: &
-    &   ply_create_surface_gauss_points_cube,    &
-    &   ply_create_surface_gauss_points_cube_2d, &
-    &   ply_create_surface_gauss_points_cube_1d, &
-    &   ply_gaussLegPoints
+  use ply_space_integration_module, only: ply_gaussLegPoints
   use ply_modg_basis_module, only: legendre_1D
-  use ply_nodes_module, only: ply_faceNodes_type,  &
-    &                         init_gauss_nodes,    &
-    &                         init_gauss_nodes_2d, &
-    &                         init_gauss_nodes_1d
 
   implicit none
 
@@ -89,23 +81,17 @@ contains
 
   ! ************************************************************************ !
   !> Initialize the transformations via L2 projections.
-  subroutine ply_init_l2p( l2p, degree, nDims, nodes, faces )
+  subroutine ply_init_l2p( l2p, degree )
     ! -------------------------------------------------------------------- !
     type(ply_l2p_type), intent(out) :: l2p
     integer, intent(in) :: degree
-    integer, intent(in) :: nDims
-    real(kind=rk), intent(out), allocatable :: nodes(:,:)
-    type(ply_faceNodes_type), intent(out), allocatable :: faces(:,:)
     ! -------------------------------------------------------------------- !
     integer :: iPoint, iDof
-    integer :: iDir, iAlign
     integer :: nDofs
     integer :: nPoints
-    integer :: lb,ub
     real(kind=rk), allocatable :: gaussp1D(:)
     real(kind=rk), allocatable :: leg1D_at_gauss(:,:)
     real(kind=rk), allocatable :: weights1D(:)
-    real(kind=rk), allocatable :: tmp_weights(:)
     real(kind=rk) :: scalprod_q
     ! -------------------------------------------------------------------- !
 
@@ -141,30 +127,6 @@ contains
           &                            * scalProd_q
       end do
     end do
-
-    ! Build the Gauss-Legendre nodes on the reference elements and faces
-    select case(nDims)
-    case (1)
-      call init_gauss_nodes_1d( nodes             = nodes,       &
-        &                       faces             = faces,       &
-        &                       weights           = tmp_weights, &
-        &                       nQuadPointsPerDir = nPoints      )
-
-    case (2)
-      call init_gauss_nodes_2d( nodes             = nodes,       &
-        &                       faces             = faces,       &
-        &                       weights           = tmp_weights, &
-        &                       nQuadPointsPerDir = nPoints      )
-
-    case (3)
-      call init_gauss_nodes( nodes             = nodes,       &
-        &                    faces             = faces,       &
-        &                    weights           = tmp_weights, &
-        &                    nQuadPointsPerDir = nPoints      )
-
-    end select
-
-    deallocate(tmp_weights)
 
   end subroutine ply_init_l2p
   ! ************************************************************************ !

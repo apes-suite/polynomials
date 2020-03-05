@@ -103,10 +103,9 @@ module ply_poly_project_module
     &                                    ply_l2p_trafo_3d, &
     &                                    ply_l2p_trafo_2d, &
     &                                    ply_l2p_trafo_1d
-  use ply_nodes_module,            only: init_cheb_nodes,    &
-    &                                    init_cheb_nodes_2d, &
-    &                                    init_cheb_nodes_1d, &
- !   &                                    init_equi_nodes,    &
+  use ply_nodes_header_module,     only: ply_nodes_header_type, &
+    &                                    assignment(=)
+  use ply_nodes_module,            only: ply_nodes_create, &
     &                                    ply_facenodes_type
   use ply_fxt_module,              only: ply_fxt_type,   &
     &                                    ply_init_fxt,   &
@@ -348,6 +347,7 @@ contains
     real(kind=rk) :: log_order, rem_log
     real(kind=rk) :: over_factor
     integer :: lb_log
+    type(ply_nodes_header_type) :: nodes_header
     ! -------------------------------------------------------------------- !
     ! set the kind in the final projection type
     me%kind = trim(proj_init%header%kind)
@@ -442,7 +442,8 @@ contains
       ! Fill fpt datatype
 
       ! fpt has option for lobattopoints
-      me%lobattopoints = proj_init%header%fpt_header%nodes_header%lobattopoints
+      nodes_header = proj_init%header%fpt_header%nodes_header
+      me%lobattopoints = nodes_header%lobattopoints
 
       !> Initialize the fpt data type
       call ply_init_legfpt(                                 &
@@ -450,13 +451,6 @@ contains
         &    nIndeps          = 1,                          &
         &    fpt              = me%body_1d%fpt,             &
         &    header           = proj_init%header%fpt_header )
-      !> Initialization/Create  of the volume quadrature  nodes and the
-      !! quadrature points on the face
-      call init_cheb_nodes_1d(                                             &
-        &    me                = proj_init%header%fpt_header%nodes_header, &
-        &    nodes             = me%body_1d%nodes,                         &
-        &    faces             = me%body_1d%faces,                         &
-        &    nQuadPointsPerDir = me%nQuadPointsPerDir                      )
 
       if (scheme_dim >= 2) then
         call ply_init_legfpt(                                 &
@@ -464,11 +458,6 @@ contains
           &    nIndeps          = me%oversamp_degree+1,       &
           &    fpt              = me%body_2d%fpt,             &
           &    header           = proj_init%header%fpt_header )
-        call init_cheb_nodes_2d(                                             &
-          &    me                = proj_init%header%fpt_header%nodes_header, &
-          &    nodes             = me%body_2d%nodes,                         &
-          &    faces             = me%body_2d%faces,                         &
-          &    nQuadPointsPerDir = me%nQuadPointsPerDir                      )
       end if
 
       if (scheme_dim >= 3) then
@@ -477,63 +466,44 @@ contains
           &    nIndeps          = (me%oversamp_degree+1)**2,  &
           &    fpt              = me%body_3D%fpt,             &
           &    header           = proj_init%header%fpt_header )
-        call init_cheb_nodes(                                                &
-          &    me                = proj_init%header%fpt_header%nodes_header, &
-          &    nodes             = me%body_3d%nodes,                         &
-          &    faces             = me%body_3d%faces,                         &
-          &    nQuadPointsPerDir = me%nQuadPointsPerDir                      )
       end if
 
     case('l2p')
       !> Fill the L2 projection datatype
       !! no lobatto points for gauss nodes implemented
+      nodes_header = proj_init%header%l2p_header%nodes_header
+
       if (scheme_dim >= 3) then
-        call ply_init_l2p( l2p    = me%body_3d%l2p,     &
-          &                degree = me%oversamp_degree, &
-          &                nDims  = 3,                  &
-          &                nodes  = me%body_3d%nodes,   &
-          &                faces  = me%body_3d%faces    )
+        call ply_init_l2p( l2p    = me%body_3d%l2p,    &
+          &                degree = me%oversamp_degree )
       end if
 
       if (scheme_dim >= 2) then
-        call ply_init_l2p( l2p    = me%body_2d%l2p,     &
-          &                degree = me%oversamp_degree, &
-          &                nDims  = 2,                  &
-          &                nodes  = me%body_2d%nodes,   &
-          &                faces  = me%body_2d%faces    )
+        call ply_init_l2p( l2p    = me%body_2d%l2p,    &
+          &                degree = me%oversamp_degree )
       end if
 
-        call ply_init_l2p( l2p    = me%body_1d%l2p,     &
-          &                degree = me%oversamp_degree, &
-          &                nDims  = 1,                  &
-          &                nodes  = me%body_1d%nodes,   &
-          &                faces  = me%body_1d%faces    )
+      call ply_init_l2p( l2p    = me%body_1d%l2p,    &
+        &                degree = me%oversamp_degree )
 
     case ('fxt')
       !> Fill the fxt Legendre Polynomial datatype
+      nodes_header = proj_init%header%l2p_header%nodes_header
+
       if (scheme_dim >= 3) then
-        call ply_init_fxt(fxt    = me%body_3d%fxt,              &
-          &               header = proj_init%header%fxt_header, &
-          &               degree = me%oversamp_degree,          &
-          &               nDims  = 3,                           &
-          &               nodes  = me%body_3d%nodes,            &
-          &               faces  = me%body_3d%faces             )
+        call ply_init_fxt( fxt    = me%body_3d%fxt,              &
+          &                header = proj_init%header%fxt_header, &
+          &                degree = me%oversamp_degree           )
       end if
 
       if (scheme_dim >= 2) then
-        call ply_init_fxt(fxt    = me%body_2d%fxt,              &
-          &               header = proj_init%header%fxt_header, &
-          &               degree = me%oversamp_degree,          &
-          &               nDims  = 2,                           &
-          &               nodes  = me%body_2d%nodes,            &
-          &               faces  = me%body_2d%faces             )
+        call ply_init_fxt( fxt    = me%body_2d%fxt,              &
+          &                header = proj_init%header%fxt_header, &
+          &                degree = me%oversamp_degree           )
       end if
-        call ply_init_fxt(fxt    = me%body_1d%fxt,              &
-          &               header = proj_init%header%fxt_header, &
-          &               degree = me%oversamp_degree,          &
-          &               nDims  = 1,                           &
-          &               nodes  = me%body_1d%nodes,            &
-          &               faces  = me%body_1d%faces             )
+        call ply_init_fxt( fxt    = me%body_1d%fxt,              &
+          &                header = proj_init%header%fxt_header, &
+          &                degree = me%oversamp_degree           )
 
     case default
       write(logUnit(1),*) 'ERROR in initializing projection:'
@@ -544,6 +514,34 @@ contains
       call tem_abort()
 
     end select
+
+    !> Initialization/Create of the volume quadrature nodes and the
+    !! quadrature points on the face
+    call ply_nodes_create(                           &
+      &    me                = nodes_header,         &
+      &    nodes             = me%body_1d%nodes,     &
+      &    faces             = me%body_1d%faces,     &
+      &    nQuadPointsPerDir = me%nQuadPointsPerDir, &
+      &    nDims             = 1                     )
+
+    if (scheme_dim >= 2) then
+      call ply_nodes_create(                           &
+        &    me                = nodes_header,         &
+        &    nodes             = me%body_2d%nodes,     &
+        &    faces             = me%body_2d%faces,     &
+        &    nQuadPointsPerDir = me%nQuadPointsPerDir, &
+        &    nDims             = 2                     )
+    end if
+
+    if (scheme_dim >= 3) then
+      call ply_nodes_create(                           &
+        &    me                = nodes_header,         &
+        &    nodes             = me%body_3d%nodes,     &
+        &    faces             = me%body_3d%faces,     &
+        &    nQuadPointsPerDir = me%nQuadPointsPerDir, &
+        &    nDims             = 3                     )
+    end if
+
   end subroutine ply_poly_project_fillbody
   ! ------------------------------------------------------------------------ !
 

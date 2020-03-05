@@ -370,7 +370,7 @@ contains
     ! -------------------------------------------------------------------- !
     !> FPT header to hold the defined settings.
     type(ply_fpt_header_type), intent(out) :: me
-    
+
     !> Blocksize to use in approximation algorithm. Defaults to
     !! [[ply_fpt_default_blocksize]].
     integer, optional, intent(in) :: blocksize
