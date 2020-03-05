@@ -500,7 +500,7 @@ contains
     integer :: n
     ! -------------------------------------------------------------------- !
 
-    !$OMP PARALLEL DEFAULT(SHARED), PRIVATE(n,iDof, cheb)
+    !$OMP PARALLEL DEFAULT(SHARED), PRIVATE(n, iDof, cheb)
     n = fpt%legToChebParams%n
 
     normFactor = 1.0_rk / real(n,kind=rk)

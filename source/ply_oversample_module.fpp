@@ -340,7 +340,7 @@ contains
     nScalars = size(modalCoeffs,2)
 
     !$OMP PARALLEL DEFAULT(SHARED), &
-    !$OMP PRIVATE(iVar,dof,iDegZ,iDegY,iDegX,dofOverSamp)
+    !$OMP PRIVATE(iVar, dof, idof, iDegZ, iDegY, iDegX, dofOverSamp)
     if (poly_proj%basisType == Q_Space) then
       if (oversamp_degree == poly_proj%min_degree) then
         state = modalCoeffs
@@ -365,6 +365,7 @@ contains
       iDegX = 1
       iDegY = 1
       iDegZ = 1
+      !$OMP DO
       do idof = 1, poly_proj%body_3d%min_dofs
 ?? copy :: posOfModgCoeffPTens(iDegX, iDegY, iDegZ, dof)
         dofOverSamp = iDegX + ( iDegY-1  &
@@ -373,6 +374,7 @@ contains
         state(dof,:) = modalCoeffs(dofOverSamp,:)
 ?? copy :: nextModgCoeffPTens(iDegX, iDegY, iDegZ)
       end do
+      !$OMP END DO
     end if
     !$OMP END PARALLEL
 
