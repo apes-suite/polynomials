@@ -1,6 +1,6 @@
 ! Copyright (c) 2013-2014 Jens Zudrop <j.zudrop@grs-sim.de>
 ! Copyright (c) 2013-2014, 2016-2017 Peter Vitt <peter.vitt2@uni-siegen.de>
-! Copyright (c) 2013-2016, 2018-2019 Harald Klimach <harald.klimach@uni-siegen.de>
+! Copyright (c) 2013-2016, 2018-2020 Harald Klimach <harald.klimach@uni-siegen.de>
 ! Copyright (c) 2013-2014 Verena Krupp
 ! Copyright (c) 2014 Nikhil Anand <nikhil.anand@uni-siegen.de>
 !
@@ -32,6 +32,7 @@ program ply_ifpt_3D_singVar_test
   use tem_logging_module,       only: logUnit
   use tem_aux_module,           only: tem_abort
   use tem_general_module,       only: tem_general_type, tem_start
+  use ply_fpt_header_module,    only: ply_fpt_header_type, ply_fpt_header_define
   use ply_legFpt_module,        only: ply_legFpt_type, ply_init_legFPT
   use ply_legFpt_3D_module,     only: ply_pntToLeg_3D
   use ply_modg_basis_module,    only: legendre_1D
@@ -74,6 +75,7 @@ contains
     real(kind=rk), allocatable :: chebPnt1D(:)
     real(kind=rk), allocatable :: legValChebPnt(:,:)
     real(kind=rk) :: rfac
+    type(ply_fpt_header_type) :: header
     type(ply_legFpt_type) :: fpt
     integer, allocatable :: rand_seed(:)
     integer :: nSeeds
@@ -138,9 +140,11 @@ contains
     write(logUnit(10),*) 'Finished'
 
     ! Init the FPT
+    call ply_fpt_header_define( me = header )
     call ply_init_legFpt( maxPolyDegree = maxPolyDegree,        &
       &                   nIndeps       = (maxPolyDegree+1)**2, &
-      &                   fpt           = fpt                   )
+      &                   fpt           = fpt,                  &
+      &                   header        = header                )
 
     ! now transform to the Chebyshev nodes
     write(logUnit(10),*) 'Calculating FPT ...'

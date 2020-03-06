@@ -1,4 +1,4 @@
-! Copyright (c) 2013-2015,2019 Harald Klimach <harald@klimachs.de>
+! Copyright (c) 2013-2015,2019-2020 Harald Klimach <harald@klimachs.de>
 ! Copyright (c) 2013-2014, 2016 Peter Vitt <peter.vitt2@uni-siegen.de>
 ! Copyright (c) 2013-2014 Verena Krupp
 ! Copyright (c) 2014 Nikhil Anand <nikhil.anand@uni-siegen.de>
@@ -31,8 +31,7 @@ program ply_project_fpt_lobattoPoints_test
     &                                  ply_poly_project_n2m,      &
     &                                  ply_poly_project_type
   use ply_prj_header_module, only: ply_prj_header_type
-  use ply_fpt_header_module, only: ply_fpt_default_blocksize, &
-    &                              ply_fpt_default_subblockingWidth
+  use ply_fpt_header_module, only: ply_fpt_header_define
   use tem_general_module,        only: tem_general_type, tem_start
 
   !mpi!nprocs = 1
@@ -98,12 +97,10 @@ contains
     basisType = Q_space
     maxdegree = power
     header%kind = 'fpt'
-    header%fpt_header%factor = 1.0_rk
-    header%fpt_header%blocksize = ply_fpt_default_blocksize
-    header%fpt_header%subblockingWidth = ply_fpt_default_subblockingWidth
-    header%fpt_header%approx_terms = 18
-    header%fpt_header%striplen = 256
-    header%fpt_header%nodes_header%lobattopoints = .true.
+    call ply_fpt_header_define( me = header%fpt_header, &
+      &                         approx_terms = 18,      &
+      &                         striplen     = 256,     &
+      &                         lobattoPoints = .true.  )
 
     ! define my poly projection type
     call ply_prj_init_define(me= prj_init,                   &

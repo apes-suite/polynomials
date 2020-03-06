@@ -1,5 +1,5 @@
 ! Copyright (c) 2013-2014 Verena Krupp
-! Copyright (c) 2013-2014,2017 Harald Klimach <harald.klimach@uni-siegen.de>
+! Copyright (c) 2013-2014,2017,2020 Harald Klimach <harald.klimach@uni-siegen.de>
 ! Copyright (c) 2013,2017 Peter Vitt <peter.vitt2@uni-siegen.de>
 ! Copyright (c) 2014 Nikhil Anand <nikhil.anand@uni-siegen.de>
 ! Copyright (c) 2017 Daniel Petró <daniel.petro@student.uni-siegen.de>
@@ -21,13 +21,54 @@
 ! OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 ! **************************************************************************** !
 
-!> Module contains the header for the l2p projection method
+!> Parameters for the plain L2 projection method to transform between Legendre
+!! modes and nodal representation.
+!!
+!! This method utilizes the L2 projection from Legendre to Lagrange polynomials
+!! or the other way around. A numerical Gauss-Legendre Quadrature is used to
+!! compute the integral over the product of both functions.
+!! The Lagrange polynomials can be defined on any nodeset, see also
+!! [[ply_nodeset_module]].
+!!
+!! Available options for the nodes to project onto are:
+!!
+!! * `'gauss-legendre'` these are the Gauss-Legendre integration points that
+!!   are also used for the numerical integration (this is the default).
+!! * `'chebyshev'` these are the nodes from the Chebyshev integration.
+!!
+!! The set of nodes to use is configured by the `nodes_kind` option, and if
+!! `nodes_kind = 'chebyshev'` it is also possible to make use of Lobatto points
+!! to include the interval boundaries in the nodal representation.
+!! This is achieved by setting `lobattoPoints = true`, by default this is false.
+!!
+!! The configuration table for a projection with L2P may, for example, look as
+!! follows:
+!!
+!!```lua
+!!  projection = {
+!!    kind = 'l2p',
+!!    factor = 1.5,
+!!    nodes_kind = 'chebyshev',
+!!    lobattoPoints = true
+!!  }
+!!```
+!!
+!! The example illustrates the three possible settings for the L2P
+!! transformation method:
+!!
+!! * `factor` - Oversampling factor to avoid aliasing.
+!! * `nodes_kind` - Selection of set of nodes to use in the nodal
+!!   representation.
+!! * `lobattoPoints` - Whether to include interval bounds, only
+!!   available for Chebyshev nodes.
+!!
 module ply_l2p_header_module
 
-  use env_module,              only: rk
+  use env_module,              only: rk, labelLen
   use aotus_module,            only: flu_State, aot_get_val
   use aot_out_module,          only: aot_out_type, aot_out_val
 
+  use tem_tools_module,        only: upper_to_lower
   use tem_aux_module,          only: tem_abort
   use tem_logging_module,      only: logUnit
   use tem_float_module
@@ -78,6 +119,7 @@ module ply_l2p_header_module
   public :: assignment(=)
   public :: ply_l2p_header_type
   public :: ply_l2p_header_load,  ply_l2p_header_display
+  public :: ply_l2p_header_define
   public :: ply_l2p_header_out
 
 
@@ -108,6 +150,7 @@ contains
     type(flu_State), intent(inout) :: conf
     integer, intent(in) :: thandle
     ! -------------------------------------------------------------------- !
+    character(len=labelLen) :: nodes_kind
     integer :: iError
     ! -------------------------------------------------------------------- !
 
@@ -127,15 +170,40 @@ contains
       &               val     = me%nodes_header%lobattoPoints, &
       &               ErrCode = iError,                        &
       &               default = .false.                        )
-    if (me%nodes_header%lobattoPoints) then
-      write(logUnit(1),*) 'ERROR in loading projection: L2P does not ' &
-        &                 // 'support Lobatto points'
-      write(logUnit(1),*) 'But you configured to use Lobatto Points!'
-      write(logUnit(1),*) 'Aborting, you probably need to recompile with' &
-        &                 // ' FFTW support to use FPT with Lobatto points'
+    call aot_get_val( L       = conf,            &
+      &               thandle = thandle,         &
+      &               key     = 'nodes_kind',    &
+      &               val     = nodes_kind,      &
+      &               ErrCode = iError,          &
+      &               default = 'gauss-legendre' )
+
+    me%nodes_header%nodes_kind = upper_to_lower(nodes_kind)
+    select case (trim(me%nodes_header%nodes_kind))
+    case ('gauss-legendre')
+
+      if ( me%nodes_header%lobattoPoints ) then
+        write(logUnit(1),*) 'ERROR in loading projection: Legendre nodes' &
+          &                 // ' do not support Lobatto points'
+        write(logUnit(1),*) 'But you configured to use Lobatto Points!'
+        write(logUnit(1),*) 'Probably you want to use Chebyshev nodes instead!'
+        call tem_abort()
+      end if
+
+    case ('chebyshev')
+      ! Nothing to do
+
+    case default
+      write(logUnit(1),*) 'ERROR in loading projection: nodes_kind'
+      write(logUnit(1),*) trim(me%nodes_header%nodes_kind)
+      write(logUnit(1),*) 'The nodes_kind needs to be one of:'
+      write(logUnit(1),*) ' * "gauss-legendre"'
+      write(logUnit(1),*) ' * "chebyshev"'
+      write(logUnit(1),*) ''
+      write(logUnit(1),*) 'Aborting...'
       call tem_abort()
-    end if
-    if (me%factor .le. 0) then
+    end select
+
+    if (me%factor <= 0.0_rk) then
       write(logUnit(1),*) 'ERROR in loading projection: factor for ' &
         &                 // 'projection has to be larger than 0!'
       write(logUnit(1),*) 'But it is set to ', me%factor
@@ -143,6 +211,72 @@ contains
     end if
 
   end subroutine ply_l2p_header_load
+  ! ************************************************************************ !
+
+
+  ! ************************************************************************ !
+  subroutine ply_l2p_header_define( me, factor, nodes_kind, lobattoPoints )
+    ! -------------------------------------------------------------------- !
+    !> L2P header to define.
+    type(ply_l2p_header_type), intent(out) :: me
+
+    !> Oversampling factor to use in the projection, defaults to 1.
+    integer, optional, intent(in)     :: factor
+
+    !> Set of nodes to use in the nodal representation.
+    !!
+    !! May be 'gauss-legendre' or 'chebyshev', defaults to 'gauss-legendre'
+    character(len=*), optional :: nodes_kind
+
+    !> Wether to use Lobatto points (include interval bounds) when using the
+    !! chebyshev nodes, defaults to .false..
+    logical, optional, intent(in)     :: lobattoPoints
+    ! -------------------------------------------------------------------- !
+    ! -------------------------------------------------------------------- !
+
+    ! Set defaults:
+    me%nodes_header%nodes_kind = 'gauss-legendre'
+    me%nodes_header%lobattoPoints = .false.
+    me%factor = 1.0_rk
+    if (present(nodes_kind)) me%nodes_header%nodes_kind &
+      &                      = upper_to_lower(nodes_kind)
+    if (present(lobattoPoints)) me%nodes_header%lobattoPoints = lobattoPoints
+    if (present(factor)) me%factor = factor
+
+
+    select case (trim(me%nodes_header%nodes_kind))
+    case ('gauss-legendre')
+
+      if ( me%nodes_header%lobattoPoints ) then
+        write(logUnit(1),*) 'ERROR in defining projection: Legendre nodes' &
+          &                 // ' do not support Lobatto points'
+        write(logUnit(1),*) 'But you configured to use Lobatto Points!'
+        write(logUnit(1),*) 'Probably you want to use Chebyshev nodes instead!'
+        call tem_abort()
+      end if
+
+    case ('chebyshev')
+      ! Nothing to do
+
+    case default
+      write(logUnit(1),*) 'ERROR in defining projection: nodes_kind'
+      write(logUnit(1),*) trim(me%nodes_header%nodes_kind)
+      write(logUnit(1),*) 'The nodes_kind needs to be one of:'
+      write(logUnit(1),*) ' * "gauss-legendre"'
+      write(logUnit(1),*) ' * "chebyshev"'
+      write(logUnit(1),*) ''
+      write(logUnit(1),*) 'Aborting...'
+      call tem_abort()
+    end select
+
+    if (me%factor <= 0.0_rk) then
+      write(logUnit(1),*) 'ERROR in defining projection: factor for ' &
+        &                 // 'projection has to be larger than 0!'
+      write(logUnit(1),*) 'But it is set to ', me%factor
+      call tem_abort()
+    end if
+
+  end subroutine ply_l2p_header_define
   ! ************************************************************************ !
 
 
@@ -157,6 +291,10 @@ contains
     call aot_out_val( put_conf = conf,     &
       &               vname    = 'factor', &
       &               val      = me%factor )
+
+    call aot_out_val( put_conf = conf,                            &
+      &               vname    = 'nodes_kind',                    &
+      &               val      = trim(me%nodes_header%nodes_kind) )
 
     call aot_out_val( put_conf = conf,                         &
       &               vname    = 'lobattoPoints',              &
@@ -174,9 +312,11 @@ contains
 
     write(logUnit(1),*) ' * Kind of projection method = l2p'
     write(logUnit(1),*) ' * Factor to use in projection = ', me%factor
-    write(logUnit(1),*) ' * using LobattoPoints =', me%nodes_header%lobattoPoints
+    write(logUnit(1),*) ' * using this set of nodes: ' &
+      &                 // trim(me%nodes_header%nodes_kind)
+    write(logUnit(1),*) ' * using LobattoPoints =', &
+      &                 me%nodes_header%lobattoPoints
 
-    write(logUnit(1),*) ' NOT using fast polynomial transforms for projection!'
     if (me%factor < 2.0_rk) then
       write(logUnit(1),*) ''
       write(logUnit(1),*)                                         &

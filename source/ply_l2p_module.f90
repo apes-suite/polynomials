@@ -1,5 +1,5 @@
 ! Copyright (c) 2012-2013 Jens Zudrop <j.zudrop@grs-sim.de>
-! Copyright (c) 2012-2015,2018 Harald Klimach <harald.klimach@uni-siegen.de.de>
+! Copyright (c) 2012-2015,2018,2020 Harald Klimach <harald.klimach@uni-siegen.de.de>
 ! Copyright (c) 2012 Jan Hueckelheim <j.hueckelheim@grs-sim.de>
 ! Copyright (c) 2012 Melven Zoellner <yameta@freenet.de>
 ! Copyright (c) 2013-2014,2016 Verena Krupp
@@ -29,18 +29,21 @@
 ! **************************************************************************** !
 
 module ply_l2p_module
-  use env_module,                only: rk
+  use env_module, only: rk
 
-  use tem_compileconf_module,    only: vlen
+  use tem_aux_module, only: tem_abort
+  use tem_compileconf_module, only: vlen
+  use tem_logging_module, only: logUnit
 
-  use ply_modg_basis_module,     only: scalProdLeg
-  use ply_space_integration_module,                  &
-    & only: ply_create_surface_gauss_points_cube,    &
-    &       ply_create_surface_gauss_points_cube_2d, &
-    &       ply_create_surface_gauss_points_cube_1d, &
-    &       ply_gaussLegPoints
-  use ply_modg_basis_module,     only: legendre_1D
-  use ply_nodes_module,          only: ply_faceNodes_type
+  use ply_modg_basis_module, only: scalProdLeg
+  use ply_space_integration_module, only: ply_gaussLegPoints
+  use ply_modg_basis_module, only: legendre_1D
+  use ply_nodeset_module, only: ply_nodeset_chebyshev, &
+    &                           ply_nodeset_chebyloba
+  use ply_l2p_header_module, only: ply_l2p_header_type
+  use ply_lagrange_module, only: ply_lagrange_type,   &
+    &                            ply_lagrange_define, &
+    &                            ply_lagrange_1D
 
   implicit none
 
@@ -62,7 +65,9 @@ module ply_l2p_module
   public :: assignment(=)
   public :: ply_l2p_trafo_1D, ply_l2p_trafo_2D, ply_l2p_trafo_3D
 
+
 contains
+
 
   ! ************************************************************************ !
   subroutine Copy_ply_l2p( left, right )
@@ -84,138 +89,107 @@ contains
 
   ! ************************************************************************ !
   !> Initialize the transformations via L2 projections.
-  subroutine ply_init_l2p( l2p, degree, nDims, nodes, faces )
+  subroutine ply_init_l2p( l2p, header, degree )
     ! -------------------------------------------------------------------- !
     type(ply_l2p_type), intent(out) :: l2p
+    type(ply_l2p_header_type), intent(in) :: header
     integer, intent(in) :: degree
-    integer, intent(in) :: nDims
-    real(kind=rk), intent(out), allocatable :: nodes(:,:)
-    type(ply_faceNodes_type), intent(out), allocatable :: faces(:,:)
     ! -------------------------------------------------------------------- !
     integer :: iPoint, iDof
-    integer :: iDir, iAlign
     integer :: nDofs
     integer :: nPoints
-    integer :: lb,ub
     real(kind=rk), allocatable :: gaussp1D(:)
-    real(kind=rk), allocatable :: leg1D_at_gauss(:,:)
+    real(kind=rk), allocatable :: target_nodes(:)
+    real(kind=rk), allocatable :: leg_at_gauss(:,:)
+    real(kind=rk), allocatable :: lagrange_at_gauss(:,:)
     real(kind=rk), allocatable :: weights1D(:)
-    real(kind=rk), allocatable :: tmp_weights(:)
+    real(kind=rk) :: quad
     real(kind=rk) :: scalprod_q
+    type(ply_lagrange_type) :: lagrange
     ! -------------------------------------------------------------------- !
 
     nDofs = degree+1
     nPoints = nDofs
 
-    allocate(leg1D_at_gauss(max(2,nDofs), nPoints))
+    allocate(leg_at_gauss(nDofs, nPoints))
     allocate(gaussp1D(nPoints))
     allocate(weights1D(nPoints))
+    allocate(target_nodes(nPoints))
 
-    ! create the quadrature points for volume and on the face
-    ! for the oversampled projection
+    allocate(l2p%leg2node(nDofs, nPoints))
+    allocate(l2p%node2leg(nPoints, nDofs))
+
+    ! Find points and weights for numerical Gauss-Legendre quadrature.
     call ply_gaussLegPoints( x1    = -1.0_rk,   &
       &                      x2    = 1.0_rk,    &
       &                      nIntP = nPoints,   &
       &                      w     = weights1D, &
       &                      x     = gaussp1D   )
-    leg1D_at_gauss = legendre_1D( points = gaussp1D, &
-      &                           degree = degree    )
+    leg_at_gauss = legendre_1D( points = gaussp1D, &
+      &                         degree = degree    )
 
-    allocate(l2p%leg2node(nDofs, nPoints))
-    allocate(l2p%node2leg(nPoints, nDofs))
+    select case(trim(header%nodes_header%nodes_kind))
+    case('gauss-legendre')
+      ! Create the projection matrix.
+      ! Coefficients to transform legendre to nodal values (evaluate
+      ! each mode at all points in the node set.
+      ! As we project to the Gauss-Legendre nodes we can simply
+      ! utilize the results for all the mode values at those points.
+      l2p%leg2node = leg_at_gauss
 
-    ! Coefficients to transform legendre to nodal values.
-    l2p%leg2node = leg1D_at_gauss(:nDofs, :)
-
-    ! Coefficients to transform nodal to legendre values.
-    do iDoF = 1,nDofs
-      scalProd_q = 1.0_rk / scalProdLeg(iDoF)
-      do iPoint = 1,nPoints
-        l2p%node2leg(iPoint, iDoF) = l2p%leg2node(iDoF, iPoint) &
-          &                            * weights1D(iPoint)        &
-          &                            * scalProd_q
-      end do
-    end do
-
-    ! Build the Gauss-Legendre nodes on the reference faces
-    ! HK: This should probably moved to a separate routine.
-    select case(nDims)
-    case (1)
-      allocate( nodes(nPoints, 3) )
-      nodes(:,1) = gaussP1D
-      nodes(:,2:) = 0.0_rk
-
-      allocate( faces(1,2) )
-      iDir = 1
-      do iAlign = 1,2
-        faces(iDir,iAlign)%nquadpoints = 1
-        call ply_create_surface_gauss_points_cube_1d( &
-          & points  = faces(iDir,iAlign)%points,      &
-          & weights = tmp_weights,                    &
-          & dir     = idir,                           &
-          & align   = iAlign                          )
-        deallocate(tmp_weights)
-      end do
-
-    case (2)
-      allocate( nodes(nPoints**2, 3) )
-      do iPoint=1,nPoints
-        lb = (iPoint-1) * nPoints + 1
-        ub = iPoint * nPoints
-        nodes(lb:ub,1) = gaussP1D
-        nodes(lb:ub,2) = gaussP1D(iPoint)
-      end do
-      nodes(:,3) = 0.0_rk
-
-      allocate( faces(2,2) )
-      do iDir = 1,2
-        do iAlign = 1,2
-          faces(iDir,iAlign)%nquadpoints = nPoints
-          call ply_create_surface_gauss_points_cube_2d(           &
-            & num_intp_per_direction = nPoints,                   &
-            & points                 = faces(iDir,iAlign)%points, &
-            & weights                = tmp_weights,               &
-            & refElemMin             = -1.0_rk,                   &
-            & refElemMax             =  1.0_rk,                   &
-            & dir                    = idir,                      &
-            & align                  = iAlign                     )
-          deallocate(tmp_weights)
+      ! Coefficients to transform nodal to legendre values.
+      do iDoF = 1,nDofs
+        scalProd_q = 1.0_rk / scalProdLeg(iDoF)
+        do iPoint = 1,nPoints
+          l2p%node2leg(iPoint, iDoF) = l2p%leg2node(iDoF, iPoint) &
+            &                            * weights1D(iPoint)      &
+            &                            * scalProd_q
         end do
       end do
 
-    case (3)
-      allocate( nodes(nPoints**3, 3) )
-      do iPoint=1,nPoints
-        lb = (iPoint-1) * nPoints + 1
-        ub = iPoint*nPoints
-        nodes(lb:ub,1) = gaussP1D
-        nodes(lb:ub,2) = gaussP1D(iPoint)
-      end do
-      nodes(:nPoints**2,3) = gaussP1D(1)
+    case('chebyshev')
+      ! Defining a lagrange polynomial series to allow the evaluation of
+      ! its basis functions, the values do not matter to us here.
+      if (header%nodes_header%lobattoPoints) then
+        lagrange = ply_lagrange_define( nPoints = nPoints,               &
+          &                             nodeset = ply_nodeset_chebyloba, &
+          &                             values  = target_nodes           )
+      else
+        lagrange = ply_lagrange_define( nPoints = nPoints,               &
+          &                             nodeset = ply_nodeset_chebyshev, &
+          &                             values  = target_nodes           )
+      end if
 
-      do iPoint=2,nPoints
-        lb = (iPoint-1) * nPoints**2 + 1
-        ub = iPoint*nPoints**2
-        nodes(lb:ub,1) = nodes(:nPoints**2,1)
-        nodes(lb:ub,2) = nodes(:nPoints**2,2)
-        nodes(lb:ub,3) = gaussP1D(iPoint)
-      end do
+      allocate(lagrange_at_gauss(nDofs, nPoints))
 
-      allocate( faces(3,2) )
-      do iDir = 1,3
-        do iAlign = 1,2
-          faces(iDir,iAlign)%nquadpoints = nPoints**2
-          call ply_create_surface_gauss_points_cube(              &
-            & num_intp_per_direction = nPoints,                   &
-            & points                 = faces(iDir,iAlign)%points, &
-            & weights                = tmp_weights,               &
-            & refElemMin             = -1.0_rk,                   &
-            & refElemMax             =  1.0_rk,                   &
-            & dir                    = idir,                      &
-            & align                  = iAlign                     )
-          deallocate(tmp_weights)
+      ! Create the projection matrix.
+      ! Coefficients to transform legendre to nodal values (evaluate
+      ! each mode at all points in the node set.
+      l2p%leg2node = legendre_1D( points = lagrange%coords, &
+        &                         degree = degree           )
+
+      ! Coefficients to transform nodal to legendre values.
+      ! This matrix is computed by using the numerical Gauss-Legendre
+      ! integration for the L2 projection of the Lagrange series to
+      ! the Legendre basis.
+
+      lagrange_at_gauss = ply_lagrange_1D( me = lagrange, points = gaussP1D)
+
+      do iDoF = 1,nDofs
+        scalProd_q = 1.0_rk / scalProdLeg(iDoF)
+        do iPoint = 1,nPoints
+          quad = sum( weights1D * lagrange_at_gauss(iPoint, :) &
+            &                   * leg_at_gauss(iDoF, :)        )
+          l2p%node2leg(iPoint, iDoF) = quad * scalProd_q
         end do
       end do
+
+    case default
+      write(logUnit(1),*) 'Error in L2P initialization'
+      write(logUnit(1),*) '"'//trim(header%nodes_header%nodes_kind) &
+        &                 //'" NOT supported by L2P!'
+      write(logUnit(1),*) 'Aborting...'
+      call tem_abort()
 
     end select
 

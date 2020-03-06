@@ -6,7 +6,7 @@
 ! Copyright (c) 2013-2018 Harald Klimach <harald.klimach@uni-siegen.de>
 ! Copyright (c) 2013-2014 Nikhil Anand <nikhil.anand@uni-siegen.de>
 ! Copyright (c) 2013-2014, 2016 Verena Krupp <v.krupp@grs-sim.de>
-! Copyright (c) 2016-2018 Peter Vitt <peter.vitt2@uni-siegen.de>
+! Copyright (c) 2016-2018, 2020 Peter Vitt <peter.vitt2@uni-siegen.de>
 ! Copyright (c) 2016-2018 Daniel Fleischer <daniel.fleischer@student.uni-siegen.de>
 ! Copyright (c) 2014, 2016 Kannan Masilamani <kannan.masilamani@uni-siegen.de>
 ! Copyright (c) 2016 Tobias Girresser <tobias.girresser@student.uni-siegen.de>
@@ -676,12 +676,10 @@ contains
     real(kind=rk), intent(out) :: res(:)
     ! -------------------------------------------------------------------- !
     type(capsule_array_type), pointer :: p
-    integer :: datlen(1)
     integer :: iElem
     integer :: nComps
     ! -------------------------------------------------------------------- !
     nComps = fun%nComponents
-    datlen = tree%nElems * nComps
 
     call c_f_pointer(fun%method_data, p)
 

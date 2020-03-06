@@ -1,5 +1,5 @@
 ! Copyright (c) 2015 Nikhil Anand <nikhil.anand@uni-siegen.de>
-! Copyright (c) 2015 Harald Klimach <harald.klimach@uni-siegen.de>
+! Copyright (c) 2015,2020 Harald Klimach <harald.klimach@uni-siegen.de>
 ! Copyright (c) 2017 Daniel Petró <daniel.petro@student.uni-siegen.de>
 ! Copyright (c) 2017 Peter Vitt <peter.vitt2@uni-siegen.de>
 ! Copyright (c) 2019 Neda Ebrahimi Pour <neda.epour@uni-siegen.de>
@@ -19,8 +19,34 @@
 ! ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 ! OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 ! **************************************************************************** !
-!> Module contains the header for the fxt projection method
-
+!> The FXT method offers a transformation from Legendre modes to nodes by a
+!! fast multipole approach implemented in the
+!! [FXTPACK](http://sudalab.is.s.u-tokyo.ac.jp/~reiji/fxtpack.html) library by
+!! Reiji Suda:
+!! R. Suda, "Fast Spherical Harmonic Transform Algorithm based on
+!! Generalized Fast Multiple Method", RIMS Kokyuroku vol 1606,
+!! pp. 18-29, Jun. 2008, RIMS, Kyoto University.
+!!
+!! Besides the oversampling `factor` that can be used to increase the number
+!! points in the nodal representation to achieve an de-aliasing, there is only
+!! one other option to this method:
+!! The `prec` parameter configures the precision up to which the FXTPACK
+!! should compute the transformation.
+!! It defaults to the square root of the epsilon for the real kind. With
+!! double precision this would something around 1.4e-8.
+!!
+!! This transformation utilizes the Gauss Legendre integration points in the
+!! nodal representation.
+!!
+!! Thus, the configuration for a FXT projection takes the following form:
+!!
+!!```lua
+!!  projection = {
+!!    kind = 'fxt',
+!!    prec = 1.e-10
+!!  }
+!!```
+!!
 module ply_fxt_header_module
 
   use env_module,              only: rk
@@ -31,7 +57,13 @@ module ply_fxt_header_module
   use tem_logging_module,      only: logUnit
   use tem_float_module
 
-  use ply_nodes_header_module
+  use ply_nodes_header_module, only: ply_nodes_header_type, &
+    &                                operator(==),          &
+    &                                operator(/=),          &
+    &                                operator(<=),          &
+    &                                operator(>=),          &
+    &                                operator(<),           &
+    &                                operator(>)
 
   implicit none
 
@@ -83,7 +115,8 @@ module ply_fxt_header_module
 
 contains
 
-  ! ************************************************************************ !
+
+  ! ------------------------------------------------------------------------ !
   pure subroutine Copy_fxt_header( left, right )
     ! -------------------------------------------------------------------- !
     !> fpt to copy to
@@ -91,16 +124,17 @@ contains
     !> fpt to copy from
     type(ply_fxt_header_type), intent(in) :: right
     ! -------------------------------------------------------------------- !
+    ! -------------------------------------------------------------------- !
 
     left%factor = right%factor
     left%prec = right%prec
     left%nodes_header = right%nodes_header
 
   end subroutine Copy_fxt_header
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
 
 
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
   !> Load settings to describe a projection method from a Lua table.
   subroutine ply_fxt_header_load( me, conf, thandle )
     ! -------------------------------------------------------------------- !
@@ -146,10 +180,10 @@ contains
     !!  &              default = .false.                        )
 
   end subroutine ply_fxt_header_load
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
 
 
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
   !> Write FXT settings into a Lua table.
   subroutine ply_fxt_header_out( me, conf )
     ! -------------------------------------------------------------------- !
@@ -166,10 +200,10 @@ contains
       &               val      = me%nodes_header%lobattoPoints )
 
   end subroutine ply_fxt_header_out
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
 
 
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
   subroutine ply_fxt_header_display( me )
     ! -------------------------------------------------------------------- !
     type(ply_fxt_header_type), intent(in) :: me
@@ -194,10 +228,10 @@ contains
     end if
 
   end subroutine ply_fxt_header_display
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
 
 
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
   !> This function provides the test for equality of two projections.
   !!
   !! Two fxt header are considered to be equal, if their node_header,
@@ -211,15 +245,16 @@ contains
     !> is equal??
     logical :: equality
     ! -------------------------------------------------------------------- !
+    ! -------------------------------------------------------------------- !
 
     equality = ( left%nodes_header == right%nodes_header ) &
       & .and. ( left%factor .feq. right%factor )
 
   end function isEqual
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
 
 
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
   !> This function provides the test for unequality of two projections.
   !!
   !! Two fxt header are considered to be unequal, if their node_header,
@@ -233,15 +268,16 @@ contains
     !> is unequal??
     logical :: unequality
     ! -------------------------------------------------------------------- !
+    ! -------------------------------------------------------------------- !
 
     unequality = ( left%nodes_header /= right%nodes_header ) &
       & .or. ( left%factor .fne. right%factor)
 
   end function isUnequal
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
 
 
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
   !> This function provides a < comparison of two projections.
   !!
   !! Sorting of fxt header is given by node_header and by the factor.
@@ -254,6 +290,7 @@ contains
     !> is smaller??
     logical :: small
     ! -------------------------------------------------------------------- !
+    ! -------------------------------------------------------------------- !
 
     small = .false.
     if (left%nodes_header < right%nodes_header) then
@@ -265,10 +302,10 @@ contains
     end if
 
   end function isSmaller
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
 
 
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
   !> This function provides a <= comparison of two projections.
   !!
   !! Sorting of fxt header is given by node_header, fxt_blocksize and
@@ -293,10 +330,10 @@ contains
     end if
 
   end function isSmallerOrEqual
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
 
 
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
   !> This function provides a > comparison of two projections.
   !!
   !! Sorting of fxt header is given by node_header, fxt_blocksize and
@@ -310,6 +347,7 @@ contains
     !> is greater??
     logical :: great
     ! -------------------------------------------------------------------- !
+    ! -------------------------------------------------------------------- !
 
     great = .false.
     if (left%nodes_header > right%nodes_header) then
@@ -321,10 +359,10 @@ contains
     end if
 
   end function isGreater
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
 
 
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
   !> This function provides a >= comparison of two projections.
   !!
   !! Sorting of fxt header is given by node_header, fxt_blocksize and
@@ -338,6 +376,7 @@ contains
     !> is greater??
     logical :: great
     ! -------------------------------------------------------------------- !
+    ! -------------------------------------------------------------------- !
 
     great = .false.
     if (left%nodes_header > right%nodes_header) then
@@ -349,6 +388,6 @@ contains
     end if
 
   end function isGreaterOrEqual
-  ! ************************************************************************ !
+  ! ------------------------------------------------------------------------ !
 
 end module ply_fxt_header_module

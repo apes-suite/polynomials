@@ -1,4 +1,4 @@
-! Copyright (c) 2013-2015,2019 Harald Klimach <harald@klimachs.de>
+! Copyright (c) 2013-2015,2019-2020 Harald Klimach <harald@klimachs.de>
 ! Copyright (c) 2013-2014 Peter Vitt <peter.vitt2@uni-siegen.de>
 ! Copyright (c) 2013-2014 Verena Krupp
 ! Copyright (c) 2014 Nikhil Anand <nikhil.anand@uni-siegen.de>
@@ -31,8 +31,7 @@ program ply_project_2d_fpt_lobattoPoints_test
     &                                  ply_poly_project_n2m,      &
     &                                  ply_poly_project_type
   use ply_prj_header_module, only: ply_prj_header_type
-  use ply_fpt_header_module,     only: ply_fpt_default_blocksize, &
-    &                                  ply_fpt_default_subblockingWidth
+  use ply_fpt_header_module,     only: ply_fpt_header_define
   use tem_general_module,        only: tem_general_type, tem_start
 
   !mpi!nprocs = 1
@@ -78,10 +77,10 @@ program ply_project_2d_fpt_lobattoPoints_test
 contains
 
   subroutine check_fpt_2d(power, res)
-  !---------------------------------------
+    !---------------------------------------
     integer, intent(in) :: power
     real(kind=rk), intent(out) :: res
-  !---------------------------------------
+    !---------------------------------------
     type(ply_poly_project_type) :: me
     type(ply_prj_init_type) :: prj_init
     type(ply_prj_header_type) :: header
@@ -97,16 +96,14 @@ contains
     basisType = Q_space
     maxdegree = power
     header%kind = 'fpt'
-    header%fpt_header%factor = 1.0_rk
-    header%fpt_header%blocksize = ply_fpt_default_blocksize
-    header%fpt_header%subblockingWidth = ply_fpt_default_subblockingWidth
-    header%fpt_header%nodes_header%lobattopoints = .true.
+    call ply_fpt_header_define( me = header%fpt_header, &
+      &                         lobattoPoints = .true.  )
 
     ! define poly projection init type
     call ply_prj_init_define(me=  prj_init,            &
       &                      header = header ,         &
       &                      maxPolyDegree= maxdegree, &
-      &                      basisType = basistype )
+      &                      basisType = basistype     )
     ! fill the projection body according to the header
     call ply_poly_project_fillbody(me = me, proj_init=prj_init, scheme_dim=2)
 
@@ -131,16 +128,16 @@ contains
       end do
     end do
 
-    call ply_poly_project_m2n(me = me ,    &
-      &                       dim = 2 , &
-      &                       nVars =1, &
-      &                       nodal_data=nodal_data, &
-      &                       modal_data=oversamp_modal)
-    call ply_poly_project_n2m(me = me,     &
-      &                       dim = 2 , &
-      &                       nVars =1, &
-      &                       nodal_data=nodal_data, &
-      &                       modal_data= oversamp_modal)
+    call ply_poly_project_m2n( me = me,                    &
+      &                        dim = 2,                    &
+      &                        nVars = 1,                  &
+      &                        nodal_data = nodal_data,    &
+      &                        modal_data = oversamp_modal )
+    call ply_poly_project_n2m( me = me,                    &
+      &                        dim = 2,                    &
+      &                        nVars = 1,                  &
+      &                        nodal_data = nodal_data,    &
+      &                        modal_data = oversamp_modal )
 
     do iDegX = 1, maxdegree+1
       do iDegY = 1, maxdegree+1
