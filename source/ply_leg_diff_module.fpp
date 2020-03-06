@@ -36,7 +36,9 @@ module ply_leg_diff_module
   public :: calcDiff_leg_1d
   public :: calcDiff_leg_normal
   public :: calcDiff_leg_2d_normal
-
+  public :: calcDiff_leg_x_vec
+  public :: calcDiff_leg_y_vec
+  public :: calcDiff_leg_z_vec
 contains
 
 
