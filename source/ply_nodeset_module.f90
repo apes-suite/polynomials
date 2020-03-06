@@ -164,13 +164,13 @@ contains
 
     ! Both interval limits can be set directly and don't have to be
     ! computed.
-    x(1) = -1.0_rk
-    x(nPoints) = 1.0_rk
+    x(1) = 1.0_rk
+    x(nPoints) = -1.0_rk
 
     do iPoint=2,nHalf
       iBack = nPoints - iPoint + 1
-      x(iBack) = cos( (iPoint - 1) * PI / real(nPoints - 1, kind=rk) )
-      x(iPoint) = -x(iBack)
+      x(iPoint) = cos( (iPoint - 1) * PI / real(nPoints - 1, kind=rk) )
+      x(iBack) = -x(iPoint)
     end do
 
   end function ply_nodeset_chebyloba
