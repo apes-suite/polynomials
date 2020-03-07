@@ -1,5 +1,5 @@
 ! Copyright (c) 2015 Harald Klimach <harald@klimachs.de>
-! Copyright (c) 2016, 2019 Peter Vitt <peter.vitt2@uni-siegen.de>
+! Copyright (c) 2016, 2019-2020 Peter Vitt <peter.vitt2@uni-siegen.de>
 !
 ! Parts of this file were written by Harald Klimach and Peter Vitt
 ! for University of Siegen.
@@ -43,18 +43,20 @@
 !! - Legendre modes
 !! - L2-Error
 program approximate_1D_jump
-  use env_module, only: rk
+  use env_module,                   only: rk
 
-  use tem_dyn_array_module, only: dyn_realArray_type, init, append
+  use tem_dyn_array_module,         only: dyn_realArray_type, init, append
 
-  use ply_dof_module, only: q_space
-  use ply_dynArray_project_module, only: ply_prj_init_type
-  use ply_modg_basis_module, only: ply_modg_refine_type, &
-    &                              init_modg_multilevelCoeffs, &
-    &                              integrateLeg, legendre_1D, scalprodleg
-  use ply_poly_project_module, only: ply_poly_project_type, &
-    &                                ply_poly_project_fillbody, &
-    &                                ply_poly_project_n2m
+  use ply_dof_module,               only: q_space
+  use ply_dynArray_project_module,  only: ply_prj_init_type
+  use ply_modg_basis_module,        only: ply_modg_refine_type,           &
+    &                                     ply_init_modg_multilevelCoeffs, &
+    &                                     ply_integrateLeg,               &
+    &                                     ply_legendre_1D,                &
+    &                                     ply_scalprodleg
+  use ply_poly_project_module,      only: ply_poly_project_type, &
+    &                                     ply_poly_project_fillbody, &
+    &                                     ply_poly_project_n2m
 
   implicit none
 
@@ -215,9 +217,9 @@ program approximate_1D_jump
 
   if (trim(method) == 'iterative') then
 
-    call init_modg_multilevelCoeffs( nPoints  = 128,          &
-      &                              nFunc    = polydegree+1, &
-      &                              integral = refine        )
+    call ply_init_modg_multilevelCoeffs( nPoints  = 128,          &
+      &                                  nFunc    = polydegree+1, &
+      &                                  integral = refine        )
 
     ! Projection of constant 1 to the half of a coarser element.
     ! (Precomputation)
@@ -322,15 +324,15 @@ program approximate_1D_jump
   do iMode=1,polydegree+1
     legmodes = 0.0_rk
     legmodes(iMode) = 1.0_rk
-    integral(:iMode+1) = integrateleg( integrand = legmodes(:iMode), &
-      &                                maxdegree = iMode             )
-    intatjota = legendre_1D( points = [jota], degree = polydegree+1 )
+    integral(:iMode+1) = ply_integrateleg( integrand = legmodes(:iMode), &
+      &                                    maxdegree = iMode             )
+    intatjota = ply_legendre_1D( points = [jota], degree = polydegree+1 )
     exact(iMode) = 0.0_rk
     do intmode=1,iMode+1
       exact(iMode) = exact(iMode) &
         &          + integral(intmode)*(1.0_rk - intatjota(intmode,1))
     end do
-    exact(iMode) = exact(iMode) / scalprodleg(iMode)
+    exact(iMode) = exact(iMode) / ply_scalprodleg(iMode)
   end do
 
   if (current == -1) then
@@ -342,8 +344,8 @@ program approximate_1D_jump
   write(*,*) 'Legendre Modes:'
   do iMode=1,polydegree+1
     write(*,*) modal_data(iMode,current), exact(iMode)
-    optierr = optierr + exact(iMode)**2 * scalprodleg(iMode)
-    l2err = l2err + scalprodleg(iMode)*(modal_data(iMode,current) &
+    optierr = optierr + exact(iMode)**2 * ply_scalprodleg(iMode)
+    l2err = l2err + ply_scalprodleg(iMode)*(modal_data(iMode,current) &
       &                                 - exact(iMode))**2
   end do
   write(*,*) '-----------------'
