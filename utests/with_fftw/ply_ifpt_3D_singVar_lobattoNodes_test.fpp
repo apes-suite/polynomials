@@ -1,5 +1,5 @@
 ! Copyright (c) 2013-2014 Jens Zudrop <j.zudrop@grs-sim.de>
-! Copyright (c) 2013-2014, 2016 Peter Vitt <peter.vitt2@uni-siegen.de>
+! Copyright (c) 2013-2014, 2016, 2020 Peter Vitt <peter.vitt2@uni-siegen.de>
 ! Copyright (c) 2013-2016, 2018-2020 Harald Klimach <harald.klimach@uni-siegen.de>
 ! Copyright (c) 2013-2014 Verena Krupp
 ! Copyright (c) 2014 Nikhil Anand <nikhil.anand@uni-siegen.de>
@@ -34,7 +34,7 @@ program ply_ifpt_3D_singVar_lobattoNodes_test
   use ply_fpt_header_module, only: ply_fpt_header_type, ply_fpt_header_define
   use ply_legFpt_module,     only: ply_legFpt_type, ply_init_legFPT
   use ply_legFpt_3D_module,  only: ply_pntToLeg_3D
-  use ply_modg_basis_module, only: evalLegendreTensPoly
+  use ply_modg_basis_module, only: ply_evalLegendreTensPoly
   use ply_dof_module,        only: Q_space
   use tem_general_module,    only: tem_general_type, tem_start
 
@@ -126,10 +126,11 @@ contains
     ! define the reference results for the point values (Chebyshev nodes)
     !allocate( legValChebPnt((maxPolyDegree+1)**3,(maxPolyDegree+1)**3) )
     !legValChebPnt(:,:) = legendre_1D(chebPnt, maxPolyDegree)
-    call evalLegendreTensPoly( coords = chebPnt , nCoords = (maxPolyDegree+1)**3, &
-                             & maxPolyDegree = maxPolyDegree, &
-                             & basisType = Q_Space, &
-                             & polyVal = legValChebPnt )
+    call ply_evalLegendreTensPoly( coords        = chebPnt,              &
+      &                            nCoords       = (maxPolyDegree+1)**3, &
+      &                            maxPolyDegree = maxPolyDegree,        &
+      &                            basisType     = Q_Space,              &
+      &                            polyVal       = legValChebPnt         )
     allocate(pntVal( (maxPolyDegree+1)**3 ))
     pntVal(:) = 0.0_rk
     write(logUnit(10),*) 'Calculating reference results ...'

@@ -1,4 +1,5 @@
 ! Copyright (c) 2017 Harald Klimach <harald.klimach@uni-siegen.de>
+! Copyright (c) 2020 Peter Vitt <peter.vitt2@uni-siegen.de>
 !
 ! Parts of this file were written by Harald Klimach for University of Siegen.
 !
@@ -19,7 +20,7 @@ program ply_split_legendre_test_prog
   use env_module, only: rk
   use ply_split_legendre_module, only: ply_split_legendre_test, &
     &                                  ply_split_legendre_matrix
-  use ply_modg_basis_module, only: legendre_1d
+  use ply_modg_basis_module, only: ply_legendre_1d
 
   implicit none
 
@@ -69,13 +70,13 @@ program ply_split_legendre_test_prog
   call random_number(xi)
 
   ! Compute all legendre modes at those points.
-  legchild = legendre_1D(xi, nModes-1)
+  legchild = ply_legendre_1D(xi, nModes-1)
 
   ! Right half:
   ! Do the coordinate transform to obtain the point values in the parent, and
   ! compute all legendre modes for these points.
   x = 0.5_rk*xi + 0.5_rk
-  legparent = legendre_1D(x, nModes-1)
+  legparent = ply_legendre_1D(x, nModes-1)
 
   ! Transformation is achieved by multiplication with the upper triangular
   ! matrix. For the right half this is stored in the format (row, column).
@@ -100,7 +101,7 @@ program ply_split_legendre_test_prog
   ! Do the coordinate transform to obtain the point values in the parent, and
   ! compute all legendre modes for these points.
   x = 0.5_rk*xi - 0.5_rk
-  legparent = legendre_1D(x, nModes-1)
+  legparent = ply_legendre_1D(x, nModes-1)
 
   ! Transformation is achieved by multiplication with the lower triangular
   ! matrix. For the left half this is stored in the format (column, row).

@@ -3,7 +3,7 @@
 ! Copyright (c) 2012 Jan Hueckelheim <j.hueckelheim@grs-sim.de>
 ! Copyright (c) 2012 Melven Zoellner <yameta@freenet.de>
 ! Copyright (c) 2013-2014,2016 Verena Krupp
-! Copyright (c) 2013-2014,2017 Peter Vitt <peter.vitt2@uni-siegen.de>
+! Copyright (c) 2013-2014, 2017, 2020 Peter Vitt <peter.vitt2@uni-siegen.de>
 ! Copyright (c) 2014-2015 Nikhil Anand <nikhil.anand@uni-siegen.de>
 ! Copyright (c) 2016 Tobias Girresser <tobias.girresser@student.uni-siegen.de>
 ! Copyright (c) 2017 Jiaxing Qi <jiaxing.qi@uni-siegen.de>
@@ -29,21 +29,21 @@
 ! **************************************************************************** !
 
 module ply_l2p_module
-  use env_module, only: rk
+  use env_module,                   only: rk
 
-  use tem_aux_module, only: tem_abort
-  use tem_compileconf_module, only: vlen
-  use tem_logging_module, only: logUnit
+  use tem_aux_module,               only: tem_abort
+  use tem_compileconf_module,       only: vlen
+  use tem_logging_module,           only: logUnit
 
-  use ply_modg_basis_module, only: scalProdLeg
+  use ply_modg_basis_module,        only: ply_scalProdLeg
   use ply_space_integration_module, only: ply_gaussLegPoints
-  use ply_modg_basis_module, only: legendre_1D
-  use ply_nodeset_module, only: ply_nodeset_chebyshev, &
-    &                           ply_nodeset_chebyloba
-  use ply_l2p_header_module, only: ply_l2p_header_type
-  use ply_lagrange_module, only: ply_lagrange_type,   &
-    &                            ply_lagrange_define, &
-    &                            ply_lagrange_1D
+  use ply_modg_basis_module,        only: ply_legendre_1d
+  use ply_nodeset_module,           only: ply_nodeset_chebyshev, &
+    &                                     ply_nodeset_chebyloba
+  use ply_l2p_header_module,        only: ply_l2p_header_type
+  use ply_lagrange_module,          only: ply_lagrange_type,   &
+    &                                     ply_lagrange_define, &
+    &                                     ply_lagrange_1D
 
   implicit none
 
@@ -125,8 +125,8 @@ contains
       &                      nIntP = nPoints,   &
       &                      w     = weights1D, &
       &                      x     = gaussp1D   )
-    leg_at_gauss = legendre_1D( points = gaussp1D, &
-      &                         degree = degree    )
+    leg_at_gauss = ply_legendre_1d( points = gaussp1D, &
+      &                             degree = degree    )
 
     select case(trim(header%nodes_header%nodes_kind))
     case('gauss-legendre')
@@ -139,7 +139,7 @@ contains
 
       ! Coefficients to transform nodal to legendre values.
       do iDoF = 1,nDofs
-        scalProd_q = 1.0_rk / scalProdLeg(iDoF)
+        scalProd_q = 1.0_rk / ply_scalProdLeg(iDoF)
         do iPoint = 1,nPoints
           l2p%node2leg(iPoint, iDoF) = l2p%leg2node(iDoF, iPoint) &
             &                            * weights1D(iPoint)      &
@@ -165,8 +165,8 @@ contains
       ! Create the projection matrix.
       ! Coefficients to transform legendre to nodal values (evaluate
       ! each mode at all points in the node set.
-      l2p%leg2node = legendre_1D( points = lagrange%coords, &
-        &                         degree = degree           )
+      l2p%leg2node = ply_legendre_1d( points = lagrange%coords, &
+        &                             degree = degree           )
 
       ! Coefficients to transform nodal to legendre values.
       ! This matrix is computed by using the numerical Gauss-Legendre
@@ -176,7 +176,7 @@ contains
       lagrange_at_gauss = ply_lagrange_1D( me = lagrange, points = gaussP1D)
 
       do iDoF = 1,nDofs
-        scalProd_q = 1.0_rk / scalProdLeg(iDoF)
+        scalProd_q = 1.0_rk / ply_scalProdLeg(iDoF)
         do iPoint = 1,nPoints
           quad = sum( weights1D * lagrange_at_gauss(iPoint, :) &
             &                   * leg_at_gauss(iDoF, :)        )

@@ -1,4 +1,5 @@
-! Copyright (c) 2017,2019 Harald Klimach <harald.klimach@uni-siegen.de>
+! Copyright (c) 2017, 2019 Harald Klimach <harald.klimach@uni-siegen.de>
+! Copyright (c) 2020 Peter Vitt <peter.vitt2@uni-siegen.de>
 !
 ! Parts of this file were written by Harald Klimach for University of Siegen.
 !
@@ -33,9 +34,9 @@
 !! Where \(x\) refers to the coordinate in the original (coarse) element, and
 !! \(\xi\) to the coordinates in the two (left and right) halves of the element.
 module ply_split_element_module
-  use env_module, only: rk
-  use ply_split_legendre_module, only: ply_split_legendre_matrix
-  use ply_modg_basis_module, only: legendre_1d
+  use env_module,                 only: rk
+  use ply_split_legendre_module,  only: ply_split_legendre_matrix
+  use ply_modg_basis_module,      only: ply_legendre_1d
 
   implicit none
 
@@ -599,15 +600,15 @@ contains
     ! Some random points to check the resulting child polynomials.
     call random_number(xi)
 
-    legchild = legendre_1D(xi, nModes-1)
+    legchild = ply_legendre_1d(xi, nModes-1)
 
     ! The corresponding positions in the left and right half of the root
     ! element.
     x_right = 0.5_rk*xi + 0.5_rk
     x_left  = 0.5_rk*xi - 0.5_rk
 
-    legleft = legendre_1D(x_left, nModes-1)
-    legright = legendre_1D(x_right, nModes-1)
+    legleft = ply_legendre_1d(x_left, nModes-1)
+    legright = ply_legendre_1d(x_right, nModes-1)
 
     do parentmodes=1,nModes
       allocate(rootelem(parentModes,1))
@@ -707,8 +708,8 @@ contains
     ! Some random points to check the resulting child polynomials.
     call random_number(xi)
 
-    legchild(:,:,1) = legendre_1D(xi(:,1), nModes-1)
-    legchild(:,:,2) = legendre_1D(xi(:,2), nModes-1)
+    legchild(:,:,1) = ply_legendre_1d(xi(:,1), nModes-1)
+    legchild(:,:,2) = ply_legendre_1d(xi(:,2), nModes-1)
 
     ! The corresponding positions in the left and right half of the root
     ! element.
@@ -721,17 +722,17 @@ contains
     x_northwest(:,1) = 0.5_rk*xi(:,1) - 0.5_rk
     x_northwest(:,2) = 0.5_rk*xi(:,2) + 0.5_rk
 
-    legsouthwest(:,:,1) = legendre_1D(x_southwest(:,1), nModes-1)
-    legsouthwest(:,:,2) = legendre_1D(x_southwest(:,2), nModes-1)
+    legsouthwest(:,:,1) = ply_legendre_1d(x_southwest(:,1), nModes-1)
+    legsouthwest(:,:,2) = ply_legendre_1d(x_southwest(:,2), nModes-1)
 
-    legsoutheast(:,:,1) = legendre_1D(x_southeast(:,1), nModes-1)
-    legsoutheast(:,:,2) = legendre_1D(x_southeast(:,2), nModes-1)
+    legsoutheast(:,:,1) = ply_legendre_1d(x_southeast(:,1), nModes-1)
+    legsoutheast(:,:,2) = ply_legendre_1d(x_southeast(:,2), nModes-1)
 
-    legnorthwest(:,:,1) = legendre_1D(x_northwest(:,1), nModes-1)
-    legnorthwest(:,:,2) = legendre_1D(x_northwest(:,2), nModes-1)
+    legnorthwest(:,:,1) = ply_legendre_1d(x_northwest(:,1), nModes-1)
+    legnorthwest(:,:,2) = ply_legendre_1d(x_northwest(:,2), nModes-1)
 
-    legnortheast(:,:,1) = legendre_1D(x_northeast(:,1), nModes-1)
-    legnortheast(:,:,2) = legendre_1D(x_northeast(:,2), nModes-1)
+    legnortheast(:,:,1) = ply_legendre_1d(x_northeast(:,1), nModes-1)
+    legnortheast(:,:,2) = ply_legendre_1d(x_northeast(:,2), nModes-1)
 
     do parentmodes=1,nModes
       allocate(rootelem(parentModes**2,1))
@@ -848,9 +849,9 @@ contains
     ! Some random points to check the resulting child polynomials.
     call random_number(xi)
 
-    legchild(:,:,1) = legendre_1D(xi(:,1), nModes-1)
-    legchild(:,:,2) = legendre_1D(xi(:,2), nModes-1)
-    legchild(:,:,3) = legendre_1D(xi(:,3), nModes-1)
+    legchild(:,:,1) = ply_legendre_1d(xi(:,1), nModes-1)
+    legchild(:,:,2) = ply_legendre_1d(xi(:,2), nModes-1)
+    legchild(:,:,3) = ply_legendre_1d(xi(:,3), nModes-1)
 
     ! The corresponding positions in the left and right half of the root
     ! element.
@@ -866,9 +867,9 @@ contains
     end do
 
     do iElem=1,8
-      legparent(:,:,1,iElem) = legendre_1D(x(:,1,iElem), nModes-1)
-      legparent(:,:,2,iElem) = legendre_1D(x(:,2,iElem), nModes-1)
-      legparent(:,:,3,iElem) = legendre_1D(x(:,3,iElem), nModes-1)
+      legparent(:,:,1,iElem) = ply_legendre_1d(x(:,1,iElem), nModes-1)
+      legparent(:,:,2,iElem) = ply_legendre_1d(x(:,2,iElem), nModes-1)
+      legparent(:,:,3,iElem) = ply_legendre_1d(x(:,3,iElem), nModes-1)
     end do
 
     do parentmodes=1,nModes

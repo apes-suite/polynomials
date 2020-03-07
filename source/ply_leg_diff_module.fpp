@@ -31,20 +31,20 @@ module ply_leg_diff_module
 
   private
 
-  public :: calcDiff_leg
-  public :: calcDiff_leg_2d
-  public :: calcDiff_leg_1d
-  public :: calcDiff_leg_normal
-  public :: calcDiff_leg_2d_normal
-  public :: calcDiff_leg_x_vec
-  public :: calcDiff_leg_y_vec
-  public :: calcDiff_leg_z_vec
+  public :: ply_calcDiff_leg
+  public :: ply_calcDiff_leg_2d
+  public :: ply_calcDiff_leg_1d
+  public :: ply_calcDiff_leg_normal
+  public :: ply_calcDiff_leg_2d_normal
+  public :: ply_calcDiff_leg_x_vec
+  public :: ply_calcDiff_leg_y_vec
+  public :: ply_calcDiff_leg_z_vec
 contains
 
 
   ! ************************************************************************ !
-  subroutine calcDiff_leg_normal( legCoeffs, legCoeffsDiff, mPd, nVars, &
-    &                             elemLength, iDir, dirVec              )
+  subroutine ply_calcDiff_leg_normal( legCoeffs, legCoeffsDiff, mPd, nVars, &
+    &                                 elemLength, iDir, dirVec              )
     ! -------------------------------------------------------------------- !
     real(kind=rk), intent(in) :: legCoeffs(:,:)
     !> Modal expansion of the derivative of legCoeffs in terms of Legendre
@@ -170,12 +170,12 @@ contains
 !!     end do
 !!   end do
 
-  end subroutine calcDiff_leg_normal
+  end subroutine ply_calcDiff_leg_normal
   ! ************************************************************************ !
 
-! ************************************************************************ !
+  ! ************************************************************************ !
   subroutine calcDiff_leg_normal_vec( legCoeffs, legCoeffsDiff, mPd, nVars, &
-    &                             elemLength, iDir, dirVec              )
+    &                             elemLength, iDir, dirVec                  )
     ! -------------------------------------------------------------------- !
     real(kind=rk), intent(in) :: legCoeffs(:,:)
     !> Modal expansion of the derivative of legCoeffs in terms of Legendre
@@ -310,8 +310,8 @@ contains
 
   ! ************************************************************************ !
   !> Compute the derivative in X direction for 3D Legendre polynomial.
-  subroutine calcDiff_leg_x_vec( legCoeffs, legCoeffsDiff, mPd, nVars, &
-    &                             elemLength )
+  subroutine ply_calcDiff_leg_x_vec( legCoeffs, legCoeffsDiff, mPd, nVars, &
+    &                                elemLength                            )
     ! -------------------------------------------------------------------- !
     real(kind=rk), intent(in) :: legCoeffs(:,:)
     !> Modal expansion of the derivative of legCoeffs in terms of Legendre
@@ -372,14 +372,14 @@ contains
 
     end do varloop
 
-  end subroutine calcDiff_leg_x_vec
+  end subroutine ply_calcDiff_leg_x_vec
   ! ************************************************************************ !
 
 
   ! ************************************************************************ !
   !> Compute the derivative in Y direction for 3D Legendre polynomial.
-  subroutine calcDiff_leg_y_vec( legCoeffs, legCoeffsDiff, mPd, nVars, &
-    &                             elemLength )
+  subroutine ply_calcDiff_leg_y_vec( legCoeffs, legCoeffsDiff, mPd, nVars, &
+    &                                elemLength                            )
     ! -------------------------------------------------------------------- !
     real(kind=rk), intent(in) :: legCoeffs(:,:)
     !> Modal expansion of the derivative of legCoeffs in terms of Legendre
@@ -440,14 +440,14 @@ contains
 
     end do varloop
 
-  end subroutine calcDiff_leg_y_vec
+  end subroutine ply_calcDiff_leg_y_vec
   ! ************************************************************************ !
 
 
   ! ************************************************************************ !
   !> Compute the derivative in Y direction for 3D Legendre polynomial.
-  subroutine calcDiff_leg_z_vec( legCoeffs, legCoeffsDiff, mPd, nVars, &
-    &                             elemLength )
+  subroutine ply_calcDiff_leg_z_vec( legCoeffs, legCoeffsDiff, mPd, nVars, &
+    &                                elemLength                            )
     ! -------------------------------------------------------------------- !
     real(kind=rk), intent(in) :: legCoeffs(:,:)
     !> Modal expansion of the derivative of legCoeffs in terms of Legendre
@@ -506,13 +506,13 @@ contains
 
     end do varloop
 
-  end subroutine calcDiff_leg_z_vec
+  end subroutine ply_calcDiff_leg_z_vec
   ! ************************************************************************ !
 
 
   ! ************************************************************************ !
-  subroutine calcDiff_leg_2d_normal( legCoeffs, legCoeffsDiff, mPd, nVars, &
-    &                                elemLength, iDir, dirVec              )
+  subroutine ply_calcDiff_leg_2d_normal( legCoeffs, legCoeffsDiff, mPd, nVars, &
+    &                                    elemLength, iDir, dirVec              )
     ! -------------------------------------------------------------------- !
     real(kind=rk), intent(in) :: legCoeffs(:,:)
     !> Modal expansion of the derivative of legCoeffs in terms of Legendre
@@ -616,13 +616,13 @@ contains
       end do
     end do
 
-  end subroutine calcDiff_leg_2d_normal
+  end subroutine ply_calcDiff_leg_2d_normal
   ! ************************************************************************ !
 
 
   ! ************************************************************************ !
-  subroutine calcDiff_leg( legCoeffs, legCoeffsDiff, maxPolyDegree, nVars, &
-    &                      elemLength                                      )
+  subroutine ply_calcDiff_leg( legCoeffs, legCoeffsDiff, maxPolyDegree, nVars, &
+    &                          elemLength                                      )
     ! -------------------------------------------------------------------- !
     real(kind=rk), intent(in) :: legCoeffs(:,:)
     !> Modal expansion of the derivative of legCoeffs in terms of Legendre
@@ -640,32 +640,32 @@ contains
     ! -------------------------------------------------------------------- !
     if (maxpolydegree > 0) then
       ! Loop over Directions
-      call calcDiff_leg_x_vec( legCoeffs     = legCoeffs,            &
-        &                      legCoeffsDiff = legCoeffsDiff(:,:,1), &
-        &                      mPD           = maxPolyDegree,        &
-        &                      nVars         = nVars,                &
-        &                      elemLength    = elemLength            )
-      call calcDiff_leg_y_vec( legCoeffs     = legCoeffs,            &
-        &                      legCoeffsDiff = legCoeffsDiff(:,:,2), &
-        &                      mPD           = maxPolyDegree,        &
-        &                      nVars         = nVars,                &
-        &                      elemLength    = elemLength            )
-      call calcDiff_leg_z_vec( legCoeffs     = legCoeffs,            &
-        &                      legCoeffsDiff = legCoeffsDiff(:,:,3), &
-        &                      mPD           = maxPolyDegree,        &
-        &                      nVars         = nVars,                &
-        &                      elemLength    = elemLength            )
+      call ply_calcDiff_leg_x_vec( legCoeffs     = legCoeffs,            &
+        &                          legCoeffsDiff = legCoeffsDiff(:,:,1), &
+        &                          mPD           = maxPolyDegree,        &
+        &                          nVars         = nVars,                &
+        &                          elemLength    = elemLength            )
+      call ply_calcDiff_leg_y_vec( legCoeffs     = legCoeffs,            &
+        &                          legCoeffsDiff = legCoeffsDiff(:,:,2), &
+        &                          mPD           = maxPolyDegree,        &
+        &                          nVars         = nVars,                &
+        &                          elemLength    = elemLength            )
+      call ply_calcDiff_leg_z_vec( legCoeffs     = legCoeffs,            &
+        &                          legCoeffsDiff = legCoeffsDiff(:,:,3), &
+        &                          mPD           = maxPolyDegree,        &
+        &                          nVars         = nVars,                &
+        &                          elemLength    = elemLength            )
     else
       legCoeffsDiff = 0.0_rk
     end if
 
-  end subroutine calcDiff_leg
+  end subroutine ply_calcDiff_leg
   ! ************************************************************************ !
   
 
   ! ************************************************************************ !
-  subroutine calcDiff_leg_2d( legCoeffs, legCoeffsDiff, maxPolyDegree, nVars, &
-    &                         elemLength                                      )
+  subroutine ply_calcDiff_leg_2d( legCoeffs, legCoeffsDiff, maxPolyDegree, &
+    &                             nVars, elemLength                        )
     ! -------------------------------------------------------------------- !
     real(kind=rk), intent(in) :: legCoeffs(:,:)
     !> Modal expansion of the derivative of legCoeffs in terms of Legendre
@@ -689,23 +689,24 @@ contains
       ! Loop over Directions
       do iDir = 1,2
         ! Calculate the differentiation for the particular direction
-        call calcDiff_leg_2d_normal( legCoeffs = legCoeffs,                   &
-          &                          legCoeffsDiff = legCoeffsDiff(:,:,iDir), &
-          &                          mPD           = maxPolyDegree,           &
-          &                          nVars         = nVars,                   &
-          &                          elemLength    = elemLength,              &
-          &                          dirvec        = dirvec(:,iDir),          &
-          &                          iDir          = iDir                     )
+        call ply_calcDiff_leg_2d_normal(                &
+          &    legCoeffs = legCoeffs,                   &
+          &    legCoeffsDiff = legCoeffsDiff(:,:,iDir), &
+          &    mPD           = maxPolyDegree,           &
+          &    nVars         = nVars,                   &
+          &    elemLength    = elemLength,              &
+          &    dirvec        = dirvec(:,iDir),          &
+          &    iDir          = iDir                     )
       enddo
     endif
 
-  end subroutine calcDiff_leg_2d
+  end subroutine ply_calcDiff_leg_2d
   ! ************************************************************************ !
 
 
   ! ************************************************************************ !
-  subroutine calcDiff_leg_1d( legCoeffs, legCoeffsDiff, maxPolyDegree, &
-    &                         elemLength                               )
+  subroutine ply_calcDiff_leg_1d( legCoeffs, legCoeffsDiff, maxPolyDegree, &
+    &                             elemLength                               )
     ! -------------------------------------------------------------------- !
     real(kind=rk), intent(in) :: legCoeffs(:,:)
     !> Modal expansion of the derivative of legCoeffs in terms of Legendre
@@ -744,7 +745,7 @@ contains
         &                         * (2.0_rk*iDegX - 1.0_rk)
     end do
 
-  end subroutine calcDiff_leg_1d
+  end subroutine ply_calcDiff_leg_1d
   ! ************************************************************************ !
 
 

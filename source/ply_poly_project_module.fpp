@@ -1,5 +1,5 @@
 ! Copyright (c) 2013-2014 Jens Zudrop <j.zudrop@grs-sim.de>
-! Copyright (c) 2013-2014, 2016-2017 Peter Vitt <peter.vitt2@uni-siegen.de>
+! Copyright (c) 2013-2014, 2016-2017, 2020 Peter Vitt <peter.vitt2@uni-siegen.de>
 ! Copyright (c) 2013-2015 Nikhil Anand <nikhil.anand@uni-siegen.de>
 ! Copyright (c) 2013-2018, 2020 Harald Klimach <harald.klimach@uni-siegen.de.de>
 ! Copyright (c) 2013-2014 Verena Krupp <v.krupp@grs-sim.de>
@@ -228,9 +228,9 @@ module ply_poly_project_module
   public :: ply_poly_project_n2m
   public :: ply_poly_project_type
   public :: ply_faceNodes_type
-  public :: get_quadpoints_faces
-  public :: get_quadpoints_faces_2d
-  public :: get_quadpoints_faces_1d
+  public :: ply_get_quadpoints_faces
+  public :: ply_get_quadpoints_faces_2d
+  public :: ply_get_quadpoints_faces_1d
   public :: ply_prj_body_type
 
 
@@ -754,7 +754,7 @@ contains
   !> function to provide the coordinates from the quadrature points on the faces
   ! idir and ialign are inputs which identify which face is needed
   ! faces is allocated as face(dir,align)
-  subroutine get_quadpoints_faces(poly_proj, idir, ialign, points)
+  subroutine ply_get_quadpoints_faces(poly_proj, idir, ialign, points)
     ! -------------------------------------------------------------------- !
     type(ply_poly_project_type), intent(in) :: poly_proj
     integer, intent(in)                     :: idir
@@ -766,12 +766,12 @@ contains
      allocate (points(poly_proj%body_3d%faces(idir,iAlign)%nquadpoints,3))
      points = poly_proj%body_3d%faces(idir,iAlign)%points
 
-  end subroutine get_quadpoints_faces
+  end subroutine ply_get_quadpoints_faces
   ! ------------------------------------------------------------------------ !
 
 
   ! ------------------------------------------------------------------------ !
-  subroutine get_quadpoints_faces_2d(poly_proj, idir, ialign, points)
+  subroutine ply_get_quadpoints_faces_2d(poly_proj, idir, ialign, points)
     ! -------------------------------------------------------------------- !
     type(ply_poly_project_type), intent(in) :: poly_proj
     integer, intent(in)                     :: idir
@@ -783,12 +783,12 @@ contains
      allocate (points(poly_proj%body_2d%faces(idir,iAlign)%nquadpoints,3))
      points = poly_proj%body_2d%faces(idir,iAlign)%points
 
-  end subroutine get_quadpoints_faces_2d
+  end subroutine ply_get_quadpoints_faces_2d
   ! ------------------------------------------------------------------------ !
 
 
   ! ------------------------------------------------------------------------ !
-  subroutine get_quadpoints_faces_1d(poly_proj, idir, ialign, points)
+  subroutine ply_get_quadpoints_faces_1d(poly_proj, idir, ialign, points)
     ! -------------------------------------------------------------------- !
     type(ply_poly_project_type), intent(in) :: poly_proj
     integer, intent(in)                     :: idir
@@ -798,7 +798,7 @@ contains
     ! -------------------------------------------------------------------- !
      allocate (points(poly_proj%body_1d%faces(idir,iAlign)%nquadpoints,3))
      points = poly_proj%body_1d%faces(idir,iAlign)%points
-  end subroutine get_quadpoints_faces_1d
+  end subroutine ply_get_quadpoints_faces_1d
   ! ------------------------------------------------------------------------ !
 
 end module ply_poly_project_module
