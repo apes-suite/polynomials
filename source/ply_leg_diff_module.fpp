@@ -67,6 +67,10 @@ contains
     integer :: leg(3), iDeg, iDeg1, iDeg2, iDeg3, DV(3)
     ! -------------------------------------------------------------------- !
 
+    !$OMP PARALLEL DEFAULT(SHARED), &
+    !$OMP PRIVATE(iVar,dofPos,dofPosPrev,dofPos2Prev,iDeg,iDeg1,iDeg2,iDeg3), &
+    !$OMP PRIVATE(leg,DV)
+
     if (present(dirVec)) then
       DV = dirvec
     else
@@ -79,6 +83,7 @@ contains
       endif
     endif
 
+    !$OMP DO
     do iDeg = 1, (mpd+1)**2
       iDeg1 = (iDeg-1)/(mpd+1) + 1      !! do IDeg1 = 1, mPd+1
       iDeg2 = iDeg - (iDeg1-1)*(mpd+1)  !! do IDeg2 = 1, mPd=1   !! iDeg2 = mod(iDeg-1,mpd+1)+1
@@ -137,8 +142,10 @@ contains
         end do
       end do
     end do
+    !$OMP END DO
 
     ! Scale the results due to the Jacobians of the mappings
+    !$OMP DO
     do dofpos=1,(mpd+1)**3
       ideg3 = (dofpos-1)/(mpd+1)**2 + 1
       iDeg = dofpos - (ideg3-1)*(mpd+1)**2
@@ -149,6 +156,9 @@ contains
         &                         * (2.0_rk/elemLength)         &
         &                         * (2.0_rk*leg(iDir) - 1.0_rk)
     end do
+    !$OMP END DO
+
+    !$OMP END PARALLEL
 
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
    ! Uncollapsed version of the scaling !
@@ -284,7 +294,6 @@ contains
 
     end do varloop
 
-
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
    ! Uncollapsed version of the scaling !
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -329,16 +338,12 @@ contains
     real(kind=rk) :: derivative((mpd+1)**2,mpd+1)
     ! -------------------------------------------------------------------- !
 
-    !$OMP PARALLEL DEFAULT(SHARED), &
-    !$OMP PRIVATE(iDeg3, iDeg2, iDeg1, iDeg, iVar, dofPos, dofPosPrev)
-
     varloop: do iVar = 1, nVars
 
       derivative(:,mpd+1) = 0.0_rk
 
       iDeg1 = mpd
 
-      !$OMP DO
       do iDeg = 1, (mpd+1)**2
         iDeg3 = (iDeg-1)/(mpd+1) + 1
         iDeg2 = iDeg - (iDeg3-1)*(mpd+1)
@@ -346,9 +351,7 @@ contains
 ?? copy :: posOfModgCoeffQTens(iDeg1+1, iDeg2, iDeg3, mPd, dofpos )
         derivative(iDeg, mpd) = legCoeffs(dofpos,iVar)
       end do
-      !$OMP END DO
 
-      !$OMP DO
       do iDeg1 = mPd-1, 1, -1
 
         !NEC$ ivdep
@@ -362,10 +365,8 @@ contains
             &                       + legCoeffs(dofposprev, iVar)
         end do
       end do
-      !$OMP END DO
 
       ! Scale the results due to the Jacobians of the mappings
-      !$OMP DO
       do dofpos=1,(mpd+1)**3
         ideg3 = (dofpos-1)/(mpd+1)**2 + 1
         iDeg = dofpos - (ideg3-1)*(mpd+1)**2
@@ -375,11 +376,8 @@ contains
           &                          * (2.0_rk/elemLength)  &
           &                          * (2.0_rk*iDeg1 - 1.0_rk)
       end do
-      !$OMP END DO
 
     end do varloop
-
-    !$OMP END PARALLEL
 
   end subroutine calcDiff_leg_x_vec
   ! ************************************************************************ !
@@ -408,16 +406,12 @@ contains
     real(kind=rk) :: derivative((mpd+1)**2,mpd+1)
     ! -------------------------------------------------------------------- !
 
-    !$OMP PARALLEL DEFAULT(SHARED), &
-    !$OMP PRIVATE(iDeg3, iDeg2, iDeg1, iDeg, iVar, dofPos, dofPosPrev)
-
     varloop: do iVar = 1, nVars
 
       derivative(:,mpd+1) = 0.0_rk
 
       iDeg2 = mpd
 
-      !$OMP DO
       do iDeg = 1, (mpd+1)**2
         iDeg3 = (iDeg-1)/(mpd+1) + 1
         iDeg1 = iDeg - (iDeg3-1)*(mpd+1)
@@ -425,9 +419,7 @@ contains
 ?? copy :: posOfModgCoeffQTens(iDeg1, iDeg2+1, iDeg3, mPd, dofpos )
         derivative(iDeg, mpd) = legCoeffs(dofpos,iVar)
       end do
-      !$OMP END DO
 
-      !$OMP DO
       do iDeg2 = mPd-1, 1, -1
 
         !NEC$ ivdep
@@ -441,10 +433,8 @@ contains
             &                       + legCoeffs(dofposprev, iVar)
         end do
       end do
-      !$OMP END DO
 
       ! Scale the results due to the Jacobians of the mappings
-      !$OMP DO
       do dofpos=1,(mpd+1)**3
         ideg3 = (dofpos-1)/(mpd+1)**2 + 1
         iDeg = dofpos - (ideg3-1)*(mpd+1)**2
@@ -454,11 +444,8 @@ contains
           &                          * (2.0_rk/elemLength)  &
           &                          * (2.0_rk*iDeg2 - 1.0_rk)
       end do
-      !$OMP END DO
 
     end do varloop
-
-    !$OMP END PARALLEL
 
   end subroutine calcDiff_leg_y_vec
   ! ************************************************************************ !
@@ -487,16 +474,12 @@ contains
     real(kind=rk) :: derivative((mpd+1)**2,mpd+1)
     ! -------------------------------------------------------------------- !
 
-    !$OMP PARALLEL DEFAULT(SHARED), &
-    !$OMP PRIVATE(iDeg3, iDeg2, iDeg1, iDeg, iVar, dofPos, dofPosPrev)
-
     varloop: do iVar = 1, nVars
 
       derivative(:,mpd+1) = 0.0_rk
 
       iDeg3 = mpd
 
-      !$OMP DO
       do iDeg = 1, (mpd+1)**2
         iDeg2 = (iDeg-1)/(mpd+1) + 1
         iDeg1 = iDeg - (iDeg2-1)*(mpd+1)
@@ -504,9 +487,7 @@ contains
 ?? copy :: posOfModgCoeffQTens(iDeg1, iDeg2, iDeg3+1, mPd, dofpos )
         derivative(iDeg, mpd) = legCoeffs(dofpos,iVar)
       end do
-      !$OMP END DO
 
-      !$OMP DO
       do iDeg3 = mPd-1, 1, -1
 
         !NEC$ ivdep
@@ -520,10 +501,8 @@ contains
             &                       + legCoeffs(dofposprev, iVar)
         end do
       end do
-      !$OMP END DO
 
       ! Scale the results due to the Jacobians of the mappings
-      !$OMP DO
       do dofpos=1,(mpd+1)**3
         ideg3 = (dofpos-1)/(mpd+1)**2 + 1
         ideg = dofpos - (ideg3-1)*(mpd+1)**2
@@ -531,11 +510,8 @@ contains
           &                          * (2.0_rk/elemLength)  &
           &                          * (2.0_rk*iDeg3 - 1.0_rk)
       end do
-      !$OMP END DO
 
     end do varloop
-
-    !$OMP END PARALLEL
 
   end subroutine calcDiff_leg_z_vec
   ! ************************************************************************ !
