@@ -1,5 +1,5 @@
 ! Copyright (c) 2015-2016 Harald Klimach <harald.klimach@uni-siegen.de>
-! Copyright (c) 2016-2017 Peter Vitt <peter.vitt2@uni-siegen.de>
+! Copyright (c) 2016-2017, 2020 Peter Vitt <peter.vitt2@uni-siegen.de>
 ! Copyright (c) 2016 Tobias Girresser <tobias.girresser@student.uni-siegen.de>
 ! Copyright (c) 2017 Jiaxing Qi <jiaxing.qi@uni-siegen.de>
 ! Copyright (c) 2017 Daniel Petró <daniel.petro@student.uni-siegen.de>
@@ -55,6 +55,8 @@ module ply_subresolution_module
 
   implicit none
 
+  private
+
   type ply_subresolution_type
     integer :: polydegree = 0
     integer :: basisType
@@ -79,7 +81,6 @@ module ply_subresolution_module
     !! pointers above.
     integer :: colpos
   end type ply_subres_colvar_type
-
 
 contains
 

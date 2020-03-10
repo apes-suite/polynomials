@@ -1,5 +1,5 @@
 ! Copyright (c) 2013-2014 Jens Zudrop <j.zudrop@grs-sim.de>
-! Copyright (c) 2013-2014, 2016-2017 Peter Vitt <peter.vitt2@uni-siegen.de>
+! Copyright (c) 2013-2014, 2016-2017, 2020 Peter Vitt <peter.vitt2@uni-siegen.de>
 ! Copyright (c) 2013-2015 Nikhil Anand <nikhil.anand@uni-siegen.de>
 ! Copyright (c) 2013-2018, 2020 Harald Klimach <harald.klimach@uni-siegen.de.de>
 ! Copyright (c) 2013-2014 Verena Krupp <v.krupp@grs-sim.de>
@@ -50,9 +50,14 @@
 !! transformation to be used:
 !!
 !! * FPT uses Chebyshev integration nodes
-!! * L2P and FXT uses Gauss-Legendre integration nodes
+!! * L2P may make use of either Chebyshev or Gauss-Legendre nodes
+!! * FXT Gauss-Legendre integration nodes
 !!
-!! It is recommended to use the FPT if available.
+!! If the Chebyshev nodes are used for the nodal representation, the interval
+!! boundaries can be included by setting `lobattoPoints=true`. In this case
+!! there will also be at least one point more be used in the nodal
+!! representation than there are modes in the Legendre series.
+!!
 !! If FPT is configured but the executable is not linked against the FFTW, there
 !! will be a warning, and the simulation uses the L2P method instead.
 !! The L2P method is also the default when no kind is provided at all.
@@ -60,7 +65,7 @@
 !! For further options of the individual projection kinds, see their respective
 !! descriptions:
 !!
-!! * L2P: no further options
+!! * L2P: [[ply_l2p_header_module]]
 !! * FPT: [[ply_fpt_header_module]]
 !! * FXT: [[ply_fxt_header_module]]
 !!
@@ -117,7 +122,6 @@ module ply_poly_project_module
     &                                    ply_fxt_n2m_2D
   use tem_precice_module,          only: precice_available, &
    &                                     precice
-
 
   implicit none
 
@@ -224,9 +228,9 @@ module ply_poly_project_module
   public :: ply_poly_project_n2m
   public :: ply_poly_project_type
   public :: ply_faceNodes_type
-  public :: get_quadpoints_faces
-  public :: get_quadpoints_faces_2d
-  public :: get_quadpoints_faces_1d
+  public :: ply_get_quadpoints_faces
+  public :: ply_get_quadpoints_faces_2d
+  public :: ply_get_quadpoints_faces_1d
   public :: ply_prj_body_type
 
 
@@ -357,10 +361,16 @@ contains
     select case(trim(proj_init%header%kind))
     case('fpt')
       over_factor = proj_init%header%fpt_header%factor
+      nodes_header = proj_init%header%fpt_header%nodes_header
+      me%lobattopoints = nodes_header%lobattopoints
     case('l2p')
       over_factor = proj_init%header%l2p_header%factor
+      nodes_header = proj_init%header%l2p_header%nodes_header
+      me%lobattopoints = nodes_header%lobattopoints
     case('fxt')
       over_factor = proj_init%header%fxt_header%factor
+      nodes_header = proj_init%header%fxt_header%nodes_header
+      me%lobattopoints = .false.
     end select
 
     ! Find the oversampling order
@@ -388,6 +398,12 @@ contains
         end if
 
       end if
+    end if
+
+    if (me%lobattoPoints) then
+      ! If lobatto Points are to be used, use at least one point more
+      ! in the nodal representation.
+      oversampling_order = max(oversampling_order, me%maxPolyDegree+2)
     end if
 
     if (trim(proj_init%header%kind) == 'fxt') then
@@ -440,12 +456,6 @@ contains
     select case (trim(proj_init%header%kind))
     case('fpt')
       ! Fill fpt datatype
-
-      ! fpt has option for lobattopoints
-      nodes_header = proj_init%header%fpt_header%nodes_header
-      me%lobattopoints = nodes_header%lobattopoints
-
-      !> Initialize the fpt data type
       call ply_init_legfpt(                                 &
         &    maxPolyDegree    = me%oversamp_degree,         &
         &    nIndeps          = 1,                          &
@@ -469,27 +479,25 @@ contains
       end if
 
     case('l2p')
-      !> Fill the L2 projection datatype
-      !! no lobatto points for gauss nodes implemented
-      nodes_header = proj_init%header%l2p_header%nodes_header
-
+      ! Fill the L2 projection datatype
       if (scheme_dim >= 3) then
-        call ply_init_l2p( l2p    = me%body_3d%l2p,    &
-          &                degree = me%oversamp_degree )
+        call ply_init_l2p( l2p    = me%body_3d%l2p,              &
+          &                header = proj_init%header%l2p_header, &
+          &                degree = me%oversamp_degree           )
       end if
 
       if (scheme_dim >= 2) then
-        call ply_init_l2p( l2p    = me%body_2d%l2p,    &
-          &                degree = me%oversamp_degree )
+        call ply_init_l2p( l2p    = me%body_2d%l2p,              &
+          &                header = proj_init%header%l2p_header, &
+          &                degree = me%oversamp_degree           )
       end if
 
-      call ply_init_l2p( l2p    = me%body_1d%l2p,    &
-        &                degree = me%oversamp_degree )
+      call ply_init_l2p( l2p    = me%body_1d%l2p,              &
+        &                header = proj_init%header%l2p_header, &
+        &                degree = me%oversamp_degree           )
 
     case ('fxt')
-      !> Fill the fxt Legendre Polynomial datatype
-      nodes_header = proj_init%header%l2p_header%nodes_header
-
+      ! Fill the fxt Legendre Polynomial datatype
       if (scheme_dim >= 3) then
         call ply_init_fxt( fxt    = me%body_3d%fxt,              &
           &                header = proj_init%header%fxt_header, &
@@ -745,7 +753,7 @@ contains
   !> function to provide the coordinates from the quadrature points on the faces
   ! idir and ialign are inputs which identify which face is needed
   ! faces is allocated as face(dir,align)
-  subroutine get_quadpoints_faces(poly_proj, idir, ialign, points)
+  subroutine ply_get_quadpoints_faces(poly_proj, idir, ialign, points)
     ! -------------------------------------------------------------------- !
     type(ply_poly_project_type), intent(in) :: poly_proj
     integer, intent(in)                     :: idir
@@ -757,12 +765,12 @@ contains
      allocate (points(poly_proj%body_3d%faces(idir,iAlign)%nquadpoints,3))
      points = poly_proj%body_3d%faces(idir,iAlign)%points
 
-  end subroutine get_quadpoints_faces
+  end subroutine ply_get_quadpoints_faces
   ! ------------------------------------------------------------------------ !
 
 
   ! ------------------------------------------------------------------------ !
-  subroutine get_quadpoints_faces_2d(poly_proj, idir, ialign, points)
+  subroutine ply_get_quadpoints_faces_2d(poly_proj, idir, ialign, points)
     ! -------------------------------------------------------------------- !
     type(ply_poly_project_type), intent(in) :: poly_proj
     integer, intent(in)                     :: idir
@@ -774,12 +782,12 @@ contains
      allocate (points(poly_proj%body_2d%faces(idir,iAlign)%nquadpoints,3))
      points = poly_proj%body_2d%faces(idir,iAlign)%points
 
-  end subroutine get_quadpoints_faces_2d
+  end subroutine ply_get_quadpoints_faces_2d
   ! ------------------------------------------------------------------------ !
 
 
   ! ------------------------------------------------------------------------ !
-  subroutine get_quadpoints_faces_1d(poly_proj, idir, ialign, points)
+  subroutine ply_get_quadpoints_faces_1d(poly_proj, idir, ialign, points)
     ! -------------------------------------------------------------------- !
     type(ply_poly_project_type), intent(in) :: poly_proj
     integer, intent(in)                     :: idir
@@ -789,7 +797,7 @@ contains
     ! -------------------------------------------------------------------- !
      allocate (points(poly_proj%body_1d%faces(idir,iAlign)%nquadpoints,3))
      points = poly_proj%body_1d%faces(idir,iAlign)%points
-  end subroutine get_quadpoints_faces_1d
+  end subroutine ply_get_quadpoints_faces_1d
   ! ------------------------------------------------------------------------ !
 
 end module ply_poly_project_module

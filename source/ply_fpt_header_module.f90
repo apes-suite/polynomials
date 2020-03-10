@@ -480,6 +480,17 @@ contains
        &              vname    = 'approx_terms', &
        &              val      = me%approx_terms )
 
+    select case(me%implementation)
+    case(ply_fpt_scalar)
+      call aot_out_val( put_conf = conf,             &
+         &              vname    = 'implementation', &
+         &              val      = 'scalar'          )
+    case(ply_fpt_vector)
+      call aot_out_val( put_conf = conf,             &
+         &              vname    = 'implementation', &
+         &              val      = 'vector'          )
+    end select
+
     call aot_out_val( put_conf = conf,       &
        &              vname    = 'striplen', &
        &              val      = me%striplen )

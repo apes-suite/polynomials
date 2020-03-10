@@ -10,6 +10,10 @@ module ply_legser_module
 
   implicit none
 
+  private
+
+  public :: ply_legser
+
 contains
 
   ! ************************************************************************ !
@@ -27,7 +31,7 @@ contains
   !!           * I_{n,k}
   !! with I_{0,0} and I_{n,k} = 0 if k < n. For I_{n,n} we have:
   !! I_{n,n} = 2^{2n}*(n!)^2/(2n+1)! if n > 0
-  subroutine legser(A, B, n)
+  subroutine ply_legser(A, B, n)
     ! -------------------------------------------------------------------- !
     !> Number of coefficients.
     integer, intent(in) :: n
@@ -74,7 +78,7 @@ contains
       b(l) = (al+0.5_rk)*bb
     end do
 
-  end subroutine legser
+  end subroutine ply_legser
   ! ************************************************************************ !
 
 end module ply_legser_module

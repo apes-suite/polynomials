@@ -1,4 +1,5 @@
 ! Copyright (c) 2015 Harald Klimach <harald.klimach@uni-siegen.de>
+! Copyright (c) 2020 Peter Vitt <peter.vitt2@uni-siegen.de>
 !
 ! Parts of this file were written by Harald Klimach for University of Siegen.
 !
@@ -19,7 +20,7 @@
 program integrateLeg_test
   use env_module, only: rk
 
-  use ply_modg_basis_module, only: integrateLeg, legendre_1D
+  use ply_modg_basis_module, only: ply_integrateLeg, ply_legendre_1d
 
   implicit none
 
@@ -68,9 +69,9 @@ program integrateLeg_test
     integrand = 0.0_rk
     integral = 0.0_rk
     integrand(iMode) = 1.0_rk
-    integral(:iMode+1) = integrateLeg( integrand = integrand(:iMode), &
+    integral(:iMode+1) = ply_integrateLeg( integrand = integrand(:iMode), &
       &                                maxdegree = iMode              )
-    evalatends(:iMode+1,:) = legendre_1D( points = [0.0_rk, 1.0_rk], &
+    evalatends(:iMode+1,:) = ply_legendre_1d( points = [0.0_rk, 1.0_rk], &
       &                                   degree = iMode              )
     halfint = sum( integral(:iMode+1)*(evalatends(:iMode+1,2) &
       &            - evalatends(:iMode+1,1)) )

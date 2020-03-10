@@ -120,10 +120,20 @@ contains
     real(kind=rk) :: x(nPoints)
     ! -------------------------------------------------------------------- !
     integer :: iPoint
+    integer :: iBack
+    integer :: nHalf
     ! -------------------------------------------------------------------- !
 
-    do iPoint = 1, nPoints
-      x(iPoint) = -1.0_rk * cos( PI / nPoints * ( (iPoint - 1) + 0.5_rk ) )
+    nHalf = nPoints/2
+
+    ! Set the middle point for odd number of points.
+    ! Will be overwritten for even number of points.
+    x(nHalf+1) = 0.0_rk
+
+    do iPoint=1,nHalf
+      iBack = nPoints - iPoint + 1
+      x(iBack) = cos( PI / nPoints * ( (iPoint - 1) + 0.5_rk ) )
+      x(iPoint) = -x(iBack)
     end do
 
   end function ply_nodeset_chebyshev
@@ -142,10 +152,25 @@ contains
     real(kind=rk) :: x(nPoints)
     ! -------------------------------------------------------------------- !
     integer :: iPoint
+    integer :: iBack
+    integer :: nHalf
     ! -------------------------------------------------------------------- !
 
-    do iPoint = 1, nPoints
+    nHalf = nPoints/2
+
+    ! Set the middle point for odd number of points.
+    ! Will be overwritten for even number of points.
+    x(nHalf+1) = 0.0_rk
+
+    ! Both interval limits can be set directly and don't have to be
+    ! computed.
+    x(1) = 1.0_rk
+    x(nPoints) = -1.0_rk
+
+    do iPoint=2,nHalf
+      iBack = nPoints - iPoint + 1
       x(iPoint) = cos( (iPoint - 1) * PI / real(nPoints - 1, kind=rk) )
+      x(iBack) = -x(iPoint)
     end do
 
   end function ply_nodeset_chebyloba

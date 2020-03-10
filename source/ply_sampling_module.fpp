@@ -81,7 +81,7 @@ module ply_sampling_module
     &                                       tem_varSys_setParams_dummy
 
   use ply_dof_module,                 only: q_space, p_space
-  use ply_modg_basis_module,          only: legendre_1D
+  use ply_modg_basis_module,          only: ply_legendre_1D
 
   use ply_poly_transformation_module, only: ply_Poly_Transformation, &
     &                                       ply_subsample_type,      &
@@ -476,7 +476,8 @@ contains
 
       varpos = trackInst%varmap%varPos%val(1)
       allocate(pointval(var_degree(varpos)+1, n1D_childs))
-      pointval = legendre_1D(points = points, degree = var_degree(varpos))
+      pointval = ply_legendre_1D( points = points,            &
+        &                         degree = var_degree(varpos) )
       lastdegree = var_degree(varpos)
 
       do iVar=1,trackInst%varmap%varPos%nVals
@@ -487,7 +488,8 @@ contains
         if (var_degree(varpos) /= lastdegree) then
           deallocate(pointval)
           allocate(pointval(var_degree(varpos)+1, n1D_childs))
-          pointval = legendre_1D(points = points, degree = var_degree(varpos))
+          pointval = ply_legendre_1D( points = points,            &
+            &                         degree = var_degree(varpos) )
           lastdegree = var_degree(varpos)
         end if
 

@@ -1,6 +1,6 @@
 ! Copyright (c) 2016 Daniel Fleischer <daniel.fleischer@student.uni-siegen.de>
 ! Copyright (c) 2017 Daniel Petró <daniel.petro@student.uni-siegen.de>
-! Copyright (c) 2017 Peter Vitt <peter.vitt2@uni-siegen.de>
+! Copyright (c) 2017, 2020 Peter Vitt <peter.vitt2@uni-siegen.de>
 ! Copyright (c) 2018 Raphael Haupt <Raphael.Haupt@student.uni-siegen.de>
 !
 ! Parts of this file were written by Daniel Fleischer, Daniel Petró, Peter Vitt
@@ -34,7 +34,7 @@ module ply_LegPolyProjection_module
 
   private
 
-  public :: gauleg
+  public :: ply_gauleg
 
   ! ************************************************************************ !
   !> Parameter to specify Legendre polynomials as the degrees of freedoms
@@ -388,7 +388,7 @@ contains
     ! Create the gauss legendre quadrature points for the reference element
     ! [-1,+1]
     nIntP = ceiling(( max(nDofsOneDim,nChildDofsOneDim) )/2.0)**2
-    call gauleg(-1.0_rk, +1.0_rk, points, weights, nIntP)
+    call ply_gauleg(-1.0_rk, +1.0_rk, points, weights, nIntP)
 
     ! Now, project ansatz function of the parent for the left child.
     ! We apply a Gaussian quadrature and take case of composition of
@@ -828,7 +828,7 @@ contains
   ! ************************************************************************ !
   !> subroutine to create gauss points and weights for one-dimensional
   !! integration on the interval [x1,x2].
-  subroutine gauleg( x1, x2, x, w, nIntP )
+  subroutine ply_gauleg( x1, x2, x, w, nIntP )
     ! -------------------------------------------------------------------- !
     !> The coordinates of the gauss points on the interval [-1,1].
     !! The array has the length nIntP.
@@ -886,7 +886,7 @@ contains
 
     end do
 
-  end subroutine gauleg
+  end subroutine ply_gauleg
   ! ************************************************************************ !
 
 end module ply_LegPolyProjection_module

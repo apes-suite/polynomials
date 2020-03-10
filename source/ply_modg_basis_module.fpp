@@ -3,7 +3,7 @@
 ! Copyright (c) 2012 Jan Hueckelheim <j.hueckelheim@grs-sim.de>
 ! Copyright (c) 2013 Melven Zoellner <yameta@freenet.de>
 ! Copyright (c) 2013-2014 Verena Krupp <v.krupp@grs-sim.de>
-! Copyright (c) 2014, 2016-2018 Peter Vitt <peter.vitt2@uni-siegen.de>
+! Copyright (c) 2014, 2016-2018, 2020 Peter Vitt <peter.vitt2@uni-siegen.de>
 ! Copyright (c) 2014-2015 Nikhil Anand <nikhil.anand@uni-siegen.de>
 ! Copyright (c) 2016 Tobias Girresser <tobias.girresser@student.uni-siegen.de>
 ! Copyright (c) 2017 Daniel Petró <daniel.petro@student.uni-siegen.de>
@@ -146,26 +146,28 @@ module ply_modg_basis_module
   end type ply_modg_basis_type
 
 
-  public :: init_modg_multilevelCoeffs, evalLegendreTensPoly, scalProdLeg, &
-    &       scalProdDualLeg, scalProdDualLegDiff,scalProdDualLeg_vec,      &
-    &       ply_modg_refine_type, ply_modg_covolume_type,                                        &
-    &       faceValLeftBndAns, faceValLeftBndTest,                         &
-    &       faceValRightBndTest, ply_modg_basis_type, legendre_1D,         &
-    &       faceValLeftBndTestGrad, faceValRightBndTestGrad,               &
-    &       faceValLeftBndgradTest, faceValRightBndgradTest,               &
-    &       faceValLeftBndTestGrad_vec, faceValRightBndTestGrad_vec,       &
-    &       faceValLeftBndgradTest_vec, faceValRightBndgradTest_vec,       &
-    &       faceValLeftBndAns_vec, faceValLeftBndTest_vec,                 &
-    &       faceValRightBndTest_vec,                                       &
-    &       faceValLeftBndDiffAns, faceValRightBndDiffAns,                 &
-    &       init_modg_covolumeCoeffs, integrateLeg
+  public :: ply_init_modg_multilevelCoeffs,                                  &
+    &       ply_evalLegendreTensPoly,                                        &
+    &       ply_scalProdLeg, ply_scalProdDualLeg,                            &
+    &       ply_scalProdDualLegDiff, ply_scalProdDualLeg_vec,                &
+    &       ply_modg_refine_type, ply_modg_covolume_type,                    &
+    &       ply_faceValLeftBndAns, ply_faceValLeftBndTest,                   &
+    &       ply_faceValRightBndTest, ply_faceValLeftBndTestGrad,             &
+    &       ply_faceValRightBndTestGrad, ply_faceValLeftBndgradTest,         &
+    &       ply_faceValRightBndgradTest, ply_faceValLeftBndTestGrad_vec,     &
+    &       ply_faceValRightBndTestGrad_vec, ply_faceValLeftBndgradTest_vec, &
+    &       ply_faceValRightBndgradTest_vec, ply_faceValLeftBndAns_vec,      &
+    &       ply_faceValLeftBndTest_vec, ply_faceValRightBndTest_vec,         &
+    &       ply_faceValLeftBndDiffAns, ply_faceValRightBndDiffAns,           &
+    &       ply_modg_basis_type, ply_legendre_1D,                            &
+    &       ply_init_modg_covolumeCoeffs, ply_integrateLeg
 
 contains
 
   ! ************************************************************************ !
   !> Integral of combination of all anzatz functions for
   !! projection onto finer element
-  subroutine init_modg_covolumeCoeffs( nPoints, nFunc, integral )
+  subroutine ply_init_modg_covolumeCoeffs( nPoints, nFunc, integral )
     ! -------------------------------------------------------------------- !
     ! The number of quadrature points to be used
     integer, intent(in) :: nPoints
@@ -219,15 +221,15 @@ contains
 
     ! Calculate values of Legendre polynomials
     ! ... on [-1;0]
-    legendre_left = legendre_1D(GaussPoints_left, nFunc-1)
+    legendre_left = ply_legendre_1D(GaussPoints_left, nFunc-1)
     ! ... on [0;+1]
-    legendre_right = legendre_1D(GaussPoints_right, nFunc-1)
+    legendre_right = ply_legendre_1D(GaussPoints_right, nFunc-1)
 
     ! Calculate values of shifted Legendre polynomials
     ! ... for [-1;0]
-    legendre_left_shifted = legendre_1D(GaussPoints_left+1.0_rk, nFunc-1)
+    legendre_left_shifted = ply_legendre_1D(GaussPoints_left+1.0_rk, nFunc-1)
     ! ... for [0;+1]
-    legendre_right_shifted = legendre_1D(GaussPoints_right-1.0_rk, nFunc-1)
+    legendre_right_shifted = ply_legendre_1D(GaussPoints_right-1.0_rk, nFunc-1)
 
     allocate( integral%anz_anzShift(1:nFunc, 1:nFunc, 2))
 
@@ -240,7 +242,8 @@ contains
           &          * legendre_left_shifted(jFunc, :) &
           &          * w(:)
         sumLeft = sum(tempLeft)
-        integral%anz_anzShift(iFunc, jFunc, 1) = sumLeft / scalProdLeg(iFunc)
+        integral%anz_anzShift(iFunc, jFunc, 1) = &
+          & sumLeft / ply_scalProdLeg(iFunc)
 
 
         ! ansatz-ansatz with right shift integral (on [0;+1])
@@ -248,19 +251,20 @@ contains
           &           * legendre_right_shifted(jFunc, :) &
           &           * w(:)
         sumRight = sum(tempRight)
-        integral%anz_anzShift(iFunc, jFunc, 2) = sumRight / scalProdLeg(iFunc)
+        integral%anz_anzShift(iFunc, jFunc, 2) = &
+          & sumRight / ply_scalProdLeg(iFunc)
 
       end do
     end do
 
-  end subroutine init_modg_covolumeCoeffs
+  end subroutine ply_init_modg_covolumeCoeffs
   ! ************************************************************************ !
 
 
   ! ************************************************************************ !
   !> Integral of combination of all anzatz functions for
   !! projection onto finer element
-  subroutine init_modg_multilevelCoeffs( nPoints, nFunc, integral )
+  subroutine ply_init_modg_multilevelCoeffs( nPoints, nFunc, integral )
     ! -------------------------------------------------------------------- !
     ! integration results
     type(ply_modg_refine_type), intent(out) :: integral
@@ -295,9 +299,9 @@ contains
       &                      nIntP = nPoints      )
 
     ! Calculate values of legendre polynomials
-    legendre_standard = legendre_1D(GaussPoints, nFunc-1)
-    legendre_left = legendre_1D(GaussPoints/2.0_rk-1.0_rk/2.0_rk, nFunc-1)
-    legendre_right = legendre_1D(GaussPoints/2.0_rk+1.0_rk/2.0_rk, nFunc-1)
+    legendre_standard = ply_legendre_1D(GaussPoints, nFunc-1)
+    legendre_left = ply_legendre_1D(GaussPoints/2.0_rk-1.0_rk/2.0_rk, nFunc-1)
+    legendre_right = ply_legendre_1D(GaussPoints/2.0_rk+1.0_rk/2.0_rk, nFunc-1)
     allocate( integral%anz_anzShift(1:nFunc, 1:nFunc, 2))
 
     !loop over anzatz functions
@@ -320,8 +324,7 @@ contains
       end do
     end do
 
-
-  end subroutine init_modg_multilevelCoeffs
+  end subroutine ply_init_modg_multilevelCoeffs
   ! ************************************************************************ !
 
 
@@ -339,7 +342,7 @@ contains
   !!
   !! Implemented property of Legendre Polynomials:
   !! L_i(x) = 1/(2*i + 1) * d/dx [ L_{i+1}(x) - L_{i-1}(x) ]
-  pure function integrateLeg( integrand, maxdegree ) result(integral)
+  pure function ply_integrateLeg( integrand, maxdegree ) result(integral)
     ! -------------------------------------------------------------------- !
     !> Coefficients of the function to integrate in Legendre basis.
     real(kind=rk), intent(in) :: integrand(:)
@@ -378,14 +381,14 @@ contains
       integral(iMode) = 0.0_rk
     end do
 
-  end function integrateLeg
+  end function ply_integrateLeg
   ! ************************************************************************ !
 
 
   ! ************************************************************************ !
   !> Evaluate all 1D Legendre polynomials at a given set
   !! of points up to the given degree.
-  pure function legendre_1D( points, degree ) result(one_dim_eval)
+  pure function ply_legendre_1D( points, degree ) result(one_dim_eval)
     ! -------------------------------------------------------------------- !
     !> 1D points to evaluate.
     real(kind=rk), intent(in) :: points(:)
@@ -419,15 +422,15 @@ contains
           &          )
       end do
     end if
-  end function legendre_1D
+  end function ply_legendre_1D
   ! ************************************************************************ !
 
 
   ! ************************************************************************ !
   !> Evaluate three-dimensional tensor product Legendre polynomials
   !! (not-normalized) at a given set of coordinates.
-  subroutine evalLegendreTensPoly( coords , nCoords, maxPolyDegree, basisType, &
-    &                              polyVal )
+  subroutine ply_evalLegendreTensPoly( coords, nCoords, maxPolyDegree, &
+    &                                  basisType, polyVal              )
     ! -------------------------------------------------------------------- !
     !> Array of coordinates (on the reference element) to evaluate the tensor
     !! product polynomials at. First dimension is nCoord, second is 3 for x,y,z
@@ -531,14 +534,14 @@ contains
         end do
     end select
 
-  end subroutine evalLegendreTensPoly
+  end subroutine ply_evalLegendreTensPoly
   ! ************************************************************************ !
 
 
   ! ************************************************************************ !
   !> Returns the value of the non-normalized differentiated Legendre polynomial
   !! at the right boundary of the reference element, i.e. at +1.
-  pure function faceValRightBndDiffAns( ansFunc ) result(val)
+  pure function ply_faceValRightBndDiffAns( ansFunc ) result(val)
     ! -------------------------------------------------------------------- !
     !> The ansatz function index, first ansatz function has index 1.
     integer, intent(in) :: ansFunc
@@ -548,14 +551,14 @@ contains
 
     val = ansFunc * ( ansFunc + 1 ) * 0.5_rk
 
-  end function faceValRightBndDiffAns
+  end function ply_faceValRightBndDiffAns
   ! ************************************************************************ !
 
 
   ! ************************************************************************ !
   !> Returns the value of the non-normalized Legendre polynomial at the left
   !! boundary of the reference element, i.e. at -1.
-  pure function faceValLeftBndAns( ansFunc ) result(val)
+  pure function ply_faceValLeftBndAns( ansFunc ) result(val)
     ! -------------------------------------------------------------------- !
     !> The ansatz function index, first ansatz function has index 1.
     integer, intent(in) :: ansFunc
@@ -565,13 +568,13 @@ contains
 
     val = ( -1.0_rk )**( ansFunc - 1 )
 
-  end function faceValLeftBndAns
+  end function ply_faceValLeftBndAns
   ! ************************************************************************ !
 
   ! ************************************************************************ !
   !> Returns the value of the non-normalized Legendre polynomial at the left
   !! boundary of the reference element, i.e. at -1.
-  function faceValLeftBndAns_vec( mPD ) result(val)
+  function ply_faceValLeftBndAns_vec( mPD ) result(val)
     ! -------------------------------------------------------------------- !
     !> The ansatz function index, first ansatz function has index 1.
     integer, intent(in) :: mPD
@@ -584,13 +587,13 @@ contains
     do ansFunc=1, mPD
       val(ansFunc) = ( -1.0_rk )**( ansFunc - 1 )
     end do
-  end function faceValLeftBndAns_vec
+  end function ply_faceValLeftBndAns_vec
   ! ************************************************************************ !
 
   ! ************************************************************************ !
   !> Returns the value of the non-normalized differentiated Legendre polynomial
   !! at the leftboundary of the reference element, i.e. at -1.
-  pure function faceValLeftBndDiffAns( ansFunc ) result(val)
+  pure function ply_faceValLeftBndDiffAns( ansFunc ) result(val)
     ! -------------------------------------------------------------------- !
     !> The ansatz function index, first ansatz function has index 1.
     integer, intent(in) :: ansFunc
@@ -604,14 +607,14 @@ contains
       val = ansFunc * ( ansFunc + 1 ) * 0.5_rk * ( ( -1.0_rk )**( ansFunc ) )
     endif
 
-  end function faceValLeftBndDiffAns
+  end function ply_faceValLeftBndDiffAns
   ! ************************************************************************ !
 
 
   ! ************************************************************************ !
   !> Returns the value of the dual Legendre polynomial at the right
   !! boundary of the reference element, i.e. at +1.
-  pure function faceValRightBndTest( testFunc ) result(val)
+  pure function ply_faceValRightBndTest( testFunc ) result(val)
     ! -------------------------------------------------------------------- !
     !> The ansatz function index, first test function has index 1.
     integer, intent(in) :: testFunc
@@ -625,13 +628,13 @@ contains
       val = 0.0_rk
     end if
 
-  end function faceValRightBndTest
+  end function ply_faceValRightBndTest
   ! ************************************************************************ !
 
 ! ************************************************************************ !
   !> Returns the value of the dual Legendre polynomial at the right
   !! boundary of the reference element, i.e. at +1. Vectorized Version.
-  function faceValRightBndTest_vec( mPD ) result(val)
+  function ply_faceValRightBndTest_vec( mPD ) result(val)
     ! -------------------------------------------------------------------- !
     !> The ansatz function index, first test function has index 1.
     integer, intent(in) :: mPD
@@ -648,13 +651,13 @@ contains
         val(testFunc) = 0.0_rk
       end if
     end do
-  end function faceValRightBndTest_vec
+  end function ply_faceValRightBndTest_vec
   ! ************************************************************************ !
 
   ! ************************************************************************ !
   !> Returns the value of the gradient of dual Legendre polynomial at the right
   !! boundary of the reference element, i.e. at +1.
-  pure function faceValRightBndgradTest( testFunc ) result(val)
+  pure function ply_faceValRightBndgradTest( testFunc ) result(val)
     ! -------------------------------------------------------------------- !
     !> The ansatz function index, first test function has index 1.
     integer, intent(in) :: testFunc
@@ -668,13 +671,13 @@ contains
       val = ( testFunc - 2 ) * 2 + 1.0_rk
     end if
 
-  end function faceValRightBndgradTest
+  end function ply_faceValRightBndgradTest
   ! ************************************************************************ !
 
   ! ************************************************************************ !
   !> Returns the value of the gradient of dual Legendre polynomial at the right
   !! boundary of the reference element, i.e. at +1. Vectorized version.
-  function faceValRightBndgradTest_vec( mPD ) result(val)
+  function ply_faceValRightBndgradTest_vec( mPD ) result(val)
     ! -------------------------------------------------------------------- !
     !> The ansatz function index, first test function has index 1.
     integer, intent(in) :: mPD
@@ -691,13 +694,13 @@ contains
         val(testFunc) = ( testFunc - 2 ) * 2 + 1.0_rk
       end if
     end do
-  end function faceValRightBndgradTest_vec
+  end function ply_faceValRightBndgradTest_vec
   ! ************************************************************************ !
 
   ! ************************************************************************ !
   !> Returns the value of the dual Legendre polynomial at the left
   !! boundary of the reference element, i.e. at -1.
-  pure function faceValLeftBndTest( testFunc ) result(val)
+  pure function ply_faceValLeftBndTest( testFunc ) result(val)
     ! -------------------------------------------------------------------- !
     !> The ansatz function index, first test function has index 1.
     integer, intent(in) :: testFunc
@@ -713,13 +716,13 @@ contains
       val = 0.0_rk
     end if
 
-  end function faceValLeftBndTest
+  end function ply_faceValLeftBndTest
   ! ************************************************************************ !
 
 ! ************************************************************************ !
   !> Returns the value of the dual Legendre polynomial at the left
   !! boundary of the reference element, i.e. at -1.Vectorized version.
-  function faceValLeftBndTest_vec( mPD ) result(val)
+  function ply_faceValLeftBndTest_vec( mPD ) result(val)
     ! -------------------------------------------------------------------- !
     !> The ansatz function index, first test function has index 1.
     integer, intent(in) :: mPD
@@ -738,13 +741,13 @@ contains
         val(testFunc) = 0.0_rk
       end if
     end do
-  end function faceValLeftBndTest_vec
+  end function ply_faceValLeftBndTest_vec
   ! ************************************************************************ !
 
   ! ************************************************************************ !
   !> Returns the value of the gradient of the dual Legendre polynomial at the
   !! left boundary of the reference element, i.e. at -1.
-  pure function faceValLeftBndgradTest( testFunc ) result(val)
+  pure function ply_faceValLeftBndgradTest( testFunc ) result(val)
     ! -------------------------------------------------------------------- !
     !> The ansatz function index, first test function has index 1.
     integer, intent(in) :: testFunc
@@ -758,13 +761,13 @@ contains
       val = ( 2.0_rk * ( testFunc - 2 ) + 1.0_rk ) * ( -1 )**testFunc
     end if
 
-  end function faceValLeftBndgradTest
+  end function ply_faceValLeftBndgradTest
   ! ************************************************************************ !
 
  ! ************************************************************************ !
   !> Returns the value of the gradient of the dual Legendre polynomial at the
   !! left boundary of the reference element, i.e. at -1.
-  function faceValLeftBndgradTest_vec( mPD ) result(val)
+  function ply_faceValLeftBndgradTest_vec( mPD ) result(val)
     ! -------------------------------------------------------------------- !
     !> The ansatz function index, first test function has index 1.
     integer, intent(in) :: mPD
@@ -782,13 +785,13 @@ contains
       end if
     end do
     
-  end function faceValLeftBndgradTest_vec
+  end function ply_faceValLeftBndgradTest_vec
   ! ************************************************************************ !
 
   ! ************************************************************************ !
   !> Returns the value of the derivaitve of the dual Legendre polynomial at the
   !! left boundary of the reference element, i.e. at -1.
-  pure function faceValLeftBndTestGrad( testFunc ) result(val)
+  pure function ply_faceValLeftBndTestGrad( testFunc ) result(val)
     ! -------------------------------------------------------------------- !
     !> The ansatz function index, first test function has index 1.
     integer, intent(in) :: testFunc
@@ -802,13 +805,13 @@ contains
       val = (-1.0_rk)**(testFunc)
     end if
 
-  end function faceValLeftBndTestGrad
+  end function ply_faceValLeftBndTestGrad
   ! ************************************************************************ !
 
 ! ************************************************************************ !
   !> Returns the value of the derivaitve of the dual Legendre polynomial at the
   !! left boundary of the reference element, i.e. at -1.Vectorized version.
-  function faceValLeftBndTestGrad_vec( mPD ) result(val)
+  function ply_faceValLeftBndTestGrad_vec( mPD ) result(val)
     ! -------------------------------------------------------------------- !
     !> The ansatz function index, first test function has index 1.
     integer, intent(in) :: mPD
@@ -826,13 +829,13 @@ contains
       end if
     end do 
 
-  end function faceValLeftBndTestGrad_vec
+  end function ply_faceValLeftBndTestGrad_vec
   ! ************************************************************************ !
 
   ! ************************************************************************ !
   !> Returns the value of the derivaitve of the dual Legendre polynomial at the right
   !! boundary of the reference element, i.e. at +1.
-  pure function faceValRightBndTestGrad( testFunc ) result(val)
+  pure function ply_faceValRightBndTestGrad( testFunc ) result(val)
     ! -------------------------------------------------------------------- !
     !> The ansatz function index, first test function has index 1.
     integer, intent(in) :: testFunc
@@ -846,13 +849,13 @@ contains
       val = 1.0_rk
     end if
 
-  end function faceValRightBndTestGrad
+  end function ply_faceValRightBndTestGrad
   ! ************************************************************************ !
 
 ! ************************************************************************ !
   !> Returns the value of the derivaitve of the dual Legendre polynomial at the right
   !! boundary of the reference element, i.e. at +1.vectoized version.
-  function faceValRightBndTestGrad_vec( mPD ) result(val)
+  function ply_faceValRightBndTestGrad_vec( mPD ) result(val)
     ! -------------------------------------------------------------------- !
     !> The ansatz function index, first test function has index 1.
     integer, intent(in) :: mPD
@@ -870,13 +873,13 @@ contains
       end if
     end do
     
-  end function faceValRightBndTestGrad_vec
+  end function ply_faceValRightBndTestGrad_vec
   ! ************************************************************************ !
 
   ! ************************************************************************ !
   !> Function to calculate the L2 scalar product of a Legendre polynomial
   !! with itself on the reference element [-1,+1].
-  pure function scalProdLeg( ansFunc ) result(scalProd)
+  pure function ply_scalProdLeg( ansFunc ) result(scalProd)
     ! -------------------------------------------------------------------- !
     !> The Legendre polynomial to calculate the scalar product for.
     !! The first Legendre polynomial has index 1.
@@ -887,7 +890,7 @@ contains
 
     scalProd = 2.0 / ( 2.0_rk * ansFunc - 1.0_rk )
 
-  end function scalProdLeg
+  end function ply_scalProdLeg
   ! ************************************************************************ !
 
 
@@ -895,7 +898,7 @@ contains
   !> Function to calculate the scalar product between a Legendre polynomial
   !! (ansatz function) and a dual Legendre polynomial (test function) on the
   !! reference element [-1;+1].
-  pure function scalProdDualLeg( ansFunc, testFunc ) result(scalProd)
+  pure function ply_scalProdDualLeg( ansFunc, testFunc ) result(scalProd)
     ! -------------------------------------------------------------------- !
     !> The ansatz function index, there first ansatz function has index 1.
     integer, intent(in) :: ansFunc
@@ -913,7 +916,7 @@ contains
       scalProd = 0.0_rk
     end if
 
-  end function scalProdDualLeg
+  end function ply_scalProdDualLeg
   ! ************************************************************************ !
 
 
@@ -921,7 +924,7 @@ contains
   !> Function to calculate the scalar product between a Legendre polynomial
   !! (ansatz function) and a differentiated dual Legendre polynomial (test
   !! function) on the reference element [-1;+1].
-  pure function scalProdDualLegDiff( ansFunc, testFunc ) result(scalProd)
+  pure function ply_scalProdDualLegDiff( ansFunc, testFunc ) result(scalProd)
     ! -------------------------------------------------------------------- !
     !> The ansatz function index, there first ansatz function has index 1.
     integer, intent(in) :: ansFunc
@@ -937,7 +940,7 @@ contains
       scalProd = 0.0_rk
     end if
 
-  end function scalProdDualLegDiff
+  end function ply_scalProdDualLegDiff
   ! ************************************************************************ !
   
   ! ************************************************************************ !
@@ -947,7 +950,7 @@ contains
   !! to calculate the scalar product between a Legendre polynomial
   !! (ansatz function) and a differentiated dual Legendre polynomial (test
   !! function) on the reference element [-1;+1].
-  function scalProdDualLeg_vec( ansFunc, testFunc, mPd) result(scalProd)
+  function ply_scalProdDualLeg_vec( ansFunc, testFunc, mPd) result(scalProd)
   ! -------------------------------------------------------------------------!
     !> maxPolyDegree
     integer, intent(in) :: mPd
@@ -971,6 +974,6 @@ contains
      end if
    end do
    
-  end function scalProdDualLeg_vec
+  end function ply_scalProdDualLeg_vec
   
 end module ply_modg_basis_module

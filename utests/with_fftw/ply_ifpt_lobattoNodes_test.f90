@@ -1,6 +1,6 @@
 ! Copyright (c) 2013-2014 Jens Zudrop <j.zudrop@grs-sim.de>
-! Copyright (c) 2013-2014 Peter Vitt <peter.vitt2@uni-siegen.de>
-! Copyright (c) 2013-2016,2019-2020 Harald Klimach <harald@klimachs.de>
+! Copyright (c) 2013-2014, 2020 Peter Vitt <peter.vitt2@uni-siegen.de>
+! Copyright (c) 2013-2016, 2019-2020 Harald Klimach <harald@klimachs.de>
 ! Copyright (c) 2013-2014 Verena Krupp
 ! Copyright (c) 2014 Nikhil Anand <nikhil.anand@uni-siegen.de>
 !
@@ -34,7 +34,7 @@ program ply_ifpt_lobattoNodes_test
   use tem_general_module,    only: tem_general_type, tem_start
   use ply_fpt_header_module, only: ply_fpt_header_type, ply_fpt_header_define
   use ply_legFpt_module,     only: ply_init_legFpt, ply_legFpt_type
-  use ply_modg_basis_module, only: legendre_1D
+  use ply_modg_basis_module, only: ply_legendre_1D
 
   !mpi!nprocs = 1
 
@@ -93,7 +93,7 @@ contains
 
     ! define the point values (Lobatto-Chebyshev-nodes)
     allocate( legValChebPnt(maxPolyDegree+1,maxPolyDegree+1) )
-    legValChebPnt(:,:) = legendre_1D(chebPnt, maxPolyDegree)
+    legValChebPnt(:,:) = ply_legendre_1D(chebPnt, maxPolyDegree)
     allocate(pntVal(maxPolyDegree+1))
     pntVal(:) = 0.0_rk
     write(logUnit(10),*) 'Calculating point values (input) ...'

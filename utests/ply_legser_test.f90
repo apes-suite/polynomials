@@ -1,4 +1,5 @@
 ! Copyright (c) 2015 Harald Klimach <harald.klimach@uni-siegen.de>
+! Copyright (c) 2020 Peter Vitt <peter.vitt2@uni-siegen.de>
 !
 ! Parts of this file were written by Harald Klimach for University of Siegen.
 !
@@ -21,7 +22,7 @@
 !! Used is the expansion of the function f(x) = 1 / (2-x).
 program ply_legser_test
   use env_module, only: rk
-  use ply_legser_module
+  use ply_legser_module, only: ply_legser
 
   implicit none
 
@@ -55,9 +56,9 @@ program ply_legser_test
     ci = cterm*ci
   end do
 
-  call legser(A = chebymodes, &
-    &         B = legmodes,   &
-    &         n = 21          )
+  call ply_legser( A = chebymodes, &
+    &              B = legmodes,   &
+    &              n = 21          )
 
   maxdiff = 0.0_rk
   do i=0,5

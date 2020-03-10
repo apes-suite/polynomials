@@ -1,5 +1,5 @@
 ! Copyright (c) 2012, 2014 Jens Zudrop <j.zudrop@grs-sim.de>
-! Copyright (c) 2013-2014, 2016 Peter Vitt <peter.vitt2@uni-siegen.de>
+! Copyright (c) 2013-2014, 2016, 2020 Peter Vitt <peter.vitt2@uni-siegen.de>
 ! Copyright (c) 2012-2016, 2018-2020 Harald Klimach <harald@klimachs.de>
 ! Copyright (c) 2013-2014 Verena Krupp <v.krupp@grs-sim.de>
 ! Copyright (c) 2014 Nikhil Anand <nikhil.anand@uni-siegen.de>
@@ -37,7 +37,7 @@ program ply_fpt_3D_test
     &                              ply_fpt_vector
   use ply_legFpt_module,     only: ply_legFpt_type, ply_init_legFPT
   use ply_legFpt_3D_module,  only: ply_legToPnt_3D
-  use ply_modg_basis_module, only: evalLegendreTensPoly
+  use ply_modg_basis_module, only: ply_evalLegendreTensPoly
   use ply_dof_module,        only: Q_space
 
   !mpi!nprocs = 1
@@ -152,7 +152,7 @@ contains
     ! define the reference results for the point values (Chebyshev nodes)
     !allocate( legValChebPnt((maxPolyDegree+1)**3,(maxPolyDegree+1)**3) )
     !legValChebPnt(:,:) = legendre_1D(chebPnt, maxPolyDegree)
-    call evalLegendreTensPoly(                   &
+    call ply_evalLegendreTensPoly(               &
       &    coords        = chebPnt,              &
       &    nCoords       = (maxPolyDegree+1)**3, &
       &    maxPolyDegree = maxPolyDegree,        &
