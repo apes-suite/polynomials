@@ -226,18 +226,16 @@ contains
           modalCoeffs = state
         else
           modalCoeffs = 0.0_rk
-          do iVar=1,nScalars
-            !$OMP PARALLEL DO PRIVATE(dof, iDegZ, iDegY, iDegX, dofOverSamp)
-            do dof = 1, mpd1_cube
-              iDegZ = (dof-1)/mpd1_square + 1
-              iDegY = (dof-1-(iDegZ-1)*mpd1_square)/mpd1+1
-              iDegX = mod(dof-1,mpd1)+1
-              dofOverSamp = iDegX + ( iDegY-1  &
-                &                     + (iDegZ-1)*(oversamp_degree+1) &
-                &                   ) * (oversamp_degree+1)
+          do dof = 1, mpd1_cube
+            iDegZ = (dof-1)/mpd1_square + 1
+            iDegY = (dof-1-(iDegZ-1)*mpd1_square)/mpd1+1
+            iDegX = mod(dof-1,mpd1)+1
+            dofOverSamp = iDegX + ( iDegY-1  &
+              &                     + (iDegZ-1)*(oversamp_degree+1) &
+              &                   ) * (oversamp_degree+1)
+            do iVar=1,nScalars
               modalCoeffs(dofOverSamp,iVar) = state(dof,iVar)
             end do
-          !$OMP END PARALLEL DO
           end do
         end if
       end if posQ
@@ -289,7 +287,6 @@ contains
         iDegX = 1
         iDegY = 1
         iDegZ = 1
-        !$OMP PARALLEL DO PRIVATE(idof, iDegZ, iDegY, iDegX, iOrd)
         do idof = 1, poly_proj%body_3d%min_dofs
 ?? copy :: posOfModgCoeffPTens(iDegX, iDegY, iDegZ, dof)
           dofOverSamp = iDegX + ( iDegY-1  &
@@ -298,7 +295,6 @@ contains
           modalCoeffs(dofOverSamp,:) = state(dof,:)
 ?? copy :: nextModgCoeffPTens(iDegX, iDegY, iDegZ)
         end do
-        !$OMP END PARALLEL DO
       end if posP
 
     end if
