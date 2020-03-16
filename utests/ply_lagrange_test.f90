@@ -79,12 +79,12 @@ program ply_lagrange_test
     &                            values  = lobval                 )
 
   ! The three basis polynomials associated with the respective modes
-  ! should be: 0.5*(x*x - x); 1-x*x; 0.5*(x*x + x)
+  ! should be: 0.5*(x*x + x); 1-x*x; 0.5*(x*x - x)
   do iSample=1,60
     call random_number(sample_x)
 
     f = ply_lagrange_mode_at(me = lobpoly, mode = 1, x = sample_x)
-    diff = abs(f - 0.5_rk*(sample_x*sample_x - sample_x))
+    diff = abs(f - 0.5_rk*(sample_x*sample_x + sample_x))
     maxdiff = max(diff, maxdiff)
 
     f = ply_lagrange_mode_at(me = lobpoly, mode = 2, x = sample_x)
@@ -92,7 +92,7 @@ program ply_lagrange_test
     maxdiff = max(diff, maxdiff)
 
     f = ply_lagrange_mode_at(me = lobpoly, mode = 3, x = sample_x)
-    diff = abs(f - 0.5_rk*(sample_x*sample_x + sample_x))
+    diff = abs(f - 0.5_rk*(sample_x*sample_x - sample_x))
     maxdiff = max(diff, maxdiff)
   end do
 
