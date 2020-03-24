@@ -192,6 +192,10 @@ contains
     nQuadPoints = n1d**(ndims-1)
     allocate(left(nQuadPoints, 3))
     allocate(right(nQuadPoints, 3))
+    ! Ensure that the higher dimensions are set to 0,
+    ! if not all three dimensions are used.
+    left = 0.0_rk
+    right = 0.0_rk
 
     left(:,dir)  = -1.0_rk
     right(:,dir) =  1.0_rk
