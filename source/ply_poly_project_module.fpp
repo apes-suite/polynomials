@@ -120,8 +120,6 @@ module ply_poly_project_module
     &                                    ply_fxt_n2m_1D, &
     &                                    ply_fxt_n2m_3D, &
     &                                    ply_fxt_n2m_2D
-  use tem_precice_module,          only: precice_available, &
-   &                                     precice
 
   implicit none
 
