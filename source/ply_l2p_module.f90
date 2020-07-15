@@ -246,7 +246,7 @@ contains
     ! -------------------------------------------------------------------- !
 
     !$OMP PARALLEL DEFAULT(SHARED), &
-    !$OMP PRIVATE(iStrip, iRow, iCell, iCol, strip_ub, mval)
+    !$OMP PRIVATE(iStrip, iRow, iCell, iCol, strip_ub)
     if (nDofs > 1) then
 
       !$OMP DO
