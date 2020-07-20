@@ -245,8 +245,9 @@ contains
     ! integer, parameter :: vlen = nIndeps
     ! -------------------------------------------------------------------- !
 
-    !$OMP PARALLEL DEFAULT(SHARED), &
-    !$OMP PRIVATE(iStrip, iRow, iCell, iCol, strip_ub)
+    !$OMP PARALLEL if (nIndeps > 1024), DEFAULT(SHARED) &
+    !$OMP PRIVATE(iStrip, iRow, iCell, iCol, strip_ub, mval)
+
     if (nDofs > 1) then
 
       !$OMP DO
@@ -257,9 +258,7 @@ contains
 
         do iRow = 1, nDofs
 
-          do iCell = iStrip+1, iStrip+strip_ub
-            projected(iCell, iRow) = 0.0_rk
-          end do
+          projected(iStrip+1:iStrip+strip_ub, iRow) = 0.0_rk
           do iCol = 1, nDofs
             mval =  matrix(iCol,iRow)
             do iCell = iStrip+1, iStrip+strip_ub
