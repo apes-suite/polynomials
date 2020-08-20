@@ -162,7 +162,8 @@ module ply_fpt_header_module
     !! The computation can be done either by a `'vector'` implementation or
     !! by a `'scalar'` implementation.
     !! We indicate the respective implementations by the integers
-    !! [[ply_fpt_scalar]] or [[ply_fpt_vector]].
+    !! [[ply_fpt_header_module:ply_fpt_scalar]] or
+    !! [[ply_fpt_header_module:ply_fpt_vector]].
     integer :: implementation
 
     !> The striplen, that should be used for vectorized simultaneous
@@ -372,7 +373,7 @@ contains
     type(ply_fpt_header_type), intent(out) :: me
 
     !> Blocksize to use in approximation algorithm. Defaults to
-    !! [[ply_fpt_default_blocksize]].
+    !! [[ply_fpt_header_module:ply_fpt_default_blocksize]].
     integer, optional, intent(in) :: blocksize
 
     !> Oversampling factor to use.
@@ -384,23 +385,24 @@ contains
 
     !> Number of approximation terms to use for the representation of the
     !! blocks in the Legendre to Chebyshev transformation algorithm.
-    !! Defaults to [[ply_fpt_default_approx_terms]].
+    !! Defaults to [[ply_fpt_header_module:ply_fpt_default_approx_terms]].
     integer, optional, intent(in) :: approx_terms
 
     !> Implementation to use in the computation.
     !!
     !! Select the implementation variant to use. Either scalar
-    !! ([[ply_fpt_scalar]]) or vectorized ([[ply_fpt_vector]]).
-    !! Default is [[ply_fpt_scalar]].
+    !! ([[ply_fpt_header_module:ply_fpt_scalar]]) or vectorized
+    !! ([[ply_fpt_header_module:ply_fpt_vector]]).
+    !! Default is [[ply_fpt_header_module:ply_fpt_scalar]].
     integer, optional, intent(in) :: implementation
 
     !> Length of strips to use in the transformation implementation.
-    !! Defaults to [[vlen]].
+    !! Defaults to [[tem_compileconf_module:vlen]].
     integer, optional, intent(in) :: striplen
 
     !> Width for subblocks in unrolling the approximate Legendre to
     !! Chebyshev transformation. Defaults to
-    !! [[ply_fpt_default_subblockingWidth]].
+    !! [[ply_fpt_header_module:ply_fpt_default_subblockingWidth]].
     integer, optional, intent(in) :: subBlockingWidth
 
     !> Adapt the oversampling factor such, that oversampled space has a
