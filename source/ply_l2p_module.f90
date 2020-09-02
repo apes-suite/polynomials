@@ -245,20 +245,22 @@ contains
     ! integer, parameter :: vlen = nIndeps
     ! -------------------------------------------------------------------- !
 
-    !$OMP PARALLEL if (nIndeps > 1024), DEFAULT(SHARED) &
+    !$OMP PARALLEL IF (nIndeps > 256) &
+    !$OMP DEFAULT(SHARED) &
     !$OMP PRIVATE(iStrip, iRow, iCell, iCol, strip_ub, mval)
 
     if (nDofs > 1) then
 
-      !$OMP DO
       do iStrip=0,nIndeps-1,vlen
 
         ! Calculate the upper bound of the current strip
         strip_ub = min(iStrip + vlen, nIndeps) - iStrip
 
+        !$OMP DO
         do iRow = 1, nDofs
 
           projected(iStrip+1:iStrip+strip_ub, iRow) = 0.0_rk
+
           do iCol = 1, nDofs
             mval =  matrix(iCol,iRow)
             do iCell = iStrip+1, iStrip+strip_ub
@@ -270,8 +272,8 @@ contains
           end do ! iCol = 1, nCols
 
         end do ! iRow = 1, nRows
+        !$OMP END DO
       end do ! iStrip
-      !$OMP END DO
 
     else
 
