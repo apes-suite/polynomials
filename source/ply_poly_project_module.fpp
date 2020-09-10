@@ -120,8 +120,6 @@ module ply_poly_project_module
     &                                    ply_fxt_n2m_1D, &
     &                                    ply_fxt_n2m_3D, &
     &                                    ply_fxt_n2m_2D
-  use tem_precice_module,          only: precice_available, &
-   &                                     precice_handle
 
   implicit none
 
@@ -554,7 +552,7 @@ contains
   ! ------------------------------------------------------------------------ !
 
 
-  !****************** MODAL to NODAL ******************************************!
+  ! ***************** MODAL to NODAL ***************************************** !
   ! ------------------------------------------------------------------------ !
   !> Convert nDoF modes to nodal values.
   subroutine ply_poly_project_m2n_multiVar(me, dim, nVars, modal_data, &
@@ -652,7 +650,7 @@ contains
 
 
 
-  !***************** NODAL to MODAL *******************************************!
+  ! **************** NODAL to MODAL ****************************************** !
   ! ------------------------------------------------------------------------ !
   !> Convert nodal values to nDoFs modes.
   subroutine ply_poly_project_n2m_multiVar(me, dim, nVars, nodal_data, &
