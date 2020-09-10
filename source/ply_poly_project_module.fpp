@@ -552,7 +552,7 @@ contains
   ! ------------------------------------------------------------------------ !
 
 
-  !****************** MODAL to NODAL ******************************************!
+  ! ***************** MODAL to NODAL ***************************************** !
   ! ------------------------------------------------------------------------ !
   !> Convert nDoF modes to nodal values.
   subroutine ply_poly_project_m2n_multiVar(me, dim, nVars, modal_data, &
@@ -651,7 +651,7 @@ contains
 
 
 
-  !***************** NODAL to MODAL *******************************************!
+  ! **************** NODAL to MODAL ****************************************** !
   ! ------------------------------------------------------------------------ !
   !> Convert nodal values to nDoFs modes.
   subroutine ply_poly_project_n2m_multiVar(me, dim, nVars, nodal_data, &
