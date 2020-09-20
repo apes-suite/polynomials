@@ -1,4 +1,4 @@
-! Copyright (c) 2015-2016 Harald Klimach <harald.klimach@uni-siegen.de>
+! Copyright (c) 2015-2016, 2020 Harald Klimach <harald.klimach@uni-siegen.de>
 ! Copyright (c) 2016-2017, 2020 Peter Vitt <peter.vitt2@uni-siegen.de>
 ! Copyright (c) 2016 Tobias Girresser <tobias.girresser@student.uni-siegen.de>
 ! Copyright (c) 2017 Jiaxing Qi <jiaxing.qi@uni-siegen.de>
@@ -81,6 +81,13 @@ module ply_subresolution_module
     !! pointers above.
     integer :: colpos
   end type ply_subres_colvar_type
+
+  public :: ply_subresolution_type
+  public :: ply_subresolution_load
+  public :: ply_subres_import_color
+  public :: ply_subres_get_elemcolor
+  public :: ply_subres_colvar_type
+
 
 contains
 
