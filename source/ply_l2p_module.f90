@@ -245,44 +245,96 @@ contains
     ! integer, parameter :: vlen = nIndeps
     ! -------------------------------------------------------------------- !
 
-    !$OMP PARALLEL IF (nIndeps > 256) &
-    !$OMP DEFAULT(SHARED) &
-    !$OMP PRIVATE(iStrip, iRow, iCell, iCol, strip_ub, mval)
+! Original version (for reference)
+!!    if (nDofs > 1) then
+!!
+!!      do iStrip=1,nIndeps,vlen
+!!
+!!        ! Calculate the upper bound of the current strip
+!!        strip_ub = iStrip-1 + min(vlen, nIndeps-iStrip+1)
+!!
+!!        do iRow = 1, nDofs
+!!
+!!          do iCell = iStrip, strip_ub
+!!            projected(iCell, iRow) = 0.0_rk
+!!          end do
+!!
+!!          do iCol = 1, nDofs
+!!            mval =  matrix(iCol,iRow)
+!!            do iCell = iStrip, strip_ub
+!!              ! on SX-ACE, this can be identified as matrix multiplication
+!!              ! which results in VERY HIGH performance
+!!              projected(iCell, iRow) = projected(iCell, iRow) &
+!!                &                   + mval * original(iCol, iCell)
+!!            end do ! iCell
+!!          end do ! iCol = 1, nCols
+!!        end do ! iRow = 1, nRows
+!!      end do ! iStrip
+!!
+!!    else
+!!
+!!      projected = matrix(nDofs,1) * original
+!!
+!!    end if
 
     if (nDofs > 1) then
 
-      do iStrip=0,nIndeps-1,vlen
+      !$OMP PARALLEL DO DEFAULT(SHARED), &
+      !$OMP PRIVATE(iStrip, iRow, iCell, iCol, mval)
+      do iStrip=1,nIndeps,vlen
 
         ! Calculate the upper bound of the current strip
-        strip_ub = min(iStrip + vlen, nIndeps) - iStrip
+        strip_ub = iStrip-1 + min(vlen, nIndeps-iStrip+1)
 
-        !$OMP DO
         do iRow = 1, nDofs
 
-          projected(iStrip+1:iStrip+strip_ub, iRow) = 0.0_rk
+          do iCell = iStrip, strip_ub
+            projected(iCell, iRow) = 0.0_rk
+          end do
 
           do iCol = 1, nDofs
             mval =  matrix(iCol,iRow)
-            do iCell = iStrip+1, iStrip+strip_ub
+            do iCell = iStrip, strip_ub
               ! on SX-ACE, this can be identified as matrix multiplication
               ! which results in VERY HIGH performance
               projected(iCell, iRow) = projected(iCell, iRow) &
                 &                   + mval * original(iCol, iCell)
             end do ! iCell
           end do ! iCol = 1, nCols
-
         end do ! iRow = 1, nRows
-        !$OMP END DO
       end do ! iStrip
+      !$OMP END PARALLEL DO
 
     else
 
-      !$OMP SINGLE
       projected = matrix(nDofs,1) * original
-      !$OMP END SINGLE
 
     end if
-    !$OMP END PARALLEL
+
+
+! test-version of the loop (will be removed later)
+!!    if (nDofs > 1) then
+!!
+!!      projected(:, :) = 0.0_rk
+!!
+!!      !$OMP PARALLEL DO COLLAPSE(2) DEFAULT(SHARED), &
+!!      !$OMP PRIVATE(iStrip, iRow, iCell, iCol, mval)
+!!      do iRow = 1, nDofs
+!!        do iCol = 1, nDofs
+!!          mval =  matrix(iCol,iRow)
+!!          do iStrip=1,nIndeps
+!!            projected(iStrip, iRow) = projected(iStrip, iRow) &
+!!              &                   + mval * original(iCol, iStrip)
+!!          end do
+!!        end do
+!!      end do
+!!      !$OMP END PARALLEL DO
+!!
+!!    else
+!!
+!!      projected = matrix(nDofs,1) * original
+!!
+!!    end if
 
   end subroutine ply_l2_projection
   ! ************************************************************************ !
