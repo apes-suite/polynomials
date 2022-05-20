@@ -1,5 +1,5 @@
 ! Copyright (c) 2012-2014 Jens Zudrop <j.zudrop@grs-sim.de>
-! Copyright (c) 2012-2014,2016,2018,2020 Harald Klimach <harald.klimach@uni-siegen.de>
+! Copyright (c) 2012-2014,2016,2018,2020,2022 Harald Klimach <harald.klimach@dlr.de>
 ! Copyright (c) 2013-2014, 2016-2017 Peter Vitt <peter.vitt2@uni-siegen.de>
 ! Copyright (c) 2013-2014 Verena Krupp
 ! Copyright (c) 2013 Simon Zimny <s.zimny@grs-sim.de>
@@ -165,7 +165,6 @@ contains
     ! -------------------------------------------------------------------- !
     integer :: nIndeps, iAlph, n, n_squared
     real(kind=rk), dimension(:), allocatable :: alph
-    real(kind=rk), dimension(:), allocatable :: gam
     ! -------------------------------------------------------------------- !
 
     n = fpt%legToChebParams%n

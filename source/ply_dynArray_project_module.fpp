@@ -1,5 +1,5 @@
 ! Copyright (c) 2014 Verena Krupp
-! Copyright (c) 2014 Harald Klimach <harald.klimach@uni-siegen.de>
+! Copyright (c) 2014, 2022 Harald Klimach <harald.klimach@dlr.de>
 ! Copyright (c) 2017 Peter Vitt <peter.vitt2@uni-siegen.de>
 ! Copyright (c) 2019 Neda Ebrahimi Pour <neda.epour@uni-siegen.de>
 !
@@ -81,7 +81,8 @@ module ply_dynarray_project_module
 
 ?? copy :: DA_decltxt( projection, type(ply_prj_init_type))
 
-  public :: init, append, dyn_projectionArray_type
+  public :: init, append, dyn_projectionArray_type, truncate, empty
+  public :: sortTruncate, positionOfVal
   public :: operator(==), operator(/=), operator(<), operator(<=)
   public :: operator(>), operator(>=)
   public :: ply_prj_init_define, ply_prj_init_type

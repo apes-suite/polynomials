@@ -1,4 +1,4 @@
-! Copyright (c) 2017-2019 Harald Klimach <harald.klimach@uni-siegen.de>
+! Copyright (c) 2017-2019, 2022 Harald Klimach <harald.klimach@dlr.de>
 ! Copyright (c) 2018, 2020 Peter Vitt <peter.vitt2@uni-siegen.de>
 ! Copyright (c) 2017-2018 Daniel Fleischer <daniel.fleischer@student.uni-siegen.de>
 !
@@ -1045,44 +1045,5 @@ contains
   end subroutine get_sampled_element
   ! ------------------------------------------------------------------------- !
   ! ------------------------------------------------------------------------- !
-
-
-  ! ------------------------------------------------------------------------- !
-  pure function sum_abs_mode(iMode, degree, nDims, dat) result(modesum)
-    ! -------------------------------------------------------------------- !
-    integer, intent(in) :: iMode
-    integer, intent(in) :: degree
-    integer, intent(in) :: nDims
-    real(kind=rk), intent(in) :: dat(:)
-    real(kind=rk) :: modesum
-    ! -------------------------------------------------------------------- !
-    integer :: nModes
-    integer :: jMode, kMode
-    ! -------------------------------------------------------------------- !
-    nModes = (degree+1)
-
-    select case(nDims)
-    case (1)
-      modesum = abs(dat(iMode))
-    case (2)
-      modesum = abs(dat(iMode+(iMode-1)*nModes))
-      do jMode=1,iMode-1
-        modesum = modesum + abs(dat(iMode+(jMode-1)*nModes)) &
-          &               + abs(dat(jMode+(iMode-1)*nModes))
-      end do
-    case (3)
-      modesum = abs(dat(iMode+((iMode-1)+(iMode-1)*nModes)*nModes))
-      do jMode=1,iMode-1
-        modesum = modesum + abs(dat(iMode+((iMode-1)+(jMode-1)*nModes)*nModes)) &
-          &               + abs(dat(iMode+((jMode-1)+(iMode-1)*nModes)*nModes)) &
-          &               + abs(dat(jMode+((iMode-1)+(iMode-1)*nModes)*nModes))
-        do kMode=1,kMode-1
-          modesum = modesum + abs(dat(iMode+((jMode-1)+(kMode-1)*nModes)*nModes)) &
-            &               + abs(dat(kMode+((iMode-1)+(jMode-1)*nModes)*nModes)) &
-            &               + abs(dat(jMode+((kMode-1)+(iMode-1)*nModes)*nModes))
-        end do
-      end do
-    end select
-  end function sum_abs_mode
 
 end module ply_sampling_adaptive_module
