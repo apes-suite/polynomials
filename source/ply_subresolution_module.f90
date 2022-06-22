@@ -399,6 +399,14 @@ contains
     logical :: has_subres
     real(kind=rk) :: void, fill
     ! --------------------------------------------------------------------- !
+    !! Dummy code to touch unused arguments
+    type(tem_time_type) :: now
+    if (varSys%nStateVars > 0) then
+      if (tree%nElems == nElems) then
+        now = time
+      end if
+    end if
+    !! end dummy code to touch unused arguments
 
     call c_f_pointer(fun%method_data, p)
 

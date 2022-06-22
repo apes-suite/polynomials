@@ -53,7 +53,7 @@ contains
   ! ------------------------------------------------------------------------ !
   !> Create a variable system for the given tracking instance.
   subroutine ply_sampling_varsys_for_track( varsys, trackInst, mesh, nDims, &
-    &                                       var_degree, lvl_degree,         &
+    &                                       lvl_degree,                     &
     &                                       sample_varsys, var, time        )
     ! -------------------------------------------------------------------- !
     !> Variable system describing the access to the original data to sample.
@@ -68,14 +68,6 @@ contains
 
     !> Dimensionality of the data to sample.
     integer, intent(in) :: nDims
-
-    !> Maximal polynomial degree for each variable.
-    !!
-    !! Needs to be matching the variable definition in the variable system.
-    !! @todo Needs to be changed to be an information per element per variable!
-    !!       Possibly by defining a variable in the varsys, providing the
-    !!       degree.
-    integer, intent(in) :: var_degree(:)
 
     !> Maximal polynomial degree for each level.
     integer, intent(in) :: lvl_degree(:)

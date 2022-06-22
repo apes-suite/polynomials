@@ -474,7 +474,6 @@ contains
       &                                 trackInst     = trackInst,  &
       &                                 mesh          = orig_mesh,  &
       &                                 nDims         = nDims,      &
-      &                                 var_degree    = var_degree, &
       &                                 lvl_degree    = lvl_degree, &
       &                                 sample_varsys = resvars,    &
       &                                 var           = var,        &
