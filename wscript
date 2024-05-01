@@ -179,7 +179,7 @@ def build(bld):
        fxtp_sources[i_source] = 'external/fxtp/fxtpack140715/' + fxtp_sources[i_source]
 
 
-    if bld.cmd != 'gendoxy':
+    if bld.cmd != 'docu':
        if bld.env.LIB_FFTW3:
           fftwdep = 'FFTW3'
           if bld.env.WITH_ASL:
@@ -248,6 +248,6 @@ def build(bld):
           utests(bld = bld, use = test_dep, path = 'utests/with_fftw')
 
     else:
-       bld(
-           features = 'coco',
+       bld.env.ply_pp = bld(
+           features = 'includes coco',
            source   = ply_ppsources)
