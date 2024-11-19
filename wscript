@@ -60,8 +60,12 @@ def configure(conf):
              conf.env.INCLUDES_FFTW3 = conf.options.fftw_path+'/include'
         else:
            # Try to use pkg-config to find the FFTW library.
+           cpath = conf.env.CPATH
+           # Empty the CPATH for pkg-config, as it will be ignored by the Fortran compiler
+           conf.env.CPATH = ''
            conf.check_cfg(package='fftw3', uselib_store='FFTW3',
                           args=['--cflags', '--libs'], mandatory=False)
+           conf.env.CPATH = cpath
            if not conf.env.LIB_FFTW3:
               # Try to link the fftw without any further options.
               conf.check(lib='fftw3', uselib_store='FFTW3', mandatory=False)
