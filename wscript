@@ -81,6 +81,7 @@ def configure(conf):
     if conf.env.LIB_FFTW3:
        try:
          # Check for the fftw3.f03 header:
+         Logs.info(f'FFTW include dir: {conf.env.INCLUDES_FFTW3}')
          if conf.env.LIB_ASL:
            conf.check_fc(fragment= "program test\n use, intrinsic :: iso_c_binding\n include 'aslfftw3.f03'\nend program test",
                          includes= conf.env.INCLUDES_FFTW3,
