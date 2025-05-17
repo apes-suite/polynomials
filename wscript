@@ -78,7 +78,7 @@ def configure(conf):
            conf.all_envs[''].FCFLAGS_FFTW3 = conf.env.CFLAGS_FFTW3
            conf.all_envs[''].LIB_FFTW3 = conf.env.LIB_FFTW3
            conf.all_envs[''].LIBPATH_FFTW3 = conf.env.LIBPATH_FFTW3
-           conf.all_envs[''].INCLUDES_FFTW3 = FFTW_INCLUDES #conf.env.INCLUDES_FFTW3
+           conf.all_envs[''].INCLUDES_FFTW3 = FFTW_INCLUDES
         conf.setenv('')
 
     if conf.env.LIB_FFTW3:
