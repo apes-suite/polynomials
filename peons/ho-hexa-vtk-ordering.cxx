@@ -82,7 +82,7 @@ int main() {
     std::cout << "module sample_vtkHOhex_module\n";
     std::cout << "  implicit none\n";
     std::cout << "  private\n";
-    std::cout << "  integer, public :: hexorders = [" << order[0]
+    std::cout << "  integer, public :: hexorders(3) = [" << order[0]
                                                       << ", " << order[1]
                                                       << ", " << order[2] << "]\n";
     std::cout << "  integer, public :: indexMap(0:" << order[0] << ", 0:" << order[1]

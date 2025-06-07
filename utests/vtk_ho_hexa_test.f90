@@ -21,6 +21,7 @@ program vtk_ho_hexa_test
   implicit none
 
   integer :: i,j,k
+  integer :: pind
   logical :: success = .TRUE.
 
   call fillMap()
@@ -29,11 +30,12 @@ program vtk_ho_hexa_test
   do k=0,hexorders(3)
     do j=0,hexorders(2)
       do i=0,hexorders(1)
-        if (hexa_pointIndexFromIJK(i, j, k, hexorders(1),              &
-          &                                 hexorders(2), hexorders(3) &
-          &                       )                                    &
-          &  /= indexMap(i, j, k)                                      ) then
+        pind = hexa_pointIndexFromIJK(i, j, k, hexorders(1),     &
+          &                           hexorders(2), hexorders(3) &
+          &                                                      )
+        if ( pind /= indexMap(i, j, k) ) then
           success = .FALSE.
+        end if
       end do
     end do
   end do

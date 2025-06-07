@@ -31,7 +31,7 @@ contains
 
 
   !> Implementation of vtkHigherOrderHexahedron::PointIndexFromIJK in Fortran
-  elemental function hexa_pointIndexFromIJK(i, j, k, orderX, orderY, orderZ) return(pointIndex)
+  elemental function hexa_pointIndexFromIJK(i, j, k, orderX, orderY, orderZ) result(pointIndex)
     !> Index in X-direction (0 - order)
     integer, intent(in) :: i
     !> Index in Y-direction (0 - order)
@@ -50,6 +50,7 @@ contains
 
     integer :: surf_count
     integer :: other_edges
+    integer :: ind
     integer :: order(3)
     integer :: ijk(3)
     logical :: on_surface(3)
@@ -76,9 +77,13 @@ contains
       end if
       if (j > 0) then
         pointIndex = pointIndex + 2
-      end if
-      if (i > 0) then
-        pointIndex = pointIndex + 1
+        if (i == 0) then
+          pointIndex = pointIndex + 1
+        end if
+      else
+        if (i > 0) then
+          pointIndex = pointIndex + 1
+        end if
       end if
 
     case(2) ! Edge DoF
@@ -96,9 +101,9 @@ contains
         if (i > 0) then
           pointIndex = pointIndex + order(1) - 1
         else
-          pointIndex = 2*(order(1)-1) + order(2) - 1
-          if (k > 0) pointIndex = pointIndex + 2*other_edges
+          pointIndex = pointIndex + 2*(order(1)-1) + order(2) - 1
         end if
+        if (k > 0) pointIndex = pointIndex + 2*other_edges
         pointIndex = pointIndex + j - 1
       end if
 
@@ -116,7 +121,40 @@ contains
 
     case(1) ! Face DoF
       pointIndex = 8 + 4 * (order(1) + order(2) + order(3) - 3)
+      if (on_surface(1)) then
+        ! On X-normal face
+        if (i > 0) then
+          pointIndex = pointIndex + (order(2)-1) * (order(3)-1)
+        end if
+        pointIndex = pointIndex + (order(2)-1) * (k-1)
+        pointIndex = pointIndex + (j-1)
+      end if
+      if (on_surface(2)) then
+        ! On Y-normal face
+        pointIndex = pointIndex + 2*(order(2)-1)*(order(3)-1)
+        if (j > 0) then
+          pointIndex = pointIndex + (order(1)-1) * (order(3)-1)
+        end if
+        pointIndex = pointIndex + (order(1)-1) * (k-1)
+        pointIndex = pointIndex + (i-1)
+      end if
+      if (on_surface(3)) then
+        ! On Z-normal face
+        pointIndex = pointIndex + 2*(order(2)-1)*(order(3)-1) &
+          &                     + 2*(order(1)-1)*(order(3)-1)
+        if (k > 0) then
+          pointIndex = pointIndex + (order(1)-1) * (order(2)-1)
+        end if
+        pointIndex = pointIndex + (order(1)-1) * (j-1)
+        pointIndex = pointIndex + (i-1)
+      end if
     case(0) ! Interior DoF
+      pointIndex = 8 + 4 * (order(1) + order(2) + order(3) - 3)
+      pointIndex = pointIndex + 2*( (order(1)-1)*(order(2)-1) &
+        &                          +(order(1)-1)*(order(3)-1) &
+        &                          +(order(2)-1)*(order(3)-1) )
+      pointIndex = pointIndex + ( (k-1)*(order(2)-1) + (j-1) ) &
+        &                       * (order(1)-1) + i-1
     end select
 
   end function hexa_pointIndexFromIJK

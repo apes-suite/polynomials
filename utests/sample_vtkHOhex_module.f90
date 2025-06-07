@@ -2,7 +2,7 @@
 module sample_vtkHOhex_module
   implicit none
   private
-  integer, public :: hexorders = [9, 8, 7]
+  integer, public :: hexorders(3) = [9, 8, 7]
   integer, public :: indexMap(0:9, 0:8, 0:7)
   public :: fillMap
 
