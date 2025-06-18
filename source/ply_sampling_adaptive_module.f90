@@ -42,7 +42,8 @@ module ply_sampling_adaptive_module
   use env_module, only: rk, labelLen
 
   use aotus_module, only: flu_state,   &
-    &                     aot_get_val
+    &                     aot_get_val, &
+    &                     aoterr_Fatal
 
   use treelmesh_module, only: treelmesh_type
   use tem_aux_module, only: tem_abort
@@ -73,6 +74,10 @@ module ply_sampling_adaptive_module
     &                          tem_varSys_getParams_dummy,    &
     &                          tem_varSys_setParams_dummy
 
+  use ply_dof_module, only: Q_space
+  use ply_filter_element_module, only: ply_filter_element,      &
+    &                                  ply_filter_element_type, &
+    &                                  ply_filter_element_load
   use ply_sampling_varsys_module, only: ply_sampling_var_type,         &
     &                                   ply_sampling_varsys_for_track, &
     &                                   ply_sampling_var_allocate,     &
@@ -83,9 +88,7 @@ module ply_sampling_adaptive_module
     &                                 ply_split_element_1D,   &
     &                                 ply_split_element_2D,   &
     &                                 ply_split_element_3D
-  use ply_filter_element_module, only: ply_filter_element,      &
-    &                                  ply_filter_element_type, &
-    &                                  ply_filter_element_load
+  use ply_transfer_module, only: ply_transfer_dofs
 
   implicit none
 
@@ -116,6 +119,12 @@ module ply_sampling_adaptive_module
     !! restricted by the global limit, due to the available space in the
     !! integers representing the treeIDs.
     integer :: max_nlevels = 0
+
+    !> Polynomial degree in the final elements to output.
+    !!
+    !! If this is larger than 0, do a nodal output of the
+    !! polynomial data.
+    integer :: out_polydegree = 0
 
     !> Maximum allowed oscillation of the solution.
     !! For adaptive subsampling only.
@@ -208,6 +217,21 @@ contains
       &               val     = me%max_nlevels, &
       &               ErrCode = iError,         &
       &               default = 0               )
+
+    call aot_get_val( L       = conf,              &
+      &               thandle = parent,            &
+      &               key     = 'out_polydegree',  &
+      &               val     = me%out_polydegree, &
+      &               ErrCode = iError,            &
+      &               default = 0                  )
+    if ( btest(iError, aoterr_Fatal) ) then
+      write(logunit(1),*) 'ERROR: out_polydegree for ply_sampling_adaptive' &
+        &                 // ' needs to be an integer!'
+      write(logunit(1),*) 'You provided out_polydegree but not in a form' &
+        &                 // ' that could be interpreted as a number.'
+      write(logunit(1),*) 'Aborting the execution, please check your config!'
+      call tem_abort()
+    end if
 
     call aot_get_val( L       = conf,        &
       &               thandle = parent,      &
@@ -580,8 +604,10 @@ contains
         if ( (elemlevel < me%AbsUpperBoundLevel) &
           & .or. (me%AbsUpperBoundLevel == 0)    ) then
           do iScalar=1,nScalars
-            is_varying(iElem) = is_varying(iElem) &
-              &                 .or. var(iScalar)%deviates(iElem)
+            is_varying(iElem) = is_varying(iElem)                       &
+              &                 .or. ( var(iScalar)%deviates(iElem)     &
+              &                        .and. var(iScalar)%degree(iElem) &
+              &                              > me%out_polydegree        )
           end do
         end if
 
@@ -728,6 +754,7 @@ contains
           case(redux_decrement)
             maxtarget = max(maxdeg(iScalar) - me%dof_decrement + 1, 1)
           end select
+          maxtarget = max(maxtarget, me%out_polydegree+1)
           containersize = newelems &
             &           + reducableElems(iScalar) * (maxtarget**nDims - 1)
         end if
@@ -739,9 +766,11 @@ contains
         iNewElem = 1
         var(iScalar)%first(1) = 1
 
-        if (.not.need2refine) then
+        if (.not.need2refine .and. (me%out_polydegree == 0)) then
           ! No need to refine the mesh, just copy the first degree of freedom
           ! in each element and skip to next variable.
+          ! (This only works with a reduction to single mean data, if we are
+          !  to output a polynomial, we need proper projection.)
           do iElem=1,curmesh%nElems
             firstdof = var(iScalar)%first(iNewElem)
             oldfirst = prev(iScalar)%first(iElem)
@@ -763,14 +792,14 @@ contains
             ! There is at least one variable that varies in this element,
             ! need to create all child elements.
 
-            if (prev(iScalar)%deviates(iElem)) then
-              ! The data of this scalar varies, we need to project it to the
-              ! child elements.
+            if (prev(iScalar)%deviates(iElem) .or. me%out_polydegree > 0) then
+              ! The data of this scalar varies, or we are not reducing to a
+              ! scalar mean. We need to project it to the child elements.
 
               if (reached_limit(iElem)) then
-                ! If we reached the limit for refinements, we only keep one
-                ! degree of freedom.
-                targetdeg = 0
+                ! If we reached the limit for refinements, we only keep
+                ! the polynomial degree configured for outputs.
+                targetdeg = me%out_polydegree
               else
                 select case(me%reduction_mode)
                 case(redux_factor)
@@ -779,7 +808,7 @@ contains
                 case(redux_decrement)
                   targetdeg = prev(iScalar)%degree(iElem) - me%dof_decrement
                 end select
-                targetdeg = max(targetdeg, 0)
+                targetdeg = max(targetdeg, me%out_polydegree)
               end if
 
               oldlast = prev(iScalar)%first(iElem+1) - 1
@@ -812,7 +841,6 @@ contains
             else
               ! This scalar does not vary more than the threshold, just keep
               ! the first degree of freedom.
-
               ndofs = 1
               targetdeg = 0
               lastdof = firstdof+nChildren-1
@@ -834,12 +862,35 @@ contains
             end do
 
           else varelem
-            ! No variation in this element, keep it with a single degree of
-            ! freedom.
+            ! No variation in this element, keep it with me%out_polydegree.
 
-            var(iScalar)%degree(iNewElem) = 0
-            var(iScalar)%dat(firstdof) = prev(iScalar)%dat(oldfirst)
-            var(iScalar)%first(iNewElem+1) = firstdof + 1
+            ndofs = (me%out_polydegree+1)**ndims
+
+            oldlast = prev(iScalar)%first(iElem+1) - 1
+            lastdof = var(iScalar)%first(iNewElem) + nDofs - 1
+            nOlddofs = oldlast - oldfirst + 1
+
+            parent_data(1:nOlddofs,1:1)              &
+              & => prev(iScalar)%dat(oldfirst:oldlast)
+            child_data(1:ndofs,1:1) &
+              & => var(iScalar)%dat(firstdof:lastdof)
+            var(iScalar)%degree(iNewElem) = me%out_polydegree
+
+            if ( prev(iScalar)%degree(iElem) /= me%out_polydegree ) then
+              ! The element is not to be refined further, but it does not
+              ! have the output polynomial degree yet, and needs to be
+              ! transferred accordingly.
+              call ply_transfer_dofs( indat = prev(iScalar)%dat(oldfirst:oldlast), &
+                &                     inspace = Q_space,                           &
+                &                     indegree = prev(iScalar)%degree(iElem),      &
+                &                     outdat = var(iScalar)%dat(firstdof:lastdof), &
+                &                     outspace = Q_space,                          &
+                &                     outdegree = var(iScalar)%degree(iNewElem),   &
+                &                     nDims = nDims                                )
+            else
+              var(iScalar)%dat(firstdof:lastdof) = prev(iScalar)%dat(oldfirst:oldlast)
+            end if
+            var(iScalar)%first(iNewElem+1) = firstdof + ndofs
             iNewElem = iNewElem+1
 
           end if varelem
@@ -919,8 +970,8 @@ contains
 
     end do refining
 
-    ! Now the refined data is stored in var%dat, and there is only one degree
-    ! of freedom left for each element.
+    ! Now the refined data is stored in var%dat, with me%out_polydegree
+    ! polynomials in each element.
     ! The final mesh is stored in curmesh.
 
     ! Discard old data to free memory.
@@ -1028,6 +1079,7 @@ contains
     type(sampled_method_data_type), pointer :: p
     integer :: iElem
     integer :: iComp
+    integer :: iDof
     integer :: nComps
     ! -------------------------------------------------------------------- !
     nComps = fun%nComponents
@@ -1036,8 +1088,10 @@ contains
 
     do iComp=1,nComps
       do iElem=1,n
-        res(iComp+(iElem-1)*nComps) &
-          & = p%component(iComp)%dat(elempos(iElem))
+        do iDof=1,nDofs
+          res(iComp+(iDof-1)*nComps+(iElem-1)*nComps*nDofs) &
+            & = p%component(iComp)%dat((elempos(iElem)-1)*nDofs+iDof)
+        end do
       end do
     end do
 
