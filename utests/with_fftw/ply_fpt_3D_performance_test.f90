@@ -46,7 +46,6 @@ program ply_fpt_3D_performance_test
 
   ! Init the Treelm environment, needed to init the log Unit
   call tem_start(codeName = 'FPT 3D Performance Test', &
-    &            version  = '1',                       &
     &            general  = general                    )
   call tem_logging_init_primary( level = 1,               &
     &                            rank = general%proc%rank )
