@@ -788,12 +788,10 @@ contains
 
 
   ! ************************************************************************ !
-  subroutine ply_calculate_coeff_strip( nIndeps, n, s, gam, matrix, alph,    &
+  subroutine ply_calculate_coeff_strip( n, s, gam, matrix, alph,             &
     &                                   nDiagonals, block_offset, remainder, &
     &                                   strip_lb, strip_ub, subblockingWidth )
     ! -------------------------------------------------------------------- !
-    !> Number of values that can be computed independently.
-    integer, intent(in) :: nIndeps
     ! The overall number of modal coefficients
     integer, intent(in) :: n
     ! Size of the smallest block
@@ -1074,7 +1072,6 @@ contains
 
     ! Multiply with the entries near the diagonal
     call ply_calculate_coeff_strip(                &
-      & nIndeps          = nIndeps,                &
       & n                = params%n,               &
       & s                = params%n,               &
       & gam              = gam,                    &
@@ -1094,7 +1091,6 @@ contains
       block_off = (iBlock-1)*params%s
 
       call ply_calculate_coeff_strip(                    &
-        & nIndeps          = nIndeps,                    &
         & n                = params%n,                   &
         & s                = params%s,                   &
         & gam              = gam,                        &
@@ -1209,7 +1205,6 @@ contains
 
     ! Multiply with the entries near the diagonal
     call ply_calculate_coeff_strip(                &
-      & nIndeps          = 1,                      &
       & n                = params%n,               &
       & s                = params%n,               &
       & gam              = gam,                    &
@@ -1229,7 +1224,6 @@ contains
       block_off = (iBlock-1)*params%s
 
       call ply_calculate_coeff_strip(                    &
-        & nIndeps          = 1,                          &
         & n                = params%n,                   &
         & s                = params%s,                   &
         & gam              = gam,                        &
@@ -1371,7 +1365,6 @@ contains
 
       ! Multiply with the entries near the diagonal
       call ply_calculate_coeff_strip(                &
-        & nIndeps          = nIndeps,                &
         & n                = params%n,               &
         & s                = params%n,               &
         & gam              = gam,                    &
@@ -1391,7 +1384,6 @@ contains
         block_off = (iBlock-1)*params%s
 
         call ply_calculate_coeff_strip(                    &
-          & nIndeps          = nIndeps,                    &
           & n                = params%n,                   &
           & s                = params%s,                   &
           & gam              = gam,                        &

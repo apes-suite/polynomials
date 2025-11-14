@@ -60,22 +60,31 @@ def configure(conf):
              conf.env.INCLUDES_FFTW3 = conf.options.fftw_path+'/include'
         else:
            # Try to use pkg-config to find the FFTW library.
+           oenv = conf.env.env
+           # Empty the CPATH for pkg-config, as it will be ignored by the Fortran compiler
+           conf.env.env = dict(conf.environ)
+           conf.env.env['CPATH'] = ''
            conf.check_cfg(package='fftw3', uselib_store='FFTW3',
                           args=['--cflags', '--libs'], mandatory=False)
+           conf.env.env = oenv
            if not conf.env.LIB_FFTW3:
               # Try to link the fftw without any further options.
               conf.check(lib='fftw3', uselib_store='FFTW3', mandatory=False)
 
         if conf.env.LIB_FFTW3:
+           FFTW_INCLUDES = conf.env.INCLUDES_FFTW3
+           if len(conf.env.INCLUDES_FFTW3) == 0:
+             FFTW_INCLUDES.append('/usr/include')
            conf.all_envs[''].FCFLAGS_FFTW3 = conf.env.CFLAGS_FFTW3
            conf.all_envs[''].LIB_FFTW3 = conf.env.LIB_FFTW3
            conf.all_envs[''].LIBPATH_FFTW3 = conf.env.LIBPATH_FFTW3
-           conf.all_envs[''].INCLUDES_FFTW3 = conf.env.INCLUDES_FFTW3
+           conf.all_envs[''].INCLUDES_FFTW3 = FFTW_INCLUDES
         conf.setenv('')
 
     if conf.env.LIB_FFTW3:
        try:
          # Check for the fftw3.f03 header:
+         Logs.info(f'FFTW include dirs: {conf.env.INCLUDES_FFTW3}')
          if conf.env.LIB_ASL:
            conf.check_fc(fragment= "program test\n use, intrinsic :: iso_c_binding\n include 'aslfftw3.f03'\nend program test",
                          includes= conf.env.INCLUDES_FFTW3,
@@ -179,7 +188,7 @@ def build(bld):
        fxtp_sources[i_source] = 'external/fxtp/fxtpack140715/' + fxtp_sources[i_source]
 
 
-    if bld.cmd != 'gendoxy':
+    if bld.cmd != 'docu':
        if bld.env.LIB_FFTW3:
           fftwdep = 'FFTW3'
           if bld.env.WITH_ASL:
@@ -248,6 +257,6 @@ def build(bld):
           utests(bld = bld, use = test_dep, path = 'utests/with_fftw')
 
     else:
-       bld(
-           features = 'coco',
+       bld.env.ply_pp = bld(
+           features = 'includes coco',
            source   = ply_ppsources)
