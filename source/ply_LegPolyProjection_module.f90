@@ -158,6 +158,7 @@ contains
     real(kind=rk), allocatable :: newWorkDat(:)
     integer :: nChildDofs, oneDof
     ! -------------------------------------------------------------------- !
+
     if (subsamp%projectionType.ne.ply_QLegendrePoly_prp) then
       call tem_abort( 'ERROR in ply_QPolyProjection: subsampling is ' &
         & // 'only implemented for Q-Legendre-Polynomials'            )
@@ -281,6 +282,7 @@ contains
     real(kind=rk), allocatable :: projCoeffOneDim(:,:,:)
     real(kind=rk) :: dimexp
     ! -------------------------------------------------------------------- !
+
     select case(dofType)
     case(ply_QLegendrePoly_prp)
       allocate(projection%projCoeff(nDofs, nChildDofs, nChilds))
@@ -352,6 +354,7 @@ contains
         & // 'for Q-Legendre polynomials'                                   )
     end select
     deallocate(projCoeffOneDim)
+
   end subroutine ply_initQLegProjCoeff
   ! ************************************************************************ !
 
@@ -595,6 +598,7 @@ contains
     integer :: oneDof, noChilds, childpos
     real(kind=rk), allocatable :: childData(:)
     ! -------------------------------------------------------------------- !
+
     nChilds = 2**ndims
     nElems = tree%nElems
     nElemsToRefine = count(new_refine_tree)
@@ -794,6 +798,7 @@ contains
     integer :: childDof_pos, parentDof_pos
     real(kind=rk) :: projCoeff
     ! -------------------------------------------------------------------- !
+
     childData(:) = 0.0_rk
 
     childLoop: do iChild = 1, nChilds

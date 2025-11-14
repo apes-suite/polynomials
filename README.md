@@ -1,6 +1,8 @@
 Polynomials Library
 ===================
 
+*This is the OpenMP implementation branch*
+
 This project is a supporting library for [TreElM](https://bitbucket.org/apesteam/treelm).
 It does not work on its own, but rather needs to be included in
 other projects, which also include TreElM.

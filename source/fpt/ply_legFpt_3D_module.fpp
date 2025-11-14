@@ -145,6 +145,7 @@ contains
       &                pntVal    = pntVal   )
     ! <<<<< Z-Direction <<<<< !
 
+
   end subroutine ply_legToPnt_3D_singVar
   ! ------------------------------------------------------------------------ !
 
@@ -265,6 +266,7 @@ contains
       &                legCoeffs = legCoeffs, &
       &                pntVal    = alph       )
     ! <<<<< X-Direction <<<<< !
+
 
   end subroutine ply_pntToLeg_3D_singVar
   ! ------------------------------------------------------------------------ !

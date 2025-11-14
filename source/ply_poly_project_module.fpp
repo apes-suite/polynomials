@@ -599,7 +599,6 @@ contains
       end select
 
     case ('fpt')
-
       select case (dim)
       case (3)
         call ply_LegToPnt_3D( fpt       = me%body_3d%fpt, &

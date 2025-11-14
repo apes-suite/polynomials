@@ -454,6 +454,7 @@ contains
     real(kind=rk) :: n_q
     ! -------------------------------------------------------------------- !
 
+
     ! allocate the output array
     select case(basisType)
       case(Q_space)
@@ -532,7 +533,6 @@ contains
 ?? copy :: nextModgCoeffPTens(iAnsX, iAnsY, iAnsZ)
         end do
     end select
-
 
   end subroutine ply_evalLegendreTensPoly
   ! ************************************************************************ !

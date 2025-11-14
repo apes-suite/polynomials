@@ -163,6 +163,7 @@ contains
           &    nElems  = 1,                         &
           &    nDofs   = nDofs,                     &
           &    res     = elemdat                    )
+
         do iComponent=1,nComponents
           iTotComp = iScalar+iComponent-1
           var(iTotComp)%dat(lower_bound:upper_bound) &

@@ -3,6 +3,7 @@
 ! Copyright (c) 2013-2014, 2017 Peter Vitt <peter.vitt2@uni-siegen.de>
 ! Copyright (c) 2013-2014 Verena Krupp
 ! Copyright (c) 2016 Langhammer Kay <kay.langhammer@student.uni-siegen.de>
+! Copyright (c) 2020 Daniel Fleischer <daniel.fleischer@student.uni-siegen.de>
 !
 ! Parts of this file were written by Jens Zudrop and Harald Klimach
 ! for German Research School for Simulation Sciences GmbH.
@@ -344,8 +345,10 @@ contains
     integer :: n
     ! -------------------------------------------------------------------- !
 
+    !$OMP PARALLEL DEFAULT(SHARED), PRIVATE(n, iDof, cheb)
     n = fpt%legToChebParams%n
 
+    !$OMP DO
     do iDof = 1, nIndeps*n, n
       call ply_fpt_single( alph   = legCoeffs(iDof:iDof+n-1), &
         &                  gam    = cheb,                     &
@@ -360,6 +363,9 @@ contains
         &                    cheb,                 &
         &                    pntVal(iDof:iDof+n-1) )
     end do
+    !$OMP END DO
+    
+    !$OMP END PARALLEL
 
   end subroutine ply_legToPnt_single
   ! ------------------------------------------------------------------------ !
@@ -417,8 +423,10 @@ contains
     integer :: n
     ! -------------------------------------------------------------------- !
 
+    !$OMP PARALLEL DEFAULT(SHARED), PRIVATE(n, iDof, cheb)
     n = fpt%legToChebParams%n
 
+    !$OMP DO
     do iDof = 1, nIndeps*n, n
       call ply_fpt_single( alph   = legCoeffs(iDof:iDof+n-1), &
         &                  gam    = cheb,                     &
@@ -432,6 +440,9 @@ contains
         &                    cheb,                 &
         &                    pntVal(iDof:iDof+n-1) )
     end do
+    !$OMP END DO
+    
+    !$OMP END PARALLEL
 
   end subroutine ply_legToPnt_lobatto_single
   ! ------------------------------------------------------------------------ !
@@ -489,9 +500,12 @@ contains
     integer :: n
     ! -------------------------------------------------------------------- !
 
+    !$OMP PARALLEL DEFAULT(SHARED), PRIVATE(n, iDof, cheb)
     n = fpt%legToChebParams%n
 
     normFactor = 1.0_rk / real(n,kind=rk)
+
+    !$OMP DO
     do iDof = 1, nIndeps*n, n
       call fftw_execute_r2r( fpt%planPntToCheb,     &
         &                    pntVal(iDof:iDof+n-1), &
@@ -506,6 +520,9 @@ contains
         &                  alph   = cheb,                     &
         &                  params = fpt%ChebToLegParams       )
     end do
+    !$OMP END DO
+
+    !$OMP END PARALLEL
 
   end subroutine ply_pntToLeg_single
   ! ------------------------------------------------------------------------ !
@@ -567,9 +584,12 @@ contains
     integer :: n
     ! -------------------------------------------------------------------- !
 
+    !$OMP PARALLEL DEFAULT(SHARED), PRIVATE(n, iDof, cheb)
     n = fpt%legToChebParams%n
 
     normFactor = 0.5_rk / real(n-1,kind=rk)
+
+    !$OMP DO
     do iDof = 1, nIndeps*n, n
       call fftw_execute_r2r( fpt%planPntToCheb,     &
         &                    pntVal(iDof:iDof+n-1), &
@@ -584,6 +604,9 @@ contains
         &                  alph   = cheb,                     &
         &                  params = fpt%ChebToLegParams       )
     end do
+    !$OMP END DO
+    
+    !$OMP END PARALLEL
 
   end subroutine ply_pntToLeg_lobatto_single
   ! ------------------------------------------------------------------------ !

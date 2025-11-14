@@ -255,6 +255,7 @@ contains
         &                   modal_data = nodal_data(lb:msq:oversamp_degree+1)  )
     end do
     modal_data = nodal_data
+
   end subroutine ply_fxt_n2m_2D
   ! ************************************************************************ !
 

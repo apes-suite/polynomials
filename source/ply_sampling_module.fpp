@@ -681,6 +681,7 @@ contains
     integer :: iElem
     integer :: nComps
     ! -------------------------------------------------------------------- !
+
     nComps = fun%nComponents
 
     call c_f_pointer(fun%method_data, p)

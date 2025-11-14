@@ -212,6 +212,7 @@ contains
     real(kind=rk), allocatable :: transform_matrix(:,:)
     real(kind=rk), allocatable :: childData(:)
     ! -------------------------------------------------------------------- !
+
     nChilds = 2**nDims
 
     max_modes = nint(real(nDofs, kind=rk)**(1.0_rk/real(nDims, kind=rk)))
@@ -421,6 +422,7 @@ contains
     real(kind=rk), allocatable :: temp_data(:)
     real(kind=rk), allocatable :: childData_prev(:)
     ! -------------------------------------------------------------------- !
+
     parent_modes = nint(real(nParentDofs,kind=rk)        &
       &                 **(1/real(nDimensions,kind=rk)))
 
@@ -750,6 +752,7 @@ contains
         end if
       end do
     end subroutine splitz
+
 
   end subroutine ply_projDataToChild
   ! ************************************************************************ !

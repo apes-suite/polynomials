@@ -44,6 +44,15 @@ contains
 
   ! ------------------------------------------------------------------------ !
   !> Create Gauss-Legendre integration points and weights for one-dimensional
+
+
+
+
+
+
+
+
+
   !! integration on the interval [x1,x2].
   subroutine ply_gaussLegPoints( x1, x2, x, w, nIntP )
     ! -------------------------------------------------------------------- !
