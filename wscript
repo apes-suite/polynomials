@@ -205,6 +205,10 @@ def build(bld):
                source = 'external/dummy/fftw_wrap.f90',
                target = 'fftw_mod_obj')
 
+       bld( features = 'fc',
+            source = 'external/vtk/vtk_ho_hexa_module.f90',
+            target = 'vtk_mod_obj')
+
        bld( features = 'c',
             source = fxtp_sources,
             use = ['MATH'],
@@ -225,7 +229,7 @@ def build(bld):
        bld(
            features = 'coco fc',
            source = ply_sources,
-           use = ['FFTW3', 'NAG', 'tem_objs', 'fftw_mod_obj', 'aotus'],
+           use = ['FFTW3', 'NAG', 'tem_objs', 'fftw_mod_obj', 'vtk_mod_obj', 'aotus'],
            target = 'ply_objs')
 
        bld(
